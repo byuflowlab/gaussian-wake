@@ -1174,17 +1174,19 @@ def FLORIS_GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, y
     # xdict = np.array(xdict)
     # print xdict
     pP = 1.88
-    ke = 0.065
-    keCorrDA = 0
-    kd = 0.15
+    # ke = 0.065
+    ke = 0.052
+    # keCorrDA = 0
+    # kd = 0.15
     # me = np.array([-0.5, 0.22, 1.0])*np.array([1., 1., 0.75])
     # MU = np.array([0.5, 1.0, 5.5])*np.array([0., 0., 0.1475])
-    me = xdict['xvars'][0:3][2]
-    MU = xdict['xvars'][3:6][2]
-    ad = -4.5
-    bd = -0.01
-    aU = 5.0
-    bU = 1.66
+    # me = xdict['xvars'][0:3][2]
+    me = 1.0
+    # MU = xdict['xvars'][3:6][2]
+    # ad = -4.5
+    # bd = -0.01
+    # aU = 5.0
+    # bU = 1.66
 
     # rename inputs and outputs
     Vinf = wind_speed                               # from standard FUSED-WIND GenericWindFarm component
@@ -1224,21 +1226,37 @@ def FLORIS_GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, y
     wakeCentersY = np.zeros((nLocations, nTurbines))
     wakeCentersYT = np.zeros((nTurbines, nTurbines))
     for turb in range(0, nTurbines):
-        wakeAngleInit = 0.5*np.power(np.cos(yaw[turb]), 2)*np.sin(yaw[turb])*4*axialInd[turb]*(1-axialInd[turb])
-        for loc in range(0, nLocations):  # at velX-locations
-            deltax = np.maximum(velX[loc]-turbineX[turb], 0)
-            factor = (2*kd*deltax/rotorDiameter[turb])+1
-            wakeCentersY[loc, turb] = turbineY[turb]
-            wakeCentersY[loc, turb] = wakeCentersY[loc, turb] + ad+bd*deltax  # rotation-induced deflection
-            wakeCentersY[loc, turb] = wakeCentersY[loc, turb] + \
-                (wakeAngleInit*(15*np.power(factor, 4)+np.power(wakeAngleInit, 2))/((30*kd*np.power(factor, 5))/rotorDiameter[turb]))-(wakeAngleInit*rotorDiameter[turb]*(15+np.power(wakeAngleInit, 4))/(30*kd))  # yaw-induced deflection
+        # wakeAngleInit = 0.5*np.power(np.cos(yaw[turb]), 2)*np.sin(yaw[turb])*4.*axialInd[turb]*(1.-axialInd[turb])
+        wakeAngleInit = 0.5*np.power(np.cos(yaw[turb]), 2)*np.sin(yaw[turb])*4.*axialInd[turb]*(1.-axialInd[turb])+2.0*np.pi/180.
+        # wakeAngleInit = (0.6*axialInd[turb] + 1.)*yaw[turb]
+        # for loc in range(0, nLocations):  # at velX-locations
+        #     deltax = np.maximum(velX[loc]-turbineX[turb], 0)
+        #     factor = (2*kd*deltax/rotorDiameter[turb])+1
+        #     wakeCentersY[loc, turb] = turbineY[turb]
+        #     wakeCentersY[loc, turb] = wakeCentersY[loc, turb] + ad+bd*deltax  # rotation-induced deflection
+        #     wakeCentersY[loc, turb] = wakeCentersY[loc, turb] + \
+        #         (wakeAngleInit*(15*np.power(factor, 4)+np.power(wakeAngleInit, 2))/((30*kd*np.power(factor, 5))/rotorDiameter[turb]))-(wakeAngleInit*rotorDiameter[turb]*(15+np.power(wakeAngleInit, 4))/(30*kd))  # yaw-induced deflection
         for turbI in range(0, nTurbines):  # at turbineX-locations
-            deltax = np.maximum(turbineX[turbI]-turbineX[turb],0)
+            deltax = np.maximum(turbineX[turbI]-turbineX[turb], 0)
+            kd = ke + 0.015
             factor = (2*kd*deltax/rotorDiameter[turb])+1
             wakeCentersYT[turbI, turb] = turbineY[turb]
-            # wakeCentersYT[turbI, turb] = wakeCentersYT[turbI,turb] + ad+bd*deltax  # rotation-induced deflection
-            wakeCentersYT[turbI, turb] = wakeCentersYT[turbI,turb] + \
-                (wakeAngleInit*(15*np.power(factor, 4)+np.power(wakeAngleInit, 4))/((30*kd*np.power(factor, 5))/rotorDiameter[turb]))-(wakeAngleInit*rotorDiameter[turb]*(15+np.power(wakeAngleInit, 4))/(30*kd))  # yaw-induced deflection
+            # wakeCentersYT[turbI, turb] += ad+bd*deltax  # rotation-induced deflection
+            # wakeCentersYT[turbI, turb] += ad  # rotation-induced deflection
+            # wakeCentersYT[turbI, turb] = wakeCentersYT[turbI,turb] + \
+            #     (wakeAngleInit*(15*np.power(factor, 4)+np.power(wakeAngleInit, 4))/((30*kd*np.power(factor, 5))/rotorDiameter[turb]))-(wakeAngleInit*rotorDiameter[turb]*(15+np.power(wakeAngleInit, 4))/(30*kd))  # yaw-induced deflection
+
+
+            # ##############
+            # calculate distance from wake cone apex to wake producing turbine
+            x1 = 0.5*rotorDiameter[turb]/kd
+
+            # calculate x position with cone apex as origin
+            x = x1 + deltax
+
+            # calculate wake offset due to yaw
+            wakeCentersYT[turbI, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
+            # ###############
 
     # calculate wake zone diameters at velX-locations
     wakeDiameters = np.zeros((nLocations, nTurbines))
@@ -1249,7 +1267,8 @@ def FLORIS_GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, y
             wakeDiameters[loc, turb] = rotorDiameter[turb]+2*ke*me*np.maximum(deltax, 0)
         for turbI in range(0, nTurbines):  # at turbineX-locations
             deltax = turbineX[turbI]-turbineX[turb]
-            wakeDiametersT[turbI, turb] = np.maximum(rotorDiameter[turb]+2*ke*me*deltax, 0)
+            # wakeDiametersT[turbI, turb] = np.maximum(rotorDiameter[turb]+2*ke*me*deltax, 0)
+            wakeDiametersT[turbI, turb] = np.maximum(rotorDiameter[turb]+2*ke*deltax, 0)
 
     # calculate overlap areas at rotors
     # wakeOverlapT(TURBI,TURB,ZONEI) = overlap area of zone ZONEI of wake
@@ -1277,21 +1296,21 @@ def FLORIS_GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, y
 
     # calculate velocities in full flow field (optional)
     ws_array = np.tile(Vinf,nLocations)
-    for turb in range(0,nTurbines):
-        mU = MU/np.cos(aU*np.pi/180+bU*yaw[turb])
-        for loc in range(0,nLocations):
-            deltax = velX[loc] - turbineX[turb]
-            radiusLoc = abs(velY[loc]-wakeCentersY[loc,turb])
-            axialIndAndNearRotor = 2*axialInd[turb]
-
-            if deltax > 0 and radiusLoc < wakeDiameters[loc, turb]/2.0:    # check if in zone 3
-                reductionFactor = axialIndAndNearRotor * \
-                    np.power((rotorDiameter[turb]/(rotorDiameter[turb]+2*ke[turb]*(mU)*np.maximum(0, deltax))), 2)
-            elif deltax <= 0 and radiusLoc < rotorDiameter[turb]/2.0:     # check if axial induction zone in front of rotor
-                reductionFactor = axialIndAndNearRotor*(0.5+np.arctan(2.0*np.minimum(0, deltax)/(rotorDiameter[turb]))/np.pi)
-            else:
-                reductionFactor = 0
-            ws_array[loc] *= (1-reductionFactor)
+    # for turb in range(0,nTurbines):
+    #     mU = MU/np.cos(aU*np.pi/180+bU*yaw[turb])
+    #     for loc in range(0,nLocations):
+    #         deltax = velX[loc] - turbineX[turb]
+    #         radiusLoc = abs(velY[loc]-wakeCentersY[loc,turb])
+    #         axialIndAndNearRotor = 2*axialInd[turb]
+    #
+    #         if deltax > 0 and radiusLoc < wakeDiameters[loc, turb]/2.0:    # check if in zone 3
+    #             reductionFactor = axialIndAndNearRotor * \
+    #                 np.power((rotorDiameter[turb]/(rotorDiameter[turb]+2*ke[turb]*(mU)*np.maximum(0, deltax))), 2)
+    #         elif deltax <= 0 and radiusLoc < rotorDiameter[turb]/2.0:     # check if axial induction zone in front of rotor
+    #             reductionFactor = axialIndAndNearRotor*(0.5+np.arctan(2.0*np.minimum(0, deltax)/(rotorDiameter[turb]))/np.pi)
+    #         else:
+    #             reductionFactor = 0
+    #         ws_array[loc] *= (1-reductionFactor)
 
     # find effective wind speeds at downstream turbines, then predict power downstream turbine
     velocitiesTurbines = np.tile(Vinf, nTurbines)
@@ -1307,10 +1326,12 @@ def FLORIS_GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, y
 
             if deltax > 0:
                 # deltay = wakeCentersYT[turbI, turb] - turbineY[turbI]
-                mU = MU / np.cos(aU*np.pi/180 + bU*yaw[turb])
+                # mU = MU / np.cos(aU*np.pi/180 + bU*yaw[turb])
+                # mU = MU
                 sigma = (wakeDiametersT[turbI, turb] + rotorDiameter[turbI])/6.
                 mu = wakeCentersYT[turbI, turb]
-                max = np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2*ke[turb]*mU*deltax), 2.0)
+                # max = np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2*ke[turb]*mU*deltax), 2.0)
+                max = np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2*ke[turb]*deltax), 2.0)
                 # p1 = wakeCentersYT[turbI, turb] + deltay - rotorDiameter[turbI]/2.
                 # p2 = wakeCentersYT[turbI, turb] + deltay + rotorDiameter[turbI]/2.
 
@@ -2107,7 +2128,7 @@ if __name__ == "__main__":
     FLORISvelocityCos = np.array(FLORISvelocityCos)
 
 
-    axes[1, 0].plot(posrange/rotorDiameter[0], FLORISvelocity[:, 1], 'b', label='original')
+    axes[1, 0].plot(posrange/rotorDiameter[0], FLORISvelocity[:, 1], 'b', label='Floris Original')
     # axes[2].plot(posrange, FLORISvelocityStat[:, 1], 'g', label='added gaussian')
     # axes[2].plot(posrange/rotorDiameter[0], FLORISvelocityLES[:, 1], 'c', label='Linear Exact Sector')
     # axes[1, 0].plot(posrange/rotorDiameter[0], FLORISvelocityGAZ[:, 1], 'm', label='GAZ')
@@ -2194,7 +2215,7 @@ if __name__ == "__main__":
     FLORISvelocityCos = np.array(FLORISvelocityCos)
 
 
-    axes[1, 1].plot(posrange/rotorDiameter[0], FLORISvelocity[:, 1], 'b', label='original')
+    axes[1, 1].plot(posrange/rotorDiameter[0], FLORISvelocity[:, 1], 'b', label='Floris Original')
     # axes[2].plot(posrange, FLORISvelocityStat[:, 1], 'g', label='added gaussian')
     # axes[2].plot(posrange/rotorDiameter[0], FLORISvelocityLES[:, 1], 'c', label='Linear Exact Sector')
     # axes[1, 1].plot(posrange/rotorDiameter[0], FLORISvelocityGAZ[:, 1], 'm', label='GAZ')
