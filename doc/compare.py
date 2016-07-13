@@ -74,6 +74,23 @@ if __name__ == "__main__":
     GaussianPower = list()
     FlorisPower = list()
 
+    import time
+
+    t1 = time.time()
+    for i in range(0, 100):
+        gauss_prob.run()
+    t2 = time.time()
+    for i in range(0, 100):
+        floris_prob.run()
+    t3 = time.time()
+    # gauss time:  0.0580031871796
+    # floris time:  0.10697388649
+
+    print 'gauss time: ', t2-t1
+    print 'floris time: ', t3-t2
+
+    # quit()
+
     for yaw1 in yawrange:
 
         for prob in probs:
