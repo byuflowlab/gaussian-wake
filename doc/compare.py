@@ -64,9 +64,9 @@ if __name__ == "__main__":
         prob['windSpeeds'] = np.array([wind_speed])
         prob['windDirections'] = np.array([wind_direction])
 
-    gauss_prob['model_params:ke'] = 0.052
-    gauss_prob['model_params:spread_angle'] = 6.
-    gauss_prob['model_params:rotation_offset_angle'] = 2.0
+    # gauss_prob['model_params:ke'] = 0.052
+    # gauss_prob['model_params:spread_angle'] = 6.
+    # gauss_prob['model_params:rotation_offset_angle'] = 2.0
 
     ICOWESdata = loadmat('../data/YawPosResults.mat')
     yawrange = ICOWESdata['yaw'][0]

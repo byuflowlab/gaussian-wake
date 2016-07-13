@@ -225,8 +225,8 @@ class GaussianWake(Component):
         self.add_param('axialInduction', val=np.zeros(nTurbines)+1./3.)
 
         self.add_param('model_params:ke', val=0.052)
-        self.add_param('model_params:rotation_offset_angle', val=1.87, units='deg')
-        self.add_param('model_params:spread_angle', val=6.37, units='deg')
+        self.add_param('model_params:rotation_offset_angle', val=1.56, units='deg')
+        self.add_param('model_params:spread_angle', val=5.84, units='deg')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
@@ -294,22 +294,22 @@ class GaussianWake(Component):
                     x = x1 + deltax
 
                     # calculate wake offset due to yaw
-                    wakeCentersYT[loc, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
+                    wakeCentersY[loc, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
 
-            # for turbI in range(0, nTurbines):  # at turbineX-locations
-            #     deltax = turbineXw[turbI]-turbineXw[turb]
-            #     wakeCentersYT[turbI, turb] = turbineYw[turb]
-            #
-            #     if deltax > 0.0:
-            #
-            #         # calculate distance from wake cone apex to wake producing turbine
-            #         x1 = 0.5*rotorDiameter[turb]/np.tan(spread_angle)
-            #
-            #         # calculate x position with cone apex as origin
-            #         x = x1 + deltax
-            #
-            #         # calculate wake offset due to yaw
-            #         wakeCentersYT[turbI, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
+            for turbI in range(0, nTurbines):  # at turbineX-locations
+                deltax = turbineXw[turbI]-turbineXw[turb]
+                wakeCentersYT[turbI, turb] = turbineYw[turb]
+
+                if deltax > 0.0:
+
+                    # calculate distance from wake cone apex to wake producing turbine
+                    x1 = 0.5*rotorDiameter[turb]/np.tan(spread_angle)
+
+                    # calculate x position with cone apex as origin
+                    x = x1 + deltax
+
+                    # calculate wake offset due to yaw
+                    wakeCentersYT[turbI, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
 
 
 
@@ -320,12 +320,15 @@ class GaussianWake(Component):
             for loc in range(0, nSamples):  # at velX-locations
                 deltax = velX[loc]-turbineXw[turb]
                 if deltax > 0.0:
-                    wakeDiameters[loc, turb] = rotorDiameter[turb]+2.*ke*deltax
-            # for turbI in range(0, nTurbines):  # at turbineX-locations
-            #     deltax = turbineXw[turbI]-turbineXw[turb]
-            #     if deltax > 0.0:
-            #         wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-            #         # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
+                    wakeDiameters[loc, turb] = 2*rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                    # if wakeDiameters[loc, turb] < 126.4:
+                    print wakeDiameters[loc, turb]
+                    # quit()
+            for turbI in range(0, nTurbines):  # at turbineX-locations
+                deltax = turbineXw[turbI]-turbineXw[turb]
+                if deltax > 0.0:
+                    wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                    # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
 
         velocitiesTurbines = np.tile(wind_speed, nTurbines)
         # print velocitiesTurbines
@@ -337,14 +340,14 @@ class GaussianWake(Component):
                 deltax = velX[loc] - turbineXw[turb]
 
                 if deltax > 0:
-                    sigma = wakeDiametersT[loc, turb]/6.
+                    sigma = wakeDiameters[loc, turb]/6.
                     mu = wakeCentersY[loc, turb]
                     max = 2.*axialInduction[turb]*np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
 
                     wakeEffCoeffTurbine = GaussianMax(velY[loc], max, mu, sigma)
                     wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
-            wakeEffCoeff[loc] = (1. - np.sqrt(wakeEffCoeff))
+            wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
             ws_array[loc] *= wakeEffCoeff
 
         for turbI in range(0, nTurbines):
@@ -356,31 +359,31 @@ class GaussianWake(Component):
 
                 if deltax > 0.:
 
-                    # ############# Calculate the wake center #################
-                    wakeAngleInit = 0.5*np.sin(yaw[turb])*Ct[turb] + rotation_offset_angle
+                    # # ############# Calculate the wake center #################
+                    # wakeAngleInit = 0.5*np.sin(yaw[turb])*Ct[turb] + rotation_offset_angle
+                    #
+                    # wakeCenterYT = turbineYw[turb]
+                    #
+                    # # calculate distance from wake cone apex to wake producing turbine
+                    # x1 = 0.5*rotorDiameter[turb]/np.tan(spread_angle)
+                    #
+                    # # calculate x position with cone apex as origin
+                    # x = x1 + deltax
+                    #
+                    # # calculate wake offset due to yaw
+                    # wakeCenterYT -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
+                    # # ##########################################################
+                    #
+                    # # ############ Calculate wake diameter ######################
+                    #
+                    # wakeDiameterT = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                    #
+                    # # ##########################################################
 
-                    wakeCenterYT = turbineYw[turb]
-
-                    # calculate distance from wake cone apex to wake producing turbine
-                    x1 = 0.5*rotorDiameter[turb]/np.tan(spread_angle)
-
-                    # calculate x position with cone apex as origin
-                    x = x1 + deltax
-
-                    # calculate wake offset due to yaw
-                    wakeCenterYT -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
-                    # ##########################################################
-
-                    # ############ Calculate wake diameter ######################
-
-                    wakeDiameterT = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-
-                    # ##########################################################
-
-                    # sigma = wakeDiametersT[turbI, turb]/6.
-                    sigma = wakeDiameterT/6.
-                    # mu = wakeCentersYT[turbI, turb]
-                    mu = wakeCenterYT
+                    sigma = wakeDiametersT[turbI, turb]/6.
+                    # sigma = wakeDiametersT/6.
+                    mu = wakeCentersYT[turbI, turb]
+                    # mu = wakeCenterYT
                     max = 2.*axialInduction[turb]*np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
                     wakeEffCoeffTurbine = GaussianMax(turbineYw[turbI], max, mu, sigma)
                     wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
@@ -392,7 +395,9 @@ class GaussianWake(Component):
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
         # print velocitiesTurbines
         if nSamples > 0.0:
+            print nSamples
             unknowns['wsArray%i' % direction_id] = ws_array
+            print unknowns['wsArray%i' % direction_id]
 
 
 if __name__ == "__main__":
