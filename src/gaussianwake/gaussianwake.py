@@ -333,17 +333,16 @@ class GaussianWake(Component):
             wakeEffCoeff = 0
             for turb in range(0, nTurbines):
                 deltax = velX[loc] - turbineXw[turb]
-                radiusLoc = abs(velY[loc]-wakeCentersY[loc, turb])
 
-                if deltax > 0 and radiusLoc < wakeDiameters[loc, turb]/2.0:
+                if deltax > 0:
                     sigma = wakeDiametersT[loc, turb]/6.
                     mu = wakeCentersY[loc, turb]
-                    max = np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
+                    max = 2.*axialInduction[turb]*np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
 
                     wakeEffCoeffTurbine = GaussianMax(velY[loc], max, mu, sigma)
-                    wakeEffCoeff += np.power(axialInduction[turb]*wakeEffCoeffTurbine, 2.0)
+                    wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
-            wakeEffCoeff[loc] = (1. - 2. * np.sqrt(wakeEffCoeff))
+            wakeEffCoeff[loc] = (1. - np.sqrt(wakeEffCoeff))
             ws_array[loc] *= wakeEffCoeff
 
         for turbI in range(0, nTurbines):
@@ -356,12 +355,11 @@ class GaussianWake(Component):
                 if deltax > 0.:
                     sigma = wakeDiametersT[turbI, turb]/6.
                     mu = wakeCentersYT[turbI, turb]
-                    max = np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
-
+                    max = 2.*axialInduction[turb]*np.power((rotorDiameter[turb])/(rotorDiameter[turb]+2.0*ke*deltax), 2.0)
                     wakeEffCoeffTurbine = GaussianMax(turbineYw[turbI], max, mu, sigma)
-                    wakeEffCoeff += np.power(axialInduction[turb]*wakeEffCoeffTurbine, 2.0)
+                    wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
-            wakeEffCoeff = (1. - 2. * np.sqrt(wakeEffCoeff))
+            wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
 
             velocitiesTurbines[turbI] *= wakeEffCoeff
 
