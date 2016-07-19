@@ -7,6 +7,7 @@ from openmdao.api import Problem, pyOptSparseDriver
 from wakeexchange.OptimizationGroups import OptAEP
 from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 from wakeexchange.floris import floris_wrapper, add_floris_params_IndepVarComps
+from wakeexchange.jensen import jensen_wrapper,add_jensen_params_IndepVarComps
 
 
 if __name__ == "__main__":
@@ -21,7 +22,7 @@ if __name__ == "__main__":
     # CP =0.768 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
     CT = 4.0*axial_induction*(1.0-axial_induction)
     generator_efficiency = 0.944
-    yaw_init = 1.0
+    yaw_init = 0.0
 
     # Define turbine characteristics
     axialInduction = np.zeros(nTurbines) + axial_induction
@@ -48,8 +49,14 @@ if __name__ == "__main__":
                                params_IdepVar_func=add_floris_params_IndepVarComps,
                                params_IndepVar_args={}))
 
-    probs = [gauss_prob, floris_prob]
-    names = ['gauss', 'floris']
+    jensen_prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
+                               wake_model=jensen_wrapper, wake_model_options={'variant': 'CosineYaw_1R',
+                                                                              'radius multiplier': 1.0}, datasize=0,
+                               params_IdepVar_func=add_jensen_params_IndepVarComps,
+                               params_IndepVar_args={'use_angle': True}))
+
+    probs = [gauss_prob, floris_prob, jensen_prob]
+    names = ['gauss', 'floris', 'jensen']
 
     for indx, prob in enumerate(probs):
 
@@ -91,4 +98,5 @@ if __name__ == "__main__":
 
     for indx, prob in enumerate(probs):
         print names[indx], prob['yaw0']
+        print 'power', np.sum(prob['wtPower0'])
 

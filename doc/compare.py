@@ -64,9 +64,30 @@ if __name__ == "__main__":
         prob['windSpeeds'] = np.array([wind_speed])
         prob['windDirections'] = np.array([wind_direction])
 
-    # gauss_prob['model_params:ke'] = 0.052
-    # gauss_prob['model_params:spread_angle'] = 6.
-    # gauss_prob['model_params:rotation_offset_angle'] = 2.0
+    gauss_prob['model_params:ke'] = 0.052
+    gauss_prob['model_params:spread_angle'] = 6.
+    gauss_prob['model_params:rotation_offset_angle'] = 2.0
+
+    # for axialInd calc only
+    # gauss_prob['model_params:ke'] = 0.050688
+    # gauss_prob['model_params:spread_angle'] = 7.562716
+    # gauss_prob['model_params:rotation_offset_angle'] = 3.336568
+
+    # for axialInd and inflow adjust
+    # gauss_prob['model_params:ke'] = 0.052333
+    # gauss_prob['model_params:spread_angle'] =  8.111330
+    # gauss_prob['model_params:rotation_offset_angle'] = 2.770265
+
+    # for inflow adjust only
+    # gauss_prob['model_params:ke'] = 0.052230
+    # gauss_prob['model_params:spread_angle'] =  6.368191
+    # gauss_prob['model_params:rotation_offset_angle'] = 1.855112
+
+    # for added n_st_dev param
+    gauss_prob['model_params:ke'] = 0.050755
+    gauss_prob['model_params:spread_angle'] = 11.205766
+    gauss_prob['model_params:rotation_offset_angle'] = 3.651790
+    gauss_prob['model_params:n_std_dev'] = 9.304371
 
     ICOWESdata = loadmat('../data/YawPosResults.mat')
     yawrange = ICOWESdata['yaw'][0]

@@ -10,7 +10,7 @@ from wakeexchange.OptimizationGroups import OptAEP
 from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 
 
-def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offset_angle': 2.0}, plot=False):
+def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offset_angle': 2.0, 'n_std_dev': 6.0}, plot=False):
 
     global prob
 
@@ -40,6 +40,13 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
         prob['model_params:rotation_offset_angle'] = xdict['rotation_offset_angle']
     except:
         prob['model_params:rotation_offset_angle'] = 2.0
+    try:
+        prob['model_params:n_std_dev'] = xdict['n_std_dev']
+        # print prob['model_params:n_std_dev']
+    except:
+        # print "here here"
+        # quit()
+        prob['model_params:n_std_dev'] = 6.0
 
     ICOWESdata = loadmat('../data/YawPosResults.mat')
     yawrange = ICOWESdata['yaw'][0]
@@ -70,7 +77,7 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
     # print GaussianPower[:, 0]
     # array = GaussianPower[:, 1]
     # print yawrange[2:-2]
-    error_turbine2 = np.sum(np.abs(GaussianPower[:, 1][2:-2] - SOWFApower[:, 1][2:-2]))
+    # error_turbine2 = 2.*np.sum(np.abs(GaussianPower[:, 1][2:-2] - SOWFApower[:, 1][2:-2]))
     error_turbine2 = np.sum(np.abs(GaussianPower[:, 1] - SOWFApower[:, 1]))
 
     posrange = ICOWESdata['pos'][0]
@@ -78,6 +85,9 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
     prob['yaw0'] = np.array([0.0, 0.0])
 
     GaussianPower = list()
+
+    # print posrange.size, yawrange.size
+    # quit()
 
     for pos2 in posrange:
         # Define turbine locations and orientation
@@ -104,7 +114,12 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
 
     # print posrange[1:-2]
     # quit()
-    error_turbine2 += np.sum(np.abs(GaussianPower[:, 1] - SOWFApower[:, 1]))
+    weight = np.ones_like(GaussianPower[:, 0])
+    # weight[-1] *= 0
+    # weight[-2] *= 0
+    # weight[1:3] *= 2.0
+    # weight[-4:-2] *= 2.0
+    error_turbine2 += np.sum(weight*np.abs(GaussianPower[:, 1] - SOWFApower[:, 1]))
 
     if plot:
         axes[0, 1].plot(posrange/rotorDiameter[0], GaussianPower[:, 0], 'b', posrange/rotorDiameter[0], SOWFApower[:, 0], 'bo')
@@ -165,6 +180,7 @@ if __name__ == "__main__":
     optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.052, scalar=10.0)
     optProb.addVarGroup('spread_angle', 1, lower=0.0, upper=30.0, value=7.0, scalar=1E-1)
     optProb.addVarGroup('rotation_offset_angle', 1, lower=0.0, upper=20.0, value=2.0, scalar=1E-1)
+    optProb.addVarGroup('n_std_dev', 1, lower=0.1, upper=20.0, value=6.0, scalar=1E-1)
 
     # add objective
     optProb.addObj('obj')
@@ -178,4 +194,5 @@ if __name__ == "__main__":
     print sol
 
     tuning_obj_function(xdict={'ke': sol.xStar['ke'], 'spread_angle': sol.xStar['spread_angle'],
-                               'rotation_offset_angle': sol.xStar['rotation_offset_angle']}, plot=True)
+                               'rotation_offset_angle': sol.xStar['rotation_offset_angle'],
+                               'n_std_dev': sol.xStar['n_std_dev']}, plot=True)
