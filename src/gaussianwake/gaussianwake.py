@@ -309,17 +309,7 @@ class GaussianWake(Component):
                 if deltax > 0.0:
 
                     wakeCentersY[loc, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb], rotation_offset_angle,
-                                                    mode=spread_mode, ky=ky)
-
-                    # # calculate distance from wake cone apex to wake producing turbine
-                    # # x1 = 0.5*rotorDiameter[turb]/np.tan(spread_angle)
-                    # x1 = 0.5*rotorDiameter[turb]/ky
-                    #
-                    # # calculate x position with cone apex as origin
-                    # x = x1 + deltax
-                    #
-                    # # calculate wake offset due to yaw
-                    # wakeCentersY[loc, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
+                                                               mode=spread_mode, ky=ky)
 
             for turbI in range(0, nTurbines):  # at turbineX-locations
                 deltax = turbineXw[turbI]-turbineXw[turb]
@@ -330,17 +320,6 @@ class GaussianWake(Component):
                     wakeCentersYT[turbI, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
                                                                   rotation_offset_angle, mode=spread_mode, ky=ky)
 
-                    # # calculate distance from wake cone apex to wake producing turbine
-                    # x1 = (0.5*rotorDiameter[turb]/ky)
-                    #
-                    # # calculate x position with cone apex as origin
-                    # x = x1 + deltax
-                    #
-                    # # calculate wake offset due to yaw
-                    # wakeCentersYT[turbI, turb] -= -wakeAngleInit*(x1**2)/x + x1*wakeAngleInit
-
-
-
         # calculate wake zone diameters at locations of interest
         wakeDiameters = np.zeros((nSamples, nTurbines))
         wakeDiametersT = np.zeros((nTurbines, nTurbines))
@@ -348,15 +327,17 @@ class GaussianWake(Component):
             for loc in range(0, nSamples):  # at velX-locations
                 deltax = velX[loc]-turbineXw[turb]
                 if deltax > 0.0:
-                    wakeDiameters[loc, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                    wakeDiameters[loc, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle)
+                    # wakeDiameters[loc, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
                     # if wakeDiameters[loc, turb] < 126.4:
                     # print wakeDiameters[loc, turb]
                     # quit()
             for turbI in range(0, nTurbines):  # at turbineX-locations
                 deltax = turbineXw[turbI]-turbineXw[turb]
                 if deltax > 0.0:
+                    wakeDiametersT[turbI, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle)
                     # wakeDiametersT[turbI, turb] = np.cos(yaw[turb])*rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-                    wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                    # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
                     # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
 
         velocitiesTurbines = np.tile(wind_speed, nTurbines)
