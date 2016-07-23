@@ -31,7 +31,9 @@ if __name__ == "__main__":
     # for tuning with n_std_dev #1
     # yaw_init_gauss = 0*np.array([1.26140798e+01, 1.26123736e+01, 1.17078481e+01, 1.17089869e+01, -1.22503914e-07,  -1.31933646e-06])
     yaw_init_gauss = 0*np.array([13.74293166, 13.74283174, 14.8380152, 14.83806931, 0., 0.])
-    yaw_init_gauss = np.array([19.00, 19.00, 23.80, 23.80, 0.05, 0.00])
+    # yaw_init_gauss = np.array([15.49, 15.49, 19.24,  19.24,  0.00,  0.00])  # power
+    # yaw_init_gauss = np.array([13.73, 13.73, 14.82,  14.82,  0.00,  0.00])  # linear
+    # yaw_init_gauss = np.array([19.00, 19.00, 23.80, 23.80, 0.05, 0.00])
 
     # for tuning with n_std_dev #2
     # yaw_init_gauss = np.array([1.29093304e+01, 1.29077015e+01, 1.19463208e+01, 1.19474608e+01, 5.61165053e-07, 8.01354835e-07])
@@ -117,22 +119,64 @@ if __name__ == "__main__":
             # gauss_prob['model_params:ky'] = 0.078069
 
             # for decoupled ky with n_std_dev = 4
-            gauss_prob['model_params:ke'] = 0.051145
-            gauss_prob['model_params:spread_angle'] = 2.617982
-            gauss_prob['model_params:rotation_offset_angle'] = 3.616082
-            gauss_prob['model_params:ky'] = 0.211496
+            # gauss_prob['model_params:ke'] = 0.051145
+            # gauss_prob['model_params:spread_angle'] = 2.617982
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.616082
+            # gauss_prob['model_params:ky'] = 0.211496
 
             # for decoupled ky with n_std_dev = 6 and double diameter wake at rotor pos
-            gauss_prob['model_params:ke'] = 0.051030
-            gauss_prob['model_params:spread_angle'] = 1.864696
-            gauss_prob['model_params:rotation_offset_angle'] = 3.362729
-            gauss_prob['model_params:ky'] = 0.193011
+            # gauss_prob['model_params:ke'] = 0.051030
+            # gauss_prob['model_params:spread_angle'] = 1.864696
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.362729
+            # gauss_prob['model_params:ky'] = 0.193011
 
             # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3
-            gauss_prob['model_params:ke'] = 0.007523
-            gauss_prob['model_params:spread_angle'] = 1.876522
-            gauss_prob['model_params:rotation_offset_angle'] = 3.633083
-            gauss_prob['model_params:ky'] = 0.193160
+            # gauss_prob['model_params:ke'] = 0.007523
+            # gauss_prob['model_params:spread_angle'] = 1.876522
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.633083
+            # gauss_prob['model_params:ky'] = 0.193160
+
+            # for decoupled ke with n_std_dev=4, linear, not integrating
+            # gauss_prob['model_params:ke'] = 0.051190
+            # gauss_prob['model_params:spread_angle'] = 2.619202
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.629337
+            # gauss_prob['model_params:ky'] = 0.211567
+
+            # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3, linear, integrating
+            # gauss_prob['model_params:ke'] = 0.008858
+            # gauss_prob['model_params:spread_angle'] = 0.000000
+            # gauss_prob['model_params:rotation_offset_angle'] = 4.035276
+            # gauss_prob['model_params:ky'] = 0.199385
+
+            # for decoupled ky with n_std_dev = 4, error = 1332.49, not integrating, power law
+            # gauss_prob['model_params:ke'] = 0.051360
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.197348
+            # gauss_prob['model_params:Dw0'] = 1.804024
+            # gauss_prob['model_params:m'] = 0.0
+
+            # for decoupled ky with n_std_dev = 4, error = 1630.8, with integrating, power law
+            # gauss_prob['model_params:ke'] = 0.033165
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.328051
+            # gauss_prob['model_params:Dw0'] = 1.708328
+            # gauss_prob['model_params:m'] = 0.0
+
+            # for decoupled ky with n_std_dev = 4, error = 1140.59, not integrating, power law for expansion,
+            # linear for yaw
+            gauss_prob['model_params:ke'] = 0.050741
+            gauss_prob['model_params:rotation_offset_angle'] = 3.628737
+            gauss_prob['model_params:Dw0'] = 0.846582
+            gauss_prob['model_params:ky'] = 0.207734
+
+            # for decoupled ky with n_std_dev = 4, error = 1058.73, integrating, power law for expansion,
+            # linear for yaw
+            # gauss_prob['model_params:ke'] = 0.016129
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.644356
+            # gauss_prob['model_params:Dw0'] = 0.602132
+            # gauss_prob['model_params:ky'] = 0.191178
+
+            gauss_prob['model_params:integrate'] = False
+            gauss_prob['model_params:spread_mode'] = 'power'
+            gauss_prob['model_params:n_std_dev'] = 4
 
             prob['yaw0'] = yaw_gauss
 
@@ -178,7 +222,7 @@ if __name__ == "__main__":
         color = color.reshape((res, res))
 
         # color maps that work better: jet, gnuplot2, coolwarm
-        plt.pcolormesh(samplesX, samplesY, color, cmap='coolwarm', vmin=1.75, vmax=11.)
+        plt.pcolormesh(samplesX, samplesY, color, cmap='coolwarm')#, vmin=1.75, vmax=11.)
         plt.xlim([min(samplesX.flatten()), max(samplesX.flatten())])
         plt.ylim([min(samplesY.flatten()), max(samplesY.flatten())])
 

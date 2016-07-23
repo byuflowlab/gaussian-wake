@@ -312,7 +312,7 @@ class GaussianWake(Component):
                 if deltax > 0.0:
 
                     wakeCentersY[loc, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb], rotation_offset_angle,
-                                                               mode=spread_mode, ky=ky, Dw0=Dw0, m=m)
+                                                               mode='linear', ky=ky, Dw0=Dw0, m=m)
 
             for turbI in range(0, nTurbines):  # at turbineX-locations
                 deltax = turbineXw[turbI]-turbineXw[turb]
@@ -321,7 +321,7 @@ class GaussianWake(Component):
                 if deltax > 0.0:
 
                     wakeCentersYT[turbI, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
-                                                                  rotation_offset_angle, mode=spread_mode, ky=ky,
+                                                                  rotation_offset_angle, mode='linear', ky=ky,
                                                                   Dw0=Dw0, m=m)
 
         # calculate wake zone diameters at locations of interest

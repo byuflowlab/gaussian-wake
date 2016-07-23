@@ -111,22 +111,70 @@ if __name__ == "__main__":
             # gauss_prob['model_params:ky'] = 0.078069
 
             # for decoupled ky with n_std_dev = 4
-            gauss_prob['model_params:ke'] = 0.051145
-            gauss_prob['model_params:spread_angle'] = 2.617982
-            gauss_prob['model_params:rotation_offset_angle'] = 3.616082
-            gauss_prob['model_params:ky'] = 0.211496
+            # gauss_prob['model_params:ke'] = 0.051145
+            # gauss_prob['model_params:spread_angle'] = 2.617982
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.616082
+            # gauss_prob['model_params:ky'] = 0.211496
 
             # for decoupled ky with n_std_dev = 6 and double diameter wake at rotor pos
-            gauss_prob['model_params:ke'] = 0.051030
-            gauss_prob['model_params:spread_angle'] = 1.864696
-            gauss_prob['model_params:rotation_offset_angle'] = 3.362729
-            gauss_prob['model_params:ky'] = 0.193011
+            # gauss_prob['model_params:ke'] = 0.051030
+            # gauss_prob['model_params:spread_angle'] = 1.864696
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.362729
+            # gauss_prob['model_params:ky'] = 0.193011
 
             # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3
-            gauss_prob['model_params:ke'] = 0.007523
-            gauss_prob['model_params:spread_angle'] = 1.876522
-            gauss_prob['model_params:rotation_offset_angle'] = 3.633083
-            gauss_prob['model_params:ky'] = 0.193160
+            # gauss_prob['model_params:ke'] = 0.007523
+            # gauss_prob['model_params:spread_angle'] = 1.876522
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.633083
+            # gauss_prob['model_params:ky'] = 0.193160
+
+            # for integrating using power law
+            # gauss_prob['model_params:ke'] = 0.033165
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.328051
+            # gauss_prob['model_params:Dw0'] = 1.708328
+            # gauss_prob['model_params:m'] = 0.0
+
+            # for decoupled ke with n_std_dev=4, linear, not integrating
+            # gauss_prob['model_params:ke'] = 0.051190
+            # gauss_prob['model_params:spread_angle'] = 2.619202
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.629337
+            # gauss_prob['model_params:ky'] = 0.211567
+
+            # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3, linear, integrating
+            # gauss_prob['model_params:ke'] = 0.008858
+            # gauss_prob['model_params:spread_angle'] = 0.000000
+            # gauss_prob['model_params:rotation_offset_angle'] = 4.035276
+            # gauss_prob['model_params:ky'] = 0.199385
+
+            # for decoupled ky with n_std_dev = 4, error = 1332.49, not integrating, power law
+            # gauss_prob['model_params:ke'] = 0.051360
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.197348
+            # gauss_prob['model_params:Dw0'] = 1.804024
+            # gauss_prob['model_params:m'] = 0.0
+
+            # for decoupled ky with n_std_dev = 4, error = 1630.8, with integrating, power law
+            # gauss_prob['model_params:ke'] = 0.033165
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.328051
+            # gauss_prob['model_params:Dw0'] = 1.708328
+            # gauss_prob['model_params:m'] = 0.0
+
+            # for decoupled ky with n_std_dev = 4, error = 1140.59, not integrating, power law for expansion,
+            # linear for yaw
+            # gauss_prob['model_params:ke'] = 0.050741
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.628737
+            # gauss_prob['model_params:Dw0'] = 0.846582
+            # gauss_prob['model_params:ky'] = 0.207734
+
+            # for decoupled ky with n_std_dev = 4, error = 1058.73, integrating, power law for expansion,
+            # linear for yaw
+            # gauss_prob['model_params:ke'] = 0.016129
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.644356
+            # gauss_prob['model_params:Dw0'] = 0.602132
+            # gauss_prob['model_params:ky'] = 0.191178
+
+            gauss_prob['model_params:integrate'] = False
+            gauss_prob['model_params:spread_mode'] = 'linear'
+            gauss_prob['model_params:n_std_dev'] = 4
 
 
 
