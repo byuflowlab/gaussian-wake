@@ -7,7 +7,7 @@ from openmdao.api import Problem, pyOptSparseDriver
 from wakeexchange.OptimizationGroups import OptAEP
 from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 from wakeexchange.floris import floris_wrapper, add_floris_params_IndepVarComps
-from wakeexchange.jensen import jensen_wrapper,add_jensen_params_IndepVarComps
+from wakeexchange.jensen import jensen_wrapper, add_jensen_params_IndepVarComps
 
 
 if __name__ == "__main__":
@@ -73,14 +73,62 @@ if __name__ == "__main__":
     
         # select design variables
         for direction_id in range(0, nDirections):
-            prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1E2)
+            prob.driver.add_desvar('yaw%i' % direction_id, lower=-30.0, upper=30.0, scaler=1)
 
         prob.setup()
 
         if names[indx] is 'gauss':
-            gauss_prob['model_params:ke'] = 0.052
-            gauss_prob['model_params:spread_angle'] = 6.
-            gauss_prob['model_params:rotation_offset_angle'] = 2.0
+            # gauss_prob['model_params:ke'] = 0.052
+            # gauss_prob['model_params:spread_angle'] = 6.
+            # gauss_prob['model_params:rotation_offset_angle'] = 2.0
+
+            # gauss_prob['model_params:ke'] = 0.050755
+            # gauss_prob['model_params:spread_angle'] = 11.205766
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.651790
+            # gauss_prob['model_params:n_std_dev'] = 9.304371
+
+            # gauss_prob['model_params:ke'] = 0.051010
+            # gauss_prob['model_params:spread_angle'] = 11.779591
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.564547
+            # gauss_prob['model_params:n_std_dev'] = 9.575505
+
+            # using ky with n_std_dev = 6
+            # gauss_prob['model_params:ke'] = 0.051115
+            # gauss_prob['model_params:spread_angle'] = 5.967284
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.597926
+            # gauss_prob['model_params:ky'] = 0.494776
+
+            # using ky with n_std_dev = 4
+            # gauss_prob['model_params:ke'] = 0.051030
+            # gauss_prob['model_params:spread_angle'] = 2.584067
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.618665
+            # gauss_prob['model_params:ky'] = 0.214723
+
+            # using ky with n_std_dev = 3
+            # gauss_prob['model_params:ke'] = 0.051079
+            # gauss_prob['model_params:spread_angle'] = 0.943942
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.579857
+            # gauss_prob['model_params:ky'] = 0.078069
+
+            # for decoupled ky with n_std_dev = 4
+            gauss_prob['model_params:ke'] = 0.051145
+            gauss_prob['model_params:spread_angle'] = 2.617982
+            gauss_prob['model_params:rotation_offset_angle'] = 3.616082
+            gauss_prob['model_params:ky'] = 0.211496
+
+            # for decoupled ky with n_std_dev = 6 and double diameter wake at rotor pos
+            gauss_prob['model_params:ke'] = 0.051030
+            gauss_prob['model_params:spread_angle'] = 1.864696
+            gauss_prob['model_params:rotation_offset_angle'] = 3.362729
+            gauss_prob['model_params:ky'] = 0.193011
+
+            # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3
+            gauss_prob['model_params:ke'] = 0.007523
+            gauss_prob['model_params:spread_angle'] = 1.876522
+            gauss_prob['model_params:rotation_offset_angle'] = 3.633083
+            gauss_prob['model_params:ky'] = 0.193160
+
+
 
         prob['turbineX'] = turbineX
         prob['turbineY'] = turbineY
@@ -94,6 +142,7 @@ if __name__ == "__main__":
         prob['windSpeeds'] = np.array([wind_speed])
         prob['windDirections'] = np.array([wind_direction])
 
+        # prob.run_once()
         prob.run()
 
     for indx, prob in enumerate(probs):

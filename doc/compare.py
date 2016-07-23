@@ -64,9 +64,9 @@ if __name__ == "__main__":
         prob['windSpeeds'] = np.array([wind_speed])
         prob['windDirections'] = np.array([wind_direction])
 
-    gauss_prob['model_params:ke'] = 0.052
-    gauss_prob['model_params:spread_angle'] = 6.
-    gauss_prob['model_params:rotation_offset_angle'] = 2.0
+    # gauss_prob['model_params:ke'] = 0.052
+    # gauss_prob['model_params:spread_angle'] = 6.
+    # gauss_prob['model_params:rotation_offset_angle'] = 2.0
 
     # for axialInd calc only
     # gauss_prob['model_params:ke'] = 0.050688
@@ -83,11 +83,32 @@ if __name__ == "__main__":
     # gauss_prob['model_params:spread_angle'] =  6.368191
     # gauss_prob['model_params:rotation_offset_angle'] = 1.855112
 
-    # for added n_st_dev param
-    gauss_prob['model_params:ke'] = 0.050755
-    gauss_prob['model_params:spread_angle'] = 11.205766
-    gauss_prob['model_params:rotation_offset_angle'] = 3.651790
-    gauss_prob['model_params:n_std_dev'] = 9.304371
+    # for added n_st_dev param #1
+    # gauss_prob['model_params:ke'] = 0.050755
+    # gauss_prob['model_params:spread_angle'] = 11.205766#*0.97
+    # gauss_prob['model_params:rotation_offset_angle'] = 3.651790
+    # gauss_prob['model_params:n_std_dev'] = 9.304371
+
+    # for added n_st_dev param #2
+    # gauss_prob['model_params:ke'] = 0.051010
+    # gauss_prob['model_params:spread_angle'] = 11.779591
+    # gauss_prob['model_params:rotation_offset_angle'] = 3.564547
+    # gauss_prob['model_params:n_std_dev'] = 9.575505
+
+    # for decoupled ky with n_std_dev = 4
+    gauss_prob['model_params:ke'] = 0.051145
+    gauss_prob['model_params:spread_angle'] = 2.617982
+    gauss_prob['model_params:rotation_offset_angle'] = 3.616082
+    gauss_prob['model_params:ky'] = 0.211496
+
+    # for integrating for decoupled ky with n_std_dev = 4, error = 1034.3
+    # gauss_prob['model_params:ke'] = 0.016969
+    # gauss_prob['model_params:ke'] = 0.052
+    # gauss_prob['model_params:spread_angle'] = 0.655430
+    # gauss_prob['model_params:rotation_offset_angle'] = 3.615754
+    # gauss_prob['model_params:ky'] = 0.195392
+
+    gauss_prob['model_params:integrate'] = False
 
     ICOWESdata = loadmat('../data/YawPosResults.mat')
     yawrange = ICOWESdata['yaw'][0]
