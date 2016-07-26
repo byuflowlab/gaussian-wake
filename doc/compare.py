@@ -114,17 +114,17 @@ if __name__ == "__main__":
     # gauss_prob['model_params:ky'] = 0.199385
 
     # for decoupled ke with n_std_dev=4, linear, not integrating
-    gauss_prob['model_params:ke'] = 0.051190
-    gauss_prob['model_params:spread_angle'] = 2.619202
-    gauss_prob['model_params:rotation_offset_angle'] = 3.629337
-    gauss_prob['model_params:ky'] = 0.211567
+    # gauss_prob['model_params:ke'] = 0.051190
+    # gauss_prob['model_params:spread_angle'] = 2.619202
+    # gauss_prob['model_params:rotation_offset_angle'] = 3.629337
+    # gauss_prob['model_params:ky'] = 0.211567
 
 
     # for decoupled ky with n_std_dev = 4, error = 1332.49, not integrating, power law
-    # gauss_prob['model_params:ke'] = 0.051360
-    # gauss_prob['model_params:rotation_offset_angle'] = 3.197348
-    # gauss_prob['model_params:Dw0'] = 1.804024
-    # gauss_prob['model_params:m'] = 0.0
+    gauss_prob['model_params:ke'] = 0.051360
+    gauss_prob['model_params:rotation_offset_angle'] = 3.197348
+    gauss_prob['model_params:Dw0'] = 1.804024
+    gauss_prob['model_params:m'] = 0.0
 
     # for decoupled ky with n_std_dev = 4, error = 1630.8, with integrating, power law
     # gauss_prob['model_params:ke'] = 0.033165
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # gauss_prob['model_params:ky'] = 0.191178
 
     gauss_prob['model_params:integrate'] = False
-    gauss_prob['model_params:spread_mode'] = 'linear'
+    gauss_prob['model_params:spread_mode'] = 'power'
     gauss_prob['model_params:n_std_dev'] = 4
 
     ICOWESdata = loadmat('../data/YawPosResults.mat')
