@@ -79,14 +79,21 @@ def setup_probs():
 
     floris_options = {'differentiable': True, 'nSamples': 0, 'use_rotor_components': False}
 
-    floris_prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
+    floris_prob_orig = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
                                wake_model=floris_wrapper, wake_model_options=floris_options, datasize=0,
                                params_IdepVar_func=add_floris_params_IndepVarComps,
                                params_IndepVar_args={}))
 
-    probs = [gauss_prob, floris_prob]
+    floris_prob_tuned = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
+                               wake_model=floris_wrapper, wake_model_options=floris_options, datasize=0,
+                               params_IdepVar_func=add_floris_params_IndepVarComps,
+                               params_IndepVar_args={}))
+
+    probs = [gauss_prob, floris_prob_orig, floris_prob_tuned]
     for prob in probs:
         prob.setup()
+        if prob is floris_prob_orig or prob is floris_prob_tuned:
+            prob['model_params:useWakeAngle'] = True
 
         turbineX = np.array([1118.1, 1881.9])
         turbineY = np.array([1279.5, 1720.5])
@@ -107,6 +114,19 @@ def setup_probs():
 
 def set_params(probs):
 
+    # floris params
+    # probs[2]['model_params:kd'] = xdict['kd']
+    # probs[2]['model_params:initialWakeAngle'] = xdict['initialWakeAngle']
+    # probs[2]['model_params:initialWakeDisplacement'] = xdict['initialWakeDisplacement']
+    # probs[2]['model_params:bd'] = xdict['bd']
+    # probs[2]['model_params:ke'] = xdict['ke']
+    # probs[2]['model_params:me'] = np.array([xdict['me'][0], xdict['me'][1], 1.0])
+    # probs[2]['model_params:MU'] = np.array([xdict['MU'][0], 1.0, xdict['MU'][1]])
+    # probs[2]['model_params:aU'] = xdict['aU']
+    # probs[2]['model_params:bU'] = xdict['bU']
+    # probs[2]['model_params:cos_spread'] = xdict['cos_spread']
+
+    # gauss params
     # probs[0]['model_params:ke'] = 0.052
     # probs[0]['model_params:spread_angle'] = 6.
     # probs[0]['model_params:rotation_offset_angle'] = 2.0
@@ -384,11 +404,14 @@ if __name__ == "__main__":
     angle_scalar = 1.
     floris_color = 'b'
     gauss_color = 'r'
+    floris_tuned_color = 'c'
     floris_line = '-'
+    floris_tuned_line = '-.'
     gauss_line = '--'
 
     FlorisError = 0.0
     GaussError = 0.0
+    FlorisTunedError = 0.0
 
     # ################## compare yaw ######################
     YawPowFig, YawPowAx = plt.subplots(ncols=2, nrows=1, sharey=False)
@@ -397,6 +420,7 @@ if __name__ == "__main__":
     yawrange = np.array(list(yawrange_4D))
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     # set to 4D positions and inflow velocity
     for prob in probs:
@@ -412,9 +436,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     # print FlorisPower
 
@@ -430,13 +456,20 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=angle_scalar, yscalar=power_scalar)
 
-    # FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
-    # GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    plot_data_vs_model(ax=YawPowAx[0], datax=yawrange, datay=SOWFApower, modelx=yawrange,
+                       modely=FlorisPowerTuned, title='4D', xlabel='yaw angle (deg.)', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=angle_scalar, yscalar=power_scalar)
+
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
     # 7D yaw
     yawrange = ICOWESdata['yaw'][0]
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     # set to 7D positions
     for prob in probs:
@@ -453,9 +486,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     # plot
 
@@ -471,8 +506,14 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=angle_scalar, yscalar=power_scalar)
 
-    # FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
-    # GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    plot_data_vs_model(ax=YawPowAx[1], datax=yawrange, datay=SOWFApower, modelx=yawrange,
+                       modely=FlorisPowerTuned, title='7D', xlabel='yaw angle (deg.)', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=angle_scalar, yscalar=power_scalar)
+
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
     # ################## compare position ######################
     PosPowFig, PosPowAx = plt.subplots(ncols=2, nrows=2, sharey=False)
@@ -483,9 +524,9 @@ if __name__ == "__main__":
 
     # position crosswind 4D
     posrange = np.array(list(posrange_cs_4D))
-    print posrange, 'here'
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     for pos2 in posrange:
         # Define turbine locations and orientation (4D)
@@ -503,9 +544,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     SOWFApower = SOWFApower_cs_4D*1E-3
     # print error_turbine2
@@ -520,14 +563,20 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    plot_data_vs_model(ax=PosPowAx[0, 0], datax=posrange, datay=SOWFApower, modelx=posrange,
+                       modely=FlorisPowerTuned, title='4D', xlabel='y/D', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=power_scalar)
+
     FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
     GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
     # position crosswind 6D
     posrange = np.array(list(posrange_cs_6D))
-    print posrange
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     for prob in probs:
         prob['windSpeeds'] = np.array([PFvelocity])
@@ -548,9 +597,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     SOWFApower = SOWFApower_cs_6D*1E-3
     # print error_turbine2
@@ -565,13 +616,20 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    plot_data_vs_model(ax=PosPowAx[0, 1], datax=posrange, datay=SOWFApower, modelx=posrange,
+                       modely=FlorisPowerTuned, title='6D', xlabel='y/D', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=power_scalar)
+
     FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
     GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
     # position crosswind 7D
     posrange = ICOWESdata['pos'][0]
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     for prob in probs:
         prob['windSpeeds'] = np.array([ICOWESvelocity])
@@ -592,9 +650,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     SOWFApower = np.array([ICOWESdata['posPowerT1'][0], ICOWESdata['posPowerT2'][0]]).transpose()/1000.
 
@@ -610,14 +670,20 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    plot_data_vs_model(ax=PosPowAx[1, 0], datax=posrange, datay=SOWFApower, modelx=posrange,
+                       modely=FlorisPowerTuned, title='7D', xlabel='y/D', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=power_scalar)
+
     FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
     GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
     # position downstream
     posrange = np.array(list(posrange_ds))*rotor_diameter
-    print posrange
     GaussianPower = list()
     FlorisPower = list()
+    FlorisPowerTuned = list()
 
     for prob in probs:
         prob['windSpeeds'] = np.array([PFvelocity])
@@ -632,9 +698,11 @@ if __name__ == "__main__":
 
         GaussianPower.append(list(probs[0]['wtPower0']))
         FlorisPower.append(list(probs[1]['wtPower0']))
+        FlorisPowerTuned.append(list(probs[2]['wtPower0']))
 
     GaussianPower = np.array(GaussianPower)
     FlorisPower = np.array(FlorisPower)
+    FlorisPowerTuned = np.array(FlorisPowerTuned)
 
     SOWFApower = SOWFApower_ds*1E-3
     # print error_turbine2
@@ -649,10 +717,16 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    plot_data_vs_model(ax=PosPowAx[1, 1], datax=posrange, datay=SOWFApower, modelx=posrange,
+                       modely=FlorisPowerTuned, title='Downstream', xlabel='x/D', ylabel='Power (MW)',
+                       datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=power_scalar)
+
     FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
     GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+    FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
 
-    print 'Floris error: ', FlorisError, ' Gauss error: ', GaussError
+    print 'Floris error: ', FlorisError, ' Gauss error: ', GaussError, 'Floris Re-Tuned Error: ', FlorisTunedError
 
     # ################## compare velocity ######################
     PosVelFig, PosVelAx = plt.subplots(ncols=2, nrows=2, sharey=False)
@@ -667,6 +741,7 @@ if __name__ == "__main__":
 
     GaussianVelocity = list()
     FlorisVelocity = list()
+    FlorisVelocityTuned = list()
 
     for pos2 in posrange:
         for prob in probs:
@@ -675,9 +750,11 @@ if __name__ == "__main__":
 
         GaussianVelocity.append(list(probs[0]['wtVelocity0']))
         FlorisVelocity.append(list(probs[1]['wtVelocity0']))
+        FlorisVelocityTuned.append(list(probs[2]['wtVelocity0']))
 
     FlorisVelocity = np.array(FlorisVelocity)
     GaussianVelocity = np.array(GaussianVelocity)
+    FlorisVelocityTuned = np.array(FlorisVelocityTuned)
 
     plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange,
                        modely=FlorisVelocity,
@@ -688,6 +765,11 @@ if __name__ == "__main__":
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False)
+
+    plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange, modely=FlorisVelocityTuned, title='7D',
+                       xlabel='y/D', ylabel='Velocity (m/s)',
+                       modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=velocity_scalar, sum=False)
     # plt.legend()
     # plt.show()
 
@@ -699,6 +781,7 @@ if __name__ == "__main__":
 
     GaussianVelocity = list()
     FlorisVelocity = list()
+    FlorisVelocityTuned = list()
 
     for pos2 in posrange:
 
@@ -708,9 +791,11 @@ if __name__ == "__main__":
 
         GaussianVelocity.append(list(probs[0]['wtVelocity0']))
         FlorisVelocity.append(list(probs[1]['wtVelocity0']))
+        FlorisVelocityTuned.append(list(probs[2]['wtVelocity0']))
 
     FlorisVelocity = np.array(FlorisVelocity)
     GaussianVelocity = np.array(GaussianVelocity)
+    FlorisVelocityTuned = np.array(FlorisVelocityTuned)
 
     plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange,
                        modely=FlorisVelocity, modellabel='FLORIS',
@@ -721,6 +806,12 @@ if __name__ == "__main__":
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False)
+
+    plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=FlorisVelocityTuned, title='Downstream (inline)',
+                       xlabel='y/D', ylabel='Velocity (m/s)',
+                       modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
+                       modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=velocity_scalar,
+                       sum=False, front=False)
 
     PosVelAx[1, 1].plot(np.array([7.0, 7.0]), np.array([0.0, 9.0]), ':k', label='Tuning Point')
 

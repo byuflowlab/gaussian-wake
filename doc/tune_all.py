@@ -219,7 +219,7 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
             'Angle: ', prob['model_params:rotation_offset_angle'], 'm: ', prob['model_params:m'], \
             'ky: ', prob['model_params:ky']
     elif model is 'floris':
-        print 'error_turbine2: ', error_turbine2
+        print 'error_turbine2: ', error_turbine2, prob['model_params:initialWakeAngle']
 
     funcs = {'obj': error_turbine2}
     fail = False
@@ -277,7 +277,7 @@ def set_param_vals(xdict):
 
     elif model is 'floris':
         # set tuning variables
-        prob['gen_params:pP'] = xdict['pP']
+        # prob['gen_params:pP'] = xdict['pP']
         prob['model_params:kd'] = xdict['kd']
         prob['model_params:initialWakeAngle'] = xdict['initialWakeAngle']
         prob['model_params:initialWakeDisplacement'] = xdict['initialWakeDisplacement']
@@ -326,6 +326,7 @@ if __name__ == "__main__":
                                    wake_model=gauss_wrapper, wake_model_options={'nSamples': 0}, datasize=0,
                                    params_IdepVar_func=add_gauss_params_IndepVarComps,
                                    params_IndepVar_args={}))
+        prob.setup()
         prob['model_params:integrate'] = False
         prob['model_params:spread_mode'] = 'power'
         prob['model_params:n_std_dev'] = 4.
@@ -337,8 +338,8 @@ if __name__ == "__main__":
                                    wake_model_options={'nSamples': 0, 'use_rotor_components': False,
                                                        'differentiable': True}, datasize=0,
                                    params_IdepVar_func=add_floris_params_IndepVarComps))
-
-    prob.setup()
+        prob.setup()
+        prob['model_params:useWakeAngle'] = True
 
     # initialize optimization problem
     optProb = Optimization('Tuning %s Model to SOWFA' % model, tuning_obj_function)
@@ -352,19 +353,19 @@ if __name__ == "__main__":
         #                     scalar=np.ones(3)*1E-2)
         optProb.addVarGroup('m', 3, lower=np.array([0., 0., -2.]), upper=np.array([0.49, 0.49, 0.]), value=np.array([0.33, 0.33, -0.57]))#, scalar=1E-3)
     elif model is 'floris':
-        optProb.addVarGroup('pP', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
-        optProb.addVarGroup('kd', 1, lower=1.0, upper=5.0, value=1.5)  # , scalar=1E-1)
-        optProb.addVarGroup('initialWakeAngle', 1, lower=-10.0, upper=10.0, value=1.5)  # , scalar=1E-1)
-        optProb.addVarGroup('initialWakeDisplacement', 1, lower=-20.0, upper=20.0, value=1.5)  # , scalar=1E-1)
+        # optProb.addVarGroup('pP', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
+        optProb.addVarGroup('kd', 1, lower=0.0, upper=1.0, value=0.15)  # , scalar=1E-1)
+        optProb.addVarGroup('initialWakeAngle', 1, lower=-10.0, upper=10.0, value=3.5)  # , scalar=1E-1)
+        optProb.addVarGroup('initialWakeDisplacement', 1, lower=-30.0, upper=30.0, value=0.0)  # , scalar=1E-1)
         optProb.addVarGroup('bd', 1, lower=-1.0, upper=1.0, value=-0.01)  # , scalar=1E-1)
         optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.065)  # , scalar=1E-1)
         optProb.addVarGroup('me', 2, lower=np.array([-10.0, 0.0]), upper=np.array([0.0, 0.9]),
                             value=np.array([-0.5, 0.3]))  # , scalar=1E-1)
-        optProb.addVarGroup('MU', 2, lower=np.array([-10.0, 0.0]), upper=np.array([-10.0, 0.0]),
+        optProb.addVarGroup('MU', 2, lower=np.array([0.0, 1.5]), upper=np.array([1.0, 20.0]),
                             value=np.array([0.5, 5.5]))  # , scalar=1E-1)
-        optProb.addVarGroup('aU', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
-        optProb.addVarGroup('bU', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
-        optProb.addVarGroup('cos_spread', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
+        optProb.addVarGroup('aU', 1, lower=0.0, upper=20.0, value=5.0)  # , scalar=1E-1)
+        optProb.addVarGroup('bU', 1, lower=0.0, upper=5.0, value=1.66)  # , scalar=1E-1)
+        optProb.addVarGroup('cos_spread', 1, lower=0.0, upper=10.0, value=2.0)  # , scalar=1E-1)
 
     # add objective
     optProb.addObj('obj', scale=1E-6)
