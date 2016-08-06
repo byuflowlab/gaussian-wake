@@ -56,11 +56,13 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
         temp = 0
     try:
         prob['model_params:Dw0'] = xdict['Dw0']
+        # print prob['model_params:Dw0'], xdict['Dw0']
+        # quit()
         # print prob['model_params:n_std_dev']
     except:
         # print "here here"
         # quit()
-        temp = 0
+        temp = np.zeros(3)
     try:
         prob['model_params:m'] = xdict['m']
         # print prob['model_params:n_std_dev']
@@ -199,20 +201,23 @@ if __name__ == "__main__":
     prob.setup()
     prob['model_params:integrate'] = False
     prob['model_params:spread_mode'] = 'linear'
+    prob['model_params:n_std_dev'] = 4.
+    prob['model_params:m'] = 0.33
+    # prob['model_params:Dw0'] = 1.3
 
     tuning_obj_function(plot=True)
 
     # initialize optimization problem
     optProb = Optimization('Tuning Gaussian Model to SOWFA', tuning_obj_function)
-    optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.152, scalar=1E-3)
-    optProb.addVarGroup('spread_angle', 1, lower=0.0, upper=30.0, value=3.0, scalar=1)
-    optProb.addVarGroup('rotation_offset_angle', 1, lower=0.0, upper=20.0, value=2.0, scalar=1E-1)
-    optProb.addVarGroup('ky', 1, lower=0.0, upper=20.0, value=2.0, scalar=1E-4)
-    # optProb.addVarGroup('Dw0', 1, lower=0.0, upper=20.0, value=1.3, scalar=1E-2)
-    # optProb.addVarGroup('m', 1, lower=0.0, upper=20.0, value=0.33, scalar=1E-3)
+    optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.152, scalar=1)
+    # optProb.addVarGroup('spread_angle', 1, lower=0.0, upper=30.0, value=3.0, scalar=1)
+    optProb.addVarGroup('rotation_offset_angle', 1, lower=0.0, upper=5.0, value=1.5, scalar=1)
+    optProb.addVarGroup('ky', 1, lower=0.0, upper=20.0, value=0.1, scalar=1E-4)
+    optProb.addVarGroup('Dw0', 3, lower=np.zeros(3), upper=np.ones(3)*20., value=np.array([1.3, 1.3, 1.3]))#, scalar=1E-2)
+    # optProb.addVarGroup('m', 1, lower=0.1, upper=20.0, value=0.33, scalar=1E-3)
 
     # add objective
-    optProb.addObj('obj')
+    optProb.addObj('obj', scale=1*10**(-7.5))
 
     # initialize optimizer
     snopt = SNOPT()

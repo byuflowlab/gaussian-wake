@@ -77,8 +77,10 @@ def setup_probs():
                                params_IdepVar_func=add_gauss_params_IndepVarComps,
                                params_IndepVar_args={}))
 
+    floris_options = {'differentiable': True, 'nSamples': 0, 'use_rotor_components': False}
+
     floris_prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
-                               wake_model=floris_wrapper, wake_model_options=None, datasize=0,
+                               wake_model=floris_wrapper, wake_model_options=floris_options, datasize=0,
                                params_IdepVar_func=add_floris_params_IndepVarComps,
                                params_IndepVar_args={}))
 
@@ -160,11 +162,18 @@ def set_params(probs):
     # probs[0]['model_params:rotation_offset_angle'] = 3.629337
     # probs[0]['model_params:ky'] = 0.211567
 
-    # for decoupled ky with n_std_dev = 4, error = 1332.49, not integrating, power law
-    probs[0]['model_params:ke'] = 0.051360
-    probs[0]['model_params:rotation_offset_angle'] = 3.197348
-    probs[0]['model_params:Dw0'] = 1.804024
-    probs[0]['model_params:m'] = 0.0
+    # for n_std_dev = 4, error = 1332.49, not integrating, power law
+    # probs[0]['model_params:ke'] = 0.051360
+    # probs[0]['model_params:rotation_offset_angle'] = 3.197348
+    # probs[0]['model_params:Dw0'] = 1.804024
+    # probs[0]['model_params:Dw0'] = 1.63
+    # probs[0]['model_params:m'] = 0.00
+
+    # for n_std_dev = 5.4, error = 1136.21, not integrating, power law
+    # probs[0]['model_params:ke'] = 0.051147
+    # probs[0]['model_params:rotation_offset_angle'] = 3.616963
+    # probs[0]['model_params:Dw0'] = 1.834599
+    # probs[0]['model_params:m'] = 0.096035
 
     # for decoupled ky with n_std_dev = 4, error = 1630.8, with integrating, power law
     # probs[0]['model_params:ke'] = 0.033165
@@ -186,9 +195,150 @@ def set_params(probs):
     # probs[0]['model_params:Dw0'] = 0.602132
     # probs[0]['model_params:ky'] = 0.191178
 
+    # for power law yaw, deficit, and expansion, error = 1759.5
+    # probs[0]['model_params:rotation_offset_angle'] = 1.393646
+    # probs[0]['model_params:Dw0'] = 1.254036
+    # probs[0]['model_params:m'] = 0.166732
+
+    # for power law yaw, deficit, and expansion (reccomended values)
+    # probs[0]['model_params:rotation_offset_angle'] = 1.393646
+    # probs[0]['model_params:Dw0'] = 1.33
+    # probs[0]['model_params:m'] = 0.33
+
+    # for power law all, Dw0 separate, tuned m
+    # probs[0]['model_params:rotation_offset_angle'] = 1.454099
+    # probs[0]['model_params:Dw0'] = np.array([1.305050, 1.401824, 1.420907])
+    # probs[0]['model_params:m'] = 0.101128
+
+    # for power law all, Dw0 separate, constant m
+    # probs[0]['model_params:rotation_offset_angle'] = 1.454099
+    # probs[0]['model_params:rotation_offset_angle'] = 1.096865
+    # probs[0]['model_params:Dw0'] = np.array([1.281240, 0.897360, 0.911161])
+    # probs[0]['model_params:Dw0'] = np.array([1.3, 1.00005, 1.])
+    # probs[0]['model_params:m'] = 0.
+
+    # for power all but deficit with constant m
+    # probs[0]['model_params:ke'] = 0.051126
+    # probs[0]['model_params:rotation_offset_angle'] = 3.603684
+    # probs[0]['model_params:Dw0'] = np.array([1.794989, 0.863206, 1.])
+    # probs[0]['model_params:m'] = 0.33
+
+    # for power law all with constant m
+    # probs[0]['model_params:rotation_offset_angle'] = 0.620239
+    # probs[0]['model_params:Dw0'] = np.array([1.265505, 0.958504, 0.896609])
+    # probs[0]['model_params:Dw0'] = np.array([1.3, 0.958504, 0.896609])
+    # probs[0]['model_params:m'] = 0.33
+
+    # for power law all with tuned m
+    # probs[0]['model_params:rotation_offset_angle'] = 0.727846
+    # probs[0]['model_params:Dw0'] = np.array([1.185009, 1.140757, 1.058244])
+    # probs[0]['model_params:m'] = 0.230722
+
+    # for power law all with tuned m and double weight yaw error
+    # probs[0]['model_params:rotation_offset_angle'] = 0.802148541875
+    # probs[0]['model_params:Dw0'] = np.array([1.18307813, 1.16833547, 1.08521648])
+    # probs[0]['model_params:m'] = 0.210864251457
+
+    # for power law all with tuned m and 20x weight yaw error
+    # probs[0]['model_params:rotation_offset_angle'] = 0.871926
+    # probs[0]['model_params:Dw0'] = np.array([1.190799, 1.223558, 1.142646])
+    # probs[0]['model_params:m'] = 0.167548
+
+    # for power law all with individually tuned m and Dw0
+    # probs[0]['model_params:rotation_offset_angle'] = 0.811689835284
+    # probs[0]['model_params:Dw0'] = np.array([1.22226021, 1.39849858, 0.97207545])
+    # probs[0]['model_params:m'] = np.array([0.15566507, 0.1, 0.28422703])
+
+    # for power law all with individually tuned m and Dw0, yaw weighted by 3
+    # probs[0]['model_params:rotation_offset_angle'] = 0.884526810188
+    # probs[0]['model_params:Dw0'] = np.array([1.21546909, 1.37702043, 0.95703538])
+    # probs[0]['model_params:m'] = np.array([0.17499415, 0.1, 0.28738021])
+
+    # for power law all with individually tuned m and Dw0, yaw weighted by 3
+    # probs[0]['model_params:rotation_offset_angle'] = 0.726281139043
+    # probs[0]['model_params:Dw0'] = np.array([10.80879724, 1.25208657, 0.62180341])
+    # probs[0]['model_params:m'] = np.array([0.5014354, 0.1, 0.53332655])
+
+    # for individual power law for diam and deficit. Yaw with linear model
+    # probs[0]['model_params:rotation_offset_angle'] = 0.810644329131
+    # probs[0]['model_params:Dw0'] = np.array([1.3, 1.64288886, 0.9818137])
+    # probs[0]['model_params:m'] = np.array([0.33, 0., 0.27860778])
+    # probs[0]['model_params:ky'] = 0.0679899837662
+
+    # for power law all with individually tuned m and Dw0, using 2*a instead of a-1
+    # probs[0]['model_params:rotation_offset_angle'] = 2.11916457882
+    # probs[0]['model_params:Dw0'] = np.array([1.86868658, 1.6258426, 0.94648549])
+    # probs[0]['model_params:m'] = np.array([0., 0., 0.29782246])
+
+    # # for power law with individually tuned m and Dw0, linear yaw, including rotor offset, using 2*a instead of a-1
+    # probs[0]['model_params:rotation_offset_angle'] = 1.482520
+    # probs[0]['model_params:ky'] = 0.204487
+    # probs[0]['model_params:Dw0'] = np.array([1.3, 0.607414, 0.107801])
+    # probs[0]['model_params:m'] = np.array([0.33, 0., 0.964934])
+
+    # for power law with individually tuned m and Dw0 including rotor offset for diam and deficit, using 2*a instead of a-1
+    # probs[0]['model_params:rotation_offset_angle'] = 2.054952
+    # probs[0]['model_params:Dw0'] = np.array([1.869272, 0.612485, 0.123260])
+    # probs[0]['model_params:m'] = np.array([0., 0., 0.885561])
+
+    # for power law with individually tuned m and Dw0 using Aitken power law for deficit, linear offset
+    # probs[0]['model_params:rotation_offset_angle'] = 0.921858
+    # probs[0]['model_params:ky'] = 0.085021
+    # probs[0]['model_params:Dw0'] = np.array([1.342291, 1.641186, 0.728072])
+    # probs[0]['model_params:m'] = np.array([0.100775, 0., -0.585698])
+
+    # for power law with individually tuned m and Dw0 using Aitken power law for deficit, inflow for Fleming data at 8.3....
+    # probs[0]['model_params:rotation_offset_angle'] = 1.062842
+    # probs[0]['model_params:rotation_offset_angle'] = 2.062842
+    # probs[0]['model_params:Dw0'] = np.array([1.333577, 1.621352, 0.639195])
+    # probs[0]['model_params:m'] = np.array([0.130396, 0., -0.522295])
+
+    # for power law with individually tuned m and Dw0 using Aitken power law for deficit, inflow for Fleming data at 8.3....
+    # probs[0]['model_params:rotation_offset_angle'] = 0.946076
+    # probs[0]['model_params:Dw0'] = np.array([1.353735, 1.623139, 0.656002])
+    # probs[0]['model_params:m'] = np.array([0.236072, 0., -0.541287])
+
+    # for power law with suggested m and Dw0 using Aitken power law for deficit, inflow for Fleming data at 8.3....
+    # probs[0]['model_params:rotation_offset_angle'] = 1.5
+    # probs[0]['model_params:Dw0'] = np.array([1.3, 1.3, 0.56])
+    # probs[0]['model_params:m'] = np.array([0.33, 0.33, -0.57])
+
+    # linear everything - coupled - tuned to all data - inflow for Fleming data at 8.3....
+    # probs[0]['model_params:ke'] = 0.052166
+    # probs[0]['model_params:spread_angle'] = 3.156446 - 3.0
+    # probs[0]['model_params:rotation_offset_angle'] = 1.124459 + 2.0
+    # probs[0]['model_params:ky'] = 0.247883 + 0.1
+
+    # for n_std_dev = 4, error = 1332.49, not integrating, power law
+    # probs[0]['model_params:ke'] = 0.051360
+    # probs[0]['model_params:rotation_offset_angle'] = 3.197348
+    # probs[0]['model_params:Dw0'] = np.array([1.804024, 1.804024, 1.804024])
+    # probs[0]['model_params:m'] = np.array([0.0, 0.0, 0.0])
+
+    # for n_std_dev = 4, linear all, 2*D
+    # probs[0]['model_params:ke'] = 0.112334
+    # probs[0]['model_params:ky'] = 0.468530
+    # probs[0]['model_params:spread_angle'] = 0.0
+    # probs[0]['model_params:rotation_offset_angle'] = 1.915430
+
+    # rederived yaw with power. Power law all
+    # probs[0]['model_params:rotation_offset_angle'] = 1.5*0.946076
+    # probs[0]['model_params:Dw0'] = np.array([1.353735, 1.623139, 0.656002])
+    # probs[0]['model_params:m'] = np.array([0.236072, 0.0, -0.541287])
+
+    # rederived yaw with power. Power law all. Dw0[0]=Dw0[1], m[0]=m[1]
+    # probs[0]['model_params:rotation_offset_angle'] = 1.02985
+    # probs[0]['model_params:Dw0'] = np.array([1.388779, 1.388779, 0.642637])
+    # probs[0]['model_params:m'] = np.array([0.100669, 0.100669, -0.530337])
+
+    # rederived yaw with power. Power law all. Dw0[0]=Dw0[1], m[0]=m[1], tuned to all data
+    probs[0]['model_params:rotation_offset_angle'] = 1.052238
+    probs[0]['model_params:Dw0'] = np.array([1.364724, 1.364724, 0.663934])
+    probs[0]['model_params:m'] = np.array([0.092746, 0.092746, -0.542009])
+
     probs[0]['model_params:integrate'] = False
     probs[0]['model_params:spread_mode'] = 'power'
-    probs[0]['model_params:n_std_dev'] = 4
+    probs[0]['model_params:n_std_dev'] = 4.
 
 
 if __name__ == "__main__":
@@ -227,6 +377,7 @@ if __name__ == "__main__":
     rotor_diameter = probs[0]['rotorDiameter'][0]
     ICOWESvelocity = 8.0
     PFvelocity = 8.48673684
+    PFvelocity = 8.38673684
     power_scalar = 1E-3
     distance_scalar = 1./rotor_diameter
     velocity_scalar = 1.
@@ -235,6 +386,9 @@ if __name__ == "__main__":
     gauss_color = 'r'
     floris_line = '-'
     gauss_line = '--'
+
+    FlorisError = 0.0
+    GaussError = 0.0
 
     # ################## compare yaw ######################
     YawPowFig, YawPowAx = plt.subplots(ncols=2, nrows=1, sharey=False)
@@ -276,7 +430,9 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=angle_scalar, yscalar=power_scalar)
 
-    # YawPowAx[0].legend(loc=4)
+    # FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    # GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+
     # 7D yaw
     yawrange = ICOWESdata['yaw'][0]
     GaussianPower = list()
@@ -315,6 +471,9 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=angle_scalar, yscalar=power_scalar)
 
+    # FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    # GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+
     # ################## compare position ######################
     PosPowFig, PosPowAx = plt.subplots(ncols=2, nrows=2, sharey=False)
 
@@ -324,7 +483,7 @@ if __name__ == "__main__":
 
     # position crosswind 4D
     posrange = np.array(list(posrange_cs_4D))
-    print posrange
+    print posrange, 'here'
     GaussianPower = list()
     FlorisPower = list()
 
@@ -360,6 +519,9 @@ if __name__ == "__main__":
                        modely=GaussianPower, title='4D', xlabel='y/D', ylabel='Power (MW)',
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
+
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
 
     # position crosswind 6D
     posrange = np.array(list(posrange_cs_6D))
@@ -403,6 +565,9 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+
     # position crosswind 7D
     posrange = ICOWESdata['pos'][0]
     GaussianPower = list()
@@ -445,6 +610,9 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+
     # position downstream
     posrange = np.array(list(posrange_ds))*rotor_diameter
     print posrange
@@ -481,6 +649,10 @@ if __name__ == "__main__":
                        datalabel='SOWFA', modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=power_scalar)
 
+    FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
+    GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
+
+    print 'Floris error: ', FlorisError, ' Gauss error: ', GaussError
 
     # ################## compare velocity ######################
     PosVelFig, PosVelAx = plt.subplots(ncols=2, nrows=2, sharey=False)
