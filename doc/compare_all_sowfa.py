@@ -115,16 +115,16 @@ def setup_probs():
 def set_params(probs):
 
     # floris params
-    # probs[2]['model_params:kd'] = xdict['kd']
-    # probs[2]['model_params:initialWakeAngle'] = xdict['initialWakeAngle']
-    # probs[2]['model_params:initialWakeDisplacement'] = xdict['initialWakeDisplacement']
-    # probs[2]['model_params:bd'] = xdict['bd']
-    # probs[2]['model_params:ke'] = xdict['ke']
-    # probs[2]['model_params:me'] = np.array([xdict['me'][0], xdict['me'][1], 1.0])
-    # probs[2]['model_params:MU'] = np.array([xdict['MU'][0], 1.0, xdict['MU'][1]])
-    # probs[2]['model_params:aU'] = xdict['aU']
-    # probs[2]['model_params:bU'] = xdict['bU']
-    # probs[2]['model_params:cos_spread'] = xdict['cos_spread']
+    probs[2]['model_params:kd'] = 0.224109
+    probs[2]['model_params:initialWakeAngle'] = 3.384485
+    probs[2]['model_params:initialWakeDisplacement'] = 8.407578
+    probs[2]['model_params:bd'] = -0.010000
+    probs[2]['model_params:ke'] = 0.055072
+    probs[2]['model_params:me'] = np.array([-0.000001, 0.181752, 1.0])
+    probs[2]['model_params:MU'] = np.array([0.933389, 1.0, 17.558286])
+    probs[2]['model_params:aU'] = 6.751072
+    probs[2]['model_params:bU'] = 1.681766
+    probs[2]['model_params:cos_spread'] = 9.989090
 
     # gauss params
     # probs[0]['model_params:ke'] = 0.052
@@ -352,12 +352,71 @@ def set_params(probs):
     # probs[0]['model_params:m'] = np.array([0.100669, 0.100669, -0.530337])
 
     # rederived yaw with power. Power law all. Dw0[0]=Dw0[1], m[0]=m[1], tuned to all data
-    probs[0]['model_params:rotation_offset_angle'] = 1.052238
-    probs[0]['model_params:Dw0'] = np.array([1.364724, 1.364724, 0.663934])
-    probs[0]['model_params:m'] = np.array([0.092746, 0.092746, -0.542009])
+    # probs[0]['model_params:rotation_offset_angle'] = 1.052238
+    # probs[0]['model_params:Dw0'] = np.array([1.364724, 1.364724, 0.663934])
+    # probs[0]['model_params:m'] = np.array([0.092746, 0.092746, -0.542009])
+
+    # rederived yaw with power. Power law all. Dw0[0]=Dw0[1], m[0]=m[1], tuned to all data
+    # rederived deficit using actuator disc and momentum balance
+    # probs[0]['model_params:rotation_offset_angle'] = 2.089085
+    # probs[0]['model_params:Dw0'] = np.array([1.488695, 1.488695, 0.560000])
+    # probs[0]['model_params:m'] = np.array([0.000000, 0.000000, -0.542009])
+
+    # probs[0]['model_params:rotation_offset_angle'] = 1.749621
+    # probs[0]['model_params:Dw0'] = np.array([1.267740, 1.267740, 0.560000])
+    # probs[0]['model_params:m'] = np.array([0.000000, 0.000000, -0.542009])
+
+    # power law as per Aitken et all plus axial induction*2
+    # this is a pretty reasonable fit, but defines no expansion in the wake
+    # probs[0]['model_params:rotation_offset_angle'] = 2.229160
+    # probs[0]['model_params:Dw0'] = np.array([1.889748, 1.603116, 1.037203])
+    # probs[0]['model_params:m'] = np.array([0.000000, 0.000000, -0.563005])
+
+    # power law as per Aitken et all plus axial induction*2, added x shift by 1D
+    # probs[0]['model_params:rotation_offset_angle'] = 2.078138 + 1.5
+    # probs[0]['model_params:Dw0'] = np.array([2.040208, 1.596522, 1.474140])
+    # probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.698327])
+
+    # power law as per Aitken et all plus axial induction*2, added x shift by 1D except for deficit
+    # also a reasonable fit, but no wake expansion
+    # probs[0]['model_params:rotation_offset_angle'] = 2.038664
+    # probs[0]['model_params:Dw0'] = np.array([2.038664, 1.601559, 1.055975])
+    # probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.574079])
+
+    # power law as per Aitken et all plus axial induction*2, added y shift tunable
+    # excellent fit, but no wake expansion and uses linear yaw offset
+    # probs[0]['model_params:rotation_offset_angle'] = 8.466369
+    # probs[0]['model_params:Dw0'] = np.array([1.893739, 1.586107, 0.987548])
+    # probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.524822])
+    # probs[0]['model_params:yshift'] = -21.775754
+
+    # probs[0]['model_params:rotation_offset_angle'] = 10.762858
+    # probs[0]['model_params:Dw0'] = np.array([1.748372, 1.345945, 1.045982])
+    # probs[0]['model_params:m'] = np.array([0.100000, 0.100000, -0.556969])
+    # probs[0]['model_params:yshift'] = -30.551647
+
+    #  using Bastankhah with linear yaw
+    # probs[0]['model_params:ke'] = 0.077491
+    # probs[0]['model_params:ky'] = 0.159944
+    # probs[0]['model_params:yshift'] = -4.614311
+
+    # Bastankhah with Bastankhah yaw
+    # probs[0]['model_params:ke'] = 0.07747
+    # probs[0]['model_params:ky'] = 0.159944
+    # probs[0]['model_params:yshift'] = -4.614311
+    # probs[0]['model_params:ke'] = 0.078413
+    # probs[0]['model_params:ky'] = 0.641951
+    # probs[0]['model_params:yshift'] = -3.870224
+
+    # Bastankhah with power yaw
+    # probs[0]['model_params:ke'] = 0.07747
+    # probs[0]['model_params:Dw0'] = np.array([1.49752, 1.3, 1.3])
+    # probs[0]['model_params:m'] = np.array([0.23975, 0.33, 0.33])
+    # probs[0]['model_params:yshift'] = -4.63626
 
     probs[0]['model_params:integrate'] = False
-    probs[0]['model_params:spread_mode'] = 'power'
+    probs[0]['model_params:spread_mode'] = 'linear'
+    probs[0]['model_params:yaw_mode'] = 'power'
     probs[0]['model_params:n_std_dev'] = 4.
 
 
@@ -404,7 +463,7 @@ if __name__ == "__main__":
     angle_scalar = 1.
     floris_color = 'b'
     gauss_color = 'r'
-    floris_tuned_color = 'c'
+    floris_tuned_color = 'g'
     floris_line = '-'
     floris_tuned_line = '-.'
     gauss_line = '--'
@@ -757,16 +816,16 @@ if __name__ == "__main__":
     FlorisVelocityTuned = np.array(FlorisVelocityTuned)
 
     plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange,
-                       modely=FlorisVelocity,
+                       modely=FlorisVelocity/PFvelocity,
                        modellabel='FLORIS', modelcolor=floris_color, modelline=floris_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False)
 
-    plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange, modely=GaussianVelocity, title='7D',
+    plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange, modely=GaussianVelocity/PFvelocity, title='7D',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False)
 
-    plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange, modely=FlorisVelocityTuned, title='7D',
+    plot_data_vs_model(ax=PosVelAx[1, 0], modelx=posrange, modely=FlorisVelocityTuned/PFvelocity, title='7D',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
                        modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=velocity_scalar, sum=False)
@@ -798,22 +857,22 @@ if __name__ == "__main__":
     FlorisVelocityTuned = np.array(FlorisVelocityTuned)
 
     plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange,
-                       modely=FlorisVelocity, modellabel='FLORIS',
+                       modely=FlorisVelocity/PFvelocity, modellabel='FLORIS',
                        modelcolor=floris_color, modelline=floris_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False)
 
-    plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=GaussianVelocity, title='Downstream (inline)',
+    plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=GaussianVelocity/PFvelocity, title='Downstream (inline)',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
                        xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False)
 
-    plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=FlorisVelocityTuned, title='Downstream (inline)',
+    plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=FlorisVelocityTuned/PFvelocity, title='Downstream (inline)',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
                        modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=velocity_scalar,
                        sum=False, front=False)
 
-    PosVelAx[1, 1].plot(np.array([7.0, 7.0]), np.array([0.0, 9.0]), ':k', label='Tuning Point')
+    PosVelAx[1, 1].plot(np.array([7.0, 7.0]), np.array([0.0, 1.2]), ':k', label='Tuning Point')
 
     plt.xlabel('x/D')
     plt.ylabel('Velocity (m/s)')

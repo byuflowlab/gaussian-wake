@@ -219,7 +219,12 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
             'Angle: ', prob['model_params:rotation_offset_angle'], 'm: ', prob['model_params:m'], \
             'ky: ', prob['model_params:ky']
     elif model is 'floris':
-        print 'error_turbine2: ', error_turbine2, prob['model_params:initialWakeAngle']
+        print 'error_turbine2: ', error_turbine2
+        print 'kd: ', xdict['kd'], 'initialWakeAngle: ', xdict['initialWakeAngle'], \
+            'initialWakeDisplacement: ', xdict['initialWakeDisplacement'], 'bd: ', xdict['bd'], 'ke: ', xdict['ke'], \
+            'me: ', np.array([xdict['me'][0], xdict['me'][1], 1.0]), \
+            'MU: ', np.array([xdict['MU'][0], 1.0, xdict['MU'][1]]), 'aU: ', xdict['aU'], 'bU: ', xdict['bU'], \
+            'cos_spread: ', xdict['cos_spread']
 
     funcs = {'obj': error_turbine2}
     fail = False
@@ -274,6 +279,13 @@ def set_param_vals(xdict):
             # print "here here"
             # quit()
             temp = 0
+        try:
+            prob['model_params:yshift'] = xdict['yshift']
+            # print prob['model_params:n_std_dev']
+        except:
+            # print "here here"
+            # quit()
+            temp = 0
 
     elif model is 'floris':
         # set tuning variables
@@ -293,7 +305,7 @@ def set_param_vals(xdict):
 if __name__ == "__main__":
 
     global model
-    model = 'floris'    # floris or gauss
+    model = 'gauss'    # floris or gauss
 
     nTurbines = 2
     nDirections = 1
@@ -328,8 +340,8 @@ if __name__ == "__main__":
                                    params_IndepVar_args={}))
         prob.setup()
         prob['model_params:integrate'] = False
-        prob['model_params:spread_mode'] = 'power'
-        prob['model_params:n_std_dev'] = 4.
+        prob['model_params:spread_mode'] = 'linear'
+        prob['model_params:n_std_dev'] = 4.0
         # prob['model_params:m'] = 0.33
         # prob['model_params:Dw0'] = 1.3
     elif model is 'floris':
@@ -345,21 +357,22 @@ if __name__ == "__main__":
     optProb = Optimization('Tuning %s Model to SOWFA' % model, tuning_obj_function)
 
     if model is 'gauss':
-        # optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.1, scalar=1E-3)
+        optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.1, scalar=1E-3)
         # optProb.addVarGroup('spread_angle', 1, lower=0.0, upper=30.0, value=3.0, scalar=1)
-        optProb.addVarGroup('rotation_offset_angle', 1, lower=0.0, upper=5.0, value=1.5, scalar=1E-1)
+        # optProb.addVarGroup('rotation_offset_angle', 1, lower=0.0, upper=50.0, value=1.5, scalar=1E-1)
         # optProb.addVarGroup('ky', 1, lower=0.0, upper=20.0, value=0.1, scalar=1)
-        optProb.addVarGroup('Dw0', 3, lower=np.zeros(3), upper=np.ones(3)*20., value=np.array([1.3, 1.3, 0.56]))
+        optProb.addVarGroup('Dw0', 3, lower=np.array([0.0, 1.0, 0.0]), upper=np.array([2.9, 1.9, 1.5]), value=np.array([1.3, 1.3, 1.06]))
         #                     scalar=np.ones(3)*1E-2)
-        optProb.addVarGroup('m', 3, lower=np.array([0., 0., -2.]), upper=np.array([0.49, 0.49, 0.]), value=np.array([0.33, 0.33, -0.57]))#, scalar=1E-3)
+        optProb.addVarGroup('m', 3, lower=np.array([0.0, 0.3, -2.]), upper=np.array([0.49, 0.49, 0.]), value=np.array([0.33, 0.33, -0.57]))#, scalar=1E-3)
+        optProb.addVarGroup('yshift', 1, lower=-126.4, upper=126.4, value=0.0)#, scalar=1E-3)
     elif model is 'floris':
         # optProb.addVarGroup('pP', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
         optProb.addVarGroup('kd', 1, lower=0.0, upper=1.0, value=0.15)  # , scalar=1E-1)
-        optProb.addVarGroup('initialWakeAngle', 1, lower=-10.0, upper=10.0, value=3.5)  # , scalar=1E-1)
-        optProb.addVarGroup('initialWakeDisplacement', 1, lower=-30.0, upper=30.0, value=0.0)  # , scalar=1E-1)
+        optProb.addVarGroup('initialWakeAngle', 1, lower=-4.0, upper=4.0, value=1.5)  # , scalar=1E-1)
+        optProb.addVarGroup('initialWakeDisplacement', 1, lower=-30.0, upper=30.0, value=-4.5)  # , scalar=1E-1)
         optProb.addVarGroup('bd', 1, lower=-1.0, upper=1.0, value=-0.01)  # , scalar=1E-1)
         optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.065)  # , scalar=1E-1)
-        optProb.addVarGroup('me', 2, lower=np.array([-10.0, 0.0]), upper=np.array([0.0, 0.9]),
+        optProb.addVarGroup('me', 2, lower=np.array([-1.0, 0.0]), upper=np.array([0.0, 0.9]),
                             value=np.array([-0.5, 0.3]))  # , scalar=1E-1)
         optProb.addVarGroup('MU', 2, lower=np.array([0.0, 1.5]), upper=np.array([1.0, 20.0]),
                             value=np.array([0.5, 5.5]))  # , scalar=1E-1)
