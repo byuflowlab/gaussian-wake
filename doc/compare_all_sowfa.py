@@ -404,9 +404,15 @@ def set_params(probs):
     # probs[0]['model_params:ke'] = 0.07747
     # probs[0]['model_params:ky'] = 0.159944
     # probs[0]['model_params:yshift'] = -4.614311
+
     # probs[0]['model_params:ke'] = 0.078413
     # probs[0]['model_params:ky'] = 0.641951
     # probs[0]['model_params:yshift'] = -3.870224
+
+
+    probs[0]['model_params:ke'] = 0.038993
+    probs[0]['model_params:ky'] = 0.087260
+    # probs[0]['model_params:yshift'] = -4.614311
 
     # Bastankhah with power yaw
     # probs[0]['model_params:ke'] = 0.07747
@@ -415,8 +421,8 @@ def set_params(probs):
     # probs[0]['model_params:yshift'] = -4.63626
 
     probs[0]['model_params:integrate'] = False
-    probs[0]['model_params:spread_mode'] = 'linear'
-    probs[0]['model_params:yaw_mode'] = 'power'
+    probs[0]['model_params:spread_mode'] = 'bastankhah'
+    probs[0]['model_params:yaw_mode'] = 'bastankhah'
     probs[0]['model_params:n_std_dev'] = 4.
 
 

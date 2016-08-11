@@ -284,7 +284,7 @@ class GaussianWake(Component):
         turbineYw = params['turbineYw']
         turbineZ = params['turbineZ']
         yaw = params['yaw%i' % direction_id]
-        rotorDiameter = params['rotorDiameter']*2
+        rotorDiameter = params['rotorDiameter']
         Ct = params['Ct']
         axialInduction = params['axialInduction']
         wind_speed = params['wind_speed']
@@ -501,8 +501,9 @@ def get_wake_offset(deltax, yaw, rotor_diameter, Ct, rotation_offset_angle, mode
         epsilon = 0.2*np.sqrt(beta)
 
         # deltay = (0.25)*xi*rotor_diameter*x/(epsilon*(rotor_diameter*epsilon+k*x))
-        wake_center_offset = (0.25)*np.power(rotor_diameter, 2)*wakeAngleInit*(deltax-2.)/((rotor_diameter*epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
-
+        # wake_center_offset = (0.25)*np.power(rotor_diameter, 2)*wakeAngleInit*(deltax-2.)/((rotor_diameter*epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
+        wake_center_offset = -(0.25)*rotor_diameter*wakeAngleInit*(2.*rotor_diameter-deltax)/((epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
+        wake_center_offset = -(0.25)*rotor_diameter*wakeAngleInit*(deltax)/((epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
     else:
         raise KeyError('Invalid wake offset calculation mode')
     wake_center_offset += yshift
@@ -563,9 +564,11 @@ def get_wake_deficit_point(R, deltax, wake_diameter, rotor_diameter, axial_induc
         beta = 0.5*((1.+np.sqrt(1.-Ct))/np.sqrt(1.-Ct))
         epsilon = 0.2*np.sqrt(beta)
         Rwn = epsilon + ke*deltax/rotor_diameter
+        # print epsilon*rotor_diameter, rotor_diameter
+        # quit()
         tmp0 = Rwn**2
         deficit = (1.-np.sqrt(1.-(Ct/(8.*tmp0))))\
-                  *np.exp((-1./(2.*tmp0))*((2.*R/rotor_diameter)**2))
+                  *np.exp((-1./(2.*tmp0))*((R/rotor_diameter)**2))
     else:
         # linear
         if mode is 'linear':
