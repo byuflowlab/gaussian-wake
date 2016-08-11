@@ -497,13 +497,17 @@ def get_wake_offset(deltax, yaw, rotor_diameter, Ct, rotation_offset_angle, mode
 
     elif mode is 'bastankhah':
 
+        n = 2.0
+        m = 0.0
         beta = 0.5*((1.+np.sqrt(1.-Ct))/np.sqrt(1.-Ct))
         epsilon = 0.2*np.sqrt(beta)
 
         # deltay = (0.25)*xi*rotor_diameter*x/(epsilon*(rotor_diameter*epsilon+k*x))
         # wake_center_offset = (0.25)*np.power(rotor_diameter, 2)*wakeAngleInit*(deltax-2.)/((rotor_diameter*epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
         wake_center_offset = -(0.25)*rotor_diameter*wakeAngleInit*(2.*rotor_diameter-deltax)/((epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
-        wake_center_offset = -(0.25)*rotor_diameter*wakeAngleInit*(deltax)/((epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
+        # wake_center_offset = -(0.25)*rotor_diameter*wakeAngleInit*(deltax)/((epsilon+2*ky)*(rotor_diameter*epsilon+ky*deltax))
+        wake_center_offset = -(1./4.)*wakeAngleInit*rotor_diameter*(m*rotor_diameter-deltax) / \
+                             (np.power(n, 2)*(epsilon+m*ky)*(epsilon*rotor_diameter+ky*deltax))
     else:
         raise KeyError('Invalid wake offset calculation mode')
     wake_center_offset += yshift
@@ -534,7 +538,7 @@ def get_wake_diameter(deltax, rotor_diameter, mode='linear', spread_angle=7.0, D
     elif mode is 'bastankhah':
         beta = 0.5*((1.+np.sqrt(1.-Ct))/np.sqrt(1.-Ct))
         epsilon = 0.2*np.sqrt(beta)
-        wake_diameter = 2.*rotor_diameter*(epsilon + ke*deltax/rotor_diameter)
+        wake_diameter = 2.*(rotor_diameter*epsilon + ke*deltax)
     else:
         raise KeyError('Invalid wake diameter calculation mode')
 

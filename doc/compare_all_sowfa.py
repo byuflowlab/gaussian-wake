@@ -13,7 +13,7 @@ from wakeexchange.floris import floris_wrapper, add_floris_params_IndepVarComps
 def plot_data_vs_model(ax=None, datax=np.zeros(0), datay=np.zeros(0), modelx=np.zeros(0),
                        modely=np.zeros(0), title='', xlabel='', ylabel='', datalabel='',
                        modellabel='', modelcolor='r', modelline='--', xscalar=1./126.4, yscalar=1E-3,
-                       sum=True, front=True, second=True):
+                       sum=True, front=True, second=True, legend=False):
 
     if ax is None:
         fig = plt.figure()
@@ -41,6 +41,9 @@ def plot_data_vs_model(ax=None, datax=np.zeros(0), datay=np.zeros(0), modelx=np.
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+
+    if legend:
+        ax.legend()
 
     return ax
 
@@ -385,10 +388,10 @@ def set_params(probs):
 
     # power law as per Aitken et all plus axial induction*2, added y shift tunable
     # excellent fit, but no wake expansion and uses linear yaw offset
-    # probs[0]['model_params:rotation_offset_angle'] = 8.466369
-    # probs[0]['model_params:Dw0'] = np.array([1.893739, 1.586107, 0.987548])
-    # probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.524822])
-    # probs[0]['model_params:yshift'] = -21.775754
+    probs[0]['model_params:rotation_offset_angle'] = 8.466369
+    probs[0]['model_params:Dw0'] = np.array([1.893739, 1.586107, 0.987548])
+    probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.524822])
+    probs[0]['model_params:yshift'] = -21.775754
 
     # probs[0]['model_params:rotation_offset_angle'] = 10.762858
     # probs[0]['model_params:Dw0'] = np.array([1.748372, 1.345945, 1.045982])
@@ -409,10 +412,40 @@ def set_params(probs):
     # probs[0]['model_params:ky'] = 0.641951
     # probs[0]['model_params:yshift'] = -3.870224
 
+    # probs[0]['model_params:ke'] = 0.038558
+    # probs[0]['model_params:ky'] = 0.078129
+    # probs[0]['model_params:yshift'] = -19.948941
+    # probs[0]['model_params:rotation_offset_angle'] = -4.0
 
-    probs[0]['model_params:ke'] = 0.038993
-    probs[0]['model_params:ky'] = 0.087260
+    # probs[0]['model_params:ke'] = 0.038993
+    # probs[0]['model_params:ky'] = 0.087260
     # probs[0]['model_params:yshift'] = -4.614311
+
+    # probs[0]['model_params:ke'] = 0.0390487790134
+    # probs[0]['model_params:ky'] = 0.039
+    # probs[0]['model_params:rotation_offset_angle'] = 0.72681975016
+
+    # ke = ky tuned to all
+    # probs[0]['model_params:ke'] = 0.039166
+    # probs[0]['model_params:ky'] = 0.039166
+    # probs[0]['model_params:rotation_offset_angle'] = 1.044754
+
+    # ke != ky tuned to all
+    # probs[0]['model_params:ke'] = 0.039200
+    # probs[0]['model_params:ky'] = 0.048369
+    # probs[0]['model_params:rotation_offset_angle'] = 1.175184
+
+    # ke != ky tuned to 7D
+    # probs[0]['model_params:ke'] = 0.035706
+    # probs[0]['model_params:ky'] = 0.046970
+    # probs[0]['model_params:rotation_offset_angle'] = 2.342700
+
+    # ke = ky tuned to 7D
+    # probs[0]['model_params:ke'] = 0.036002
+    # probs[0]['model_params:ky'] = 0.036002
+    # probs[0]['model_params:rotation_offset_angle'] = 1.5
+
+
 
     # Bastankhah with power yaw
     # probs[0]['model_params:ke'] = 0.07747
@@ -421,8 +454,8 @@ def set_params(probs):
     # probs[0]['model_params:yshift'] = -4.63626
 
     probs[0]['model_params:integrate'] = False
-    probs[0]['model_params:spread_mode'] = 'bastankhah'
-    probs[0]['model_params:yaw_mode'] = 'bastankhah'
+    probs[0]['model_params:spread_mode'] = 'power'
+    probs[0]['model_params:yaw_mode'] = 'power'
     probs[0]['model_params:n_std_dev'] = 4.
 
 
@@ -525,7 +558,6 @@ if __name__ == "__main__":
                        modely=FlorisPowerTuned, title='4D', xlabel='yaw angle (deg.)', ylabel='Power (MW)',
                        datalabel='SOWFA', modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
                        modelline=floris_tuned_line, xscalar=angle_scalar, yscalar=power_scalar)
-
     FlorisError += np.sum((SOWFApower[:, 1]-FlorisPower[:, 1])**2)
     GaussError += np.sum((SOWFApower[:, 1]-GaussianPower[:, 1])**2)
     FlorisTunedError += np.sum((SOWFApower[:, 1]-FlorisPowerTuned[:, 1])**2)
