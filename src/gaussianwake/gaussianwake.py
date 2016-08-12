@@ -233,7 +233,7 @@ class GaussianWake(Component):
         self.add_param('model_params:n_std_dev', val=4, desc='the number of standard deviations from the mean that are '
                                                              'assumed included in the wake diameter',
                        pass_by_object=True)
-        self.add_param('model_params:integrate', val=True, desc='if True, will integrate over the full rotor for Ueff',
+        self.add_param('model_params:integrate', val=False, desc='if True, will integrate over the full rotor for Ueff',
                        pass_by_object=True)
         self.add_param('model_params:extra_diams', val=2,
                        desc='how many diameters the wake width should be at the rotor', pass_by_object=True)
@@ -435,14 +435,13 @@ class GaussianWake(Component):
                     wakeEffCoeff = 0.
                     for turb in range(0, nTurbines):
 
-
                         deltax = turbineXw[turbI] - turbineXw[turb]
 
                         if deltax > 0.:
 
                             R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
                             wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
-                                                                         rotorDiameter[turbI], axialInduction[turb], ke,
+                                                                         rotorDiameter[turb], axialInduction[turb], ke,
                                                                          Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
                                                                          mode=spread_mode)
 
