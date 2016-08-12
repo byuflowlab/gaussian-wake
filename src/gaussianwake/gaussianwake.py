@@ -193,10 +193,10 @@ class GaussianWake(Component):
     def __init__(self, nTurbines, direction_id=0, options=None):
         super(GaussianWake, self).__init__()
 
-        self.fd_options['form'] = 'central'
-        self.fd_options['step_size'] = 1.0e-6
-        self.fd_options['step_type'] = 'relative'
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'forward'
+        self.deriv_options['step_size'] = 1.0e-6
+        self.deriv_options['step_calc'] = 'relative'
 
         self.nTurbines = nTurbines
         self.direction_id = direction_id
@@ -432,27 +432,35 @@ class GaussianWake(Component):
 
             else:
                 for turbI in range(0, nTurbines):
-                        for turb in range(0, nTurbines):
-                            wakeEffCoeff = 0.
+                    wakeEffCoeff = 0.
+                    for turb in range(0, nTurbines):
 
-                            deltax = turbineXw[turbI] - turbineXw[turb]
 
-                            if deltax > 0.:
+                        deltax = turbineXw[turbI] - turbineXw[turb]
 
-                                R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
-                                wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
-                                                                             rotorDiameter[turbI], axialInduction[turb], ke,
-                                                                             Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
-                                                                             mode=spread_mode)
+                        if deltax > 0.:
 
-                                wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+                            R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
+                            wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
+                                                                         rotorDiameter[turbI], axialInduction[turb], ke,
+                                                                         Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
+                                                                         mode=spread_mode)
 
-                        wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+                            wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
-                        velocitiesTurbines[turbI] *= wakeEffCoeff
+                            # print wakeEffCoeff
+
+
+                    # print wakeEffCoeff
+                    wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+
+
+                    velocitiesTurbines[turbI] *= wakeEffCoeff
+
+                    # print velocitiesTurbines
 
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
-        # print velocitiesTurbines
+
         if nSamples > 0.0:
             print nSamples
             unknowns['wsArray%i' % direction_id] = ws_array

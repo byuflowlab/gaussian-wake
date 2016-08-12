@@ -328,9 +328,9 @@ def set_params(probs):
 
     # linear everything - coupled - tuned to all data - inflow for Fleming data at 8.3....
     # probs[0]['model_params:ke'] = 0.052166
-    # probs[0]['model_params:spread_angle'] = 3.156446 - 3.0
-    # probs[0]['model_params:rotation_offset_angle'] = 1.124459 + 2.0
-    # probs[0]['model_params:ky'] = 0.247883 + 0.1
+    # probs[0]['model_params:spread_angle'] = 3.156446
+    # probs[0]['model_params:rotation_offset_angle'] = 1.124459
+    # probs[0]['model_params:ky'] = 0.247883
 
     # for n_std_dev = 4, error = 1332.49, not integrating, power law
     # probs[0]['model_params:ke'] = 0.051360
@@ -445,13 +445,17 @@ def set_params(probs):
     # probs[0]['model_params:ky'] = 0.036002
     # probs[0]['model_params:rotation_offset_angle'] = 1.5
 
-
-
     # Bastankhah with power yaw
     # probs[0]['model_params:ke'] = 0.07747
     # probs[0]['model_params:Dw0'] = np.array([1.49752, 1.3, 1.3])
     # probs[0]['model_params:m'] = np.array([0.23975, 0.33, 0.33])
     # probs[0]['model_params:yshift'] = -4.63626
+
+     # linear everything - coupled - tuned to all data - inflow for Fleming data at 8.3....
+    # probs[0]['model_params:ke'] = 0.051690
+    # probs[0]['model_params:spread_angle'] = 3.115443
+    # probs[0]['model_params:rotation_offset_angle'] = 1.235173
+    # probs[0]['model_params:ky'] = 0.205729
 
     probs[0]['model_params:integrate'] = False
     probs[0]['model_params:spread_mode'] = 'power'
