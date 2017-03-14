@@ -562,11 +562,11 @@ class GaussianWake(Component):
         self.add_param('model_params:spread_angle', val=5.84, units='deg', pass_by_object=True)
 
         # params for Bastankhah with yaw
-        self.add_param('model_params:ky', val=0.07, pass_by_object=True)
-        self.add_param('model_params:kz', val=0.07, pass_by_object=True)
+        self.add_param('model_params:ky', val=0.075, pass_by_object=True)
+        self.add_param('model_params:kz', val=0.075, pass_by_object=True)
         self.add_param('model_params:alpha', val=2.32, pass_by_object=True)
         self.add_param('model_params:beta', val=0.154, pass_by_object=True)
-        self.add_param('model_params:I', val=0.01, pass_by_object=True, desc='turbulence intensity')\
+        self.add_param('model_params:I', val=0.1, pass_by_object=True, desc='turbulence intensity')\
 
         self.add_param('model_params:Dw0', val=np.ones(3)*1.4, pass_by_object=True)
         self.add_param('model_params:m', val=np.ones(3)*0.33, pass_by_object=True)
@@ -728,12 +728,14 @@ class GaussianWake(Component):
                                   + np.sqrt(Ct[turb])))
                             )
                         )
+                        # print wake_offset, turbineYw[turbI]
 
+                        #TODO change the sign on wake_offset and figure out what the real issue is
                         deltav = wind_speed * (
                             (1.0 - np.sqrt(1.0 - Ct[turb] *
                                            np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
                                                                 (rotorDiameter[turb] ** 2)))) *
-                            np.exp(-0.5 * ((turbineYw[turbI] - wake_offset) / sigmay) ** 2) *
+                            np.exp(-0.5 * ((turbineYw[turbI] + wake_offset) / sigmay) ** 2) *
                             np.exp(-0.5 * ((turbineZ[turbI] - turbineZ[turb]) / sigmaz) ** 2)
                         )
 
