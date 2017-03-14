@@ -664,19 +664,49 @@ class GaussianWake(Component):
         if yaw_mode is spread_mode is 'bastankhah':
 
             velocitiesTurbines = np.tile(wind_speed, nTurbines)
+            ws_array = np.tile(wind_speed, nSamples)
 
             for turb in range(0, nTurbines):
                 x0 = rotorDiameter[turb] * (np.cos(yaw[turb]) * (1.0 + np.sqrt(1.0 - Ct[turb])) /
                                              (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct[turb])))))
                 theta_c_0 = 0.3 * yaw[turb] * (1.0 - np.sqrt(1.0 - Ct[turb] * np.cos(yaw[turb]))) / np.cos(yaw[turb])
 
-                # for loc in range(0, nSamples):  # at velX-locations
-                #
-                #     if deltax > 0.0:
+                for loc in range(0, nSamples):  # at velX-locations
+                    deltax0 = velX[loc] - (turbineXw[turb] + x0)
+                    if deltax0 > 0.0:
+                        sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
+                                                        + np.cos(yaw[turb]) / np.sqrt(8.0))
+                        sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
+                                                        + 1.0 / np.sqrt(8.0))
+                        wake_offset = rotorDiameter[turb] * (
+                            theta_c_0 * x0 / rotorDiameter[turb] +
+                            (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
+                            (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
+                            np.log(
+                                ((1.6 + np.sqrt(Ct[turb])) *
+                                 (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                                (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                                  - np.sqrt(Ct[turb]))) /
+                                ((1.6 - np.sqrt(Ct[turb])) *
+                                 (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                                (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                                  + np.sqrt(Ct[turb])))
+                            )
+                        )
+
+                        deltav = wind_speed * (
+                            (1.0 - np.sqrt(1.0 - Ct[turb] *
+                                           np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
+                                                                (rotorDiameter[turb] ** 2)))) *
+                            np.exp(-0.5 * ((velY[loc] - wake_offset) / sigmay) ** 2) *
+                            np.exp(-0.5 * ((velZ[loc] - turbineZ[turb]) / sigmaz) ** 2)
+                        )
+
+                        ws_array[loc] -= deltav
 
                 for turbI in range(0, nTurbines):  # at turbineX-locations
 
-                    deltax0 = turbineXw[turbI] - x0
+                    deltax0 = turbineXw[turbI] - (turbineXw[turb]+x0)
 
                     if deltax0 > 0.0:
                         sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
