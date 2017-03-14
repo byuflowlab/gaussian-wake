@@ -188,6 +188,339 @@ def GaussianHub(wind_speed, wind_direction, air_density, rotorDiameter, yaw, Cp,
     return velocitiesTurbines, wt_power, power, ws_array
 
 
+class GaussianWakeSA(Component):
+
+    def __init__(self, nTurbines, direction_id=0, options=None):
+
+        super(GaussianWake, self).__init__()
+
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'forward'
+        self.deriv_options['step_size'] = 1.0e-6
+        self.deriv_options['step_calc'] = 'relative'
+
+        self.nTurbines = nTurbines
+        self.direction_id = direction_id
+
+        if options is None:
+            self.radius_multiplier = 1.0
+            self.nSamples = nSamples = 0
+        else:
+            # self.radius_multiplier = options['radius multiplier']
+            self.nSamples = nSamples = options['nSamples']
+
+        # unused but required for compatibility
+        self.add_param('hubHeight', np.zeros(nTurbines), units='m')
+        self.add_param('wakeCentersYT', np.zeros(nTurbines * nTurbines), units='m')
+        self.add_param('wakeDiametersT', np.zeros(nTurbines * nTurbines), units='m')
+        self.add_param('wakeOverlapTRel', np.zeros(nTurbines * nTurbines))
+
+        # used
+        self.add_param('turbineXw', val=np.zeros(nTurbines), units='m')
+        self.add_param('turbineYw', val=np.zeros(nTurbines), units='m')
+        self.add_param('turbineZ', val=np.zeros(nTurbines), units='m')
+        self.add_param('yaw%i' % direction_id, np.zeros(nTurbines), units='deg')
+        self.add_param('rotorDiameter', val=np.zeros(nTurbines) + 126.4, units='m')
+        self.add_param('Ct', np.zeros(nTurbines), desc='Turbine thrust coefficients')
+        self.add_param('wind_speed', val=8.0, units='m/s')
+        self.add_param('axialInduction', val=np.zeros(nTurbines) + 1. / 3.)
+
+        # TODO remove unnecessary params
+        self.add_param('model_params:ke', val=0.052, pass_by_object=True)
+        self.add_param('model_params:rotation_offset_angle', val=1.56, units='deg', pass_by_object=True)
+        self.add_param('model_params:spread_angle', val=5.84, units='deg', pass_by_object=True)
+        self.add_param('model_params:spread_mode', val='bastankhah', pass_by_object=True)
+        self.add_param('model_params:yaw_mode', val='bastankhah', pass_by_object=True)
+
+        self.add_param('model_params:ky', val=0.07, pass_by_object=True)
+        self.add_param('model_params:kz', val=0.07, pass_by_object=True)
+        self.add_param('model_params:alpha', val=2.32, pass_by_object=True)
+        self.add_param('model_params:beta', val=0.154, pass_by_object=True)
+        self.add_param('model_params:I', val=0.01, pass_by_object=True, desc='turbulence intensity')
+
+        self.add_param('model_params:Dw0', val=np.ones(3) * 1.4, pass_by_object=True)
+        self.add_param('model_params:m', val=np.ones(3) * 0.33, pass_by_object=True)
+        self.add_param('model_params:n_std_dev', val=4, desc='the number of standard deviations from the mean that are '
+                                                             'assumed included in the wake diameter',
+                       pass_by_object=True)
+
+        self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
+
+        if nSamples > 0:
+            # visualization input
+            self.add_param('wsPositionXw', np.zeros(nSamples), units='m', pass_by_object=True,
+                           desc='downwind position of desired measurements in wind ref. frame')
+            self.add_param('wsPositionYw', np.zeros(nSamples), units='m', pass_by_object=True,
+                           desc='crosswind position of desired measurements in wind ref. frame')
+            self.add_param('wsPositionZ', np.zeros(nSamples), units='m', pass_by_object=True,
+                           desc='position of desired measurements in wind ref. frame')
+
+            # visualization output
+            self.add_output('wsArray%i' % direction_id, np.zeros(nSamples), units='m/s', pass_by_object=True,
+                            desc='wind speed at measurement locations')
+
+    def solve_nonlinear(self, params, unknowns, resids):
+
+        nTurbines = self.nTurbines
+        direction_id = self.direction_id
+        nSamples = self.nSamples
+
+        ke = params['model_params:ke']
+        rotation_offset_angle = params['model_params:rotation_offset_angle']
+        spread_angle = params['model_params:spread_angle']
+        n_std_dev = params['model_params:n_std_dev']
+
+        # params for Bastankhah model with yaw
+        ky = params['model_params:ky']
+        kz = params['model_params:kz']
+        alpha = params['model_params:alpha']
+        beta = params['model_params:beta']
+        I = params['model_params:I']
+        spread_mode = params['model_params:spread_mode']
+        yaw_mode = params['model_params:yaw_mode']
+
+        Dw0 = params['model_params:Dw0']
+        m = params['model_params:m']
+        integrate = params['model_params:integrate']
+        yshift = params['model_params:yshift']
+
+        # print Dw0
+
+        # rename inputs and outputs
+        turbineXw = params['turbineXw']
+        turbineYw = params['turbineYw']
+        turbineZ = params['turbineZ']
+        yaw = params['yaw%i' % direction_id]
+        rotorDiameter = params['rotorDiameter']
+        Ct = params['Ct']
+        axialInduction = params['axialInduction']
+        wind_speed = params['wind_speed']
+
+        for i in range(0, nTurbines):
+            if (Ct[i] > 0.96): # Glauert condition
+                axialInduction[i] = 0.143 + np.sqrt(0.0203-0.6427*(0.889 - Ct[i]))
+            else:
+                axialInduction[i] = 0.5*(1.0-np.sqrt(1.0-Ct[i]))
+
+        # print axialInduction
+        yaw *= np.pi/180.
+        rotation_offset_angle *= np.pi/180.
+        spread_angle *= np.pi/180.0
+
+        if self.nSamples > 0:
+            velX = params['wsPositionXw']
+            velY = params['wsPositionYw']
+            velZ = params['wsPositionZ']
+        else:
+            velX = np.zeros([0, 0])
+            velY = np.zeros([0, 0])
+            velZ = np.zeros([0, 0])
+
+        if yaw_mode is spread_mode is 'bastankhah':
+
+            velocitiesTurbines = np.tile(wind_speed, nTurbines)
+
+            for turb in range(0, nTurbines):
+                x0 = rotorDiameter[turb]*(np.cos(yaw[turb])*(1.0+np.sqrt(1.0-Ct[turb]))/
+                                           (np.sqrt(2.0)*(alpha*I+beta*(1.0-np.sqrt(1.0-Ct[turb])))))
+                theta_c_0 = 0.3*yaw[turb]*(1.0-np.sqrt(1.0-Ct[turb]*np.cos(yaw[turb])))/np.cos(yaw[turb])
+
+                # for loc in range(0, nSamples):  # at velX-locations
+                #
+                #     if deltax > 0.0:
+
+                for turbI in range(0, nTurbines):  # at turbineX-locations
+
+                    deltax0 = turbineXw[turbI] - x0
+
+                    if deltax0 > 0.0:
+
+                        sigmay = rotorDiameter[turb]*(ky*deltax0/rotorDiameter[turb]
+                                                       + np.cos(yaw[turb])/np.sqrt(8.0))
+                        sigmaz = rotorDiameter[turb]*(kz*deltax0/rotorDiameter[turb]
+                                                       + 1.0/np.sqrt(8.0))
+                        wake_offset = rotorDiameter[turb]*(
+                            theta_c_0*x0/rotorDiameter[turb] +
+                            (theta_c_0/14.7)*np.sqrt(np.cos(yaw[turb])/(ky*kz*Ct[turb])) *
+                            (2.9+1.3*np.sqrt(1.0-Ct[turb])-Ct[turb]) *
+                            np.log(
+                                ((1.6+np.sqrt(Ct[turb]))*
+                                 (1.6*np.sqrt(8.0*sigmay*sigmaz/
+                                              (np.cos(yaw[turb])*rotorDiameter[turb]**2))
+                                              -np.sqrt(Ct[turb])))/
+                                ((1.6-np.sqrt(Ct[turb]))*
+                                 (1.6*np.sqrt(8.0*sigmay*sigmaz/
+                                              (np.cos(yaw[turb])*rotorDiameter[turb]**2))
+                                              +np.sqrt(Ct[turb])))
+                            )
+                        )
+
+                        deltav = wind_speed * (
+                            (1.0 - np.sqrt(1.0 - Ct[turb]*
+                                          np.cos(yaw[turb])/(8.0*sigmay*sigmaz/
+                                                            (rotorDiameter[turb]**2)))) *
+                            np.exp(-0.5*((turbineY[turbI]-wake_offset)/sigmay)**2) *
+                            np.exp(-0.5*((turbineZ[turbI]-turbineZ[turb])/sigmaz)**2)
+                        )
+
+                        velocitiesTurbines[turbI] -= deltav
+
+        else:
+            wake_deficit_percent = (1.0-np.sqrt(1.0-(Ct*np.cos(yaw)/(8.0*Sy*Sz/d**2))))*np.exp(-0.5*(y-delt))
+
+            # calculate crosswind locations of wake centers at downstream locations of interest
+            wakeCentersY = np.zeros((nSamples, nTurbines))
+            wakeCentersYT = np.zeros((nTurbines, nTurbines))
+
+            for turb in range(0, nTurbines):
+                # wakeAngleInit = 0.5*np.sin(yaw[turb])*Ct[turb] + rotation_offset_angle
+                # print turb
+                for loc in range(0, nSamples):  # at velX-locations
+                    deltax = velX[loc]-turbineXw[turb]
+                    wakeCentersY[loc, turb] = turbineYw[turb]
+                    if deltax > 0.0:
+
+                        wakeCentersY[loc, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
+                                                                   rotation_offset_angle, mode=yaw_mode, ky=ky,
+                                                                   Dw0=Dw0[0], m=m[0], yshift=yshift)
+
+                for turbI in range(0, nTurbines):  # at turbineX-locations
+                    deltax = turbineXw[turbI]-turbineXw[turb]
+                    wakeCentersYT[turbI, turb] = turbineYw[turb]
+
+                    if deltax > 0.0:
+
+                        wakeCentersYT[turbI, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
+                                                                      rotation_offset_angle, mode=yaw_mode, ky=ky,
+                                                                      Dw0=Dw0[0], m=m[0], yshift=yshift)
+
+            # calculate wake zone diameters at locations of interest
+            wakeDiameters = np.zeros((nSamples, nTurbines))
+            wakeDiametersT = np.zeros((nTurbines, nTurbines))
+            for turb in range(0, nTurbines):
+                for loc in range(0, nSamples):  # at velX-locations
+                    deltax = velX[loc]-turbineXw[turb]
+                    if deltax > 0.0:
+                        wakeDiameters[loc, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
+                                                                     Dw0=Dw0[1], m=m[1], ke=ke)
+                        # wakeDiameters[loc, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # if wakeDiameters[loc, turb] < 126.4:
+                        # print wakeDiameters[loc, turb]
+                        # quit()
+                for turbI in range(0, nTurbines):  # at turbineX-locations
+                    deltax = turbineXw[turbI]-turbineXw[turb]
+                    if deltax > 0.0:
+                        wakeDiametersT[turbI, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
+                                                                        Dw0=Dw0[1], m=m[1], ke=ke, Ct=Ct[turb])
+                        # wakeDiametersT[turbI, turb] = np.cos(yaw[turb])*rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
+
+            velocitiesTurbines = np.tile(wind_speed, nTurbines)
+            # print velocitiesTurbines
+            ws_array = np.tile(wind_speed, nSamples)
+
+            for loc in range(0, nSamples):
+                wakeEffCoeff = 0
+                for turb in range(0, nTurbines):
+                    deltax = velX[loc] - turbineXw[turb]
+
+                    if deltax > 0:
+                        R = abs(wakeCentersY[loc, turb] - velY[loc])
+                        wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiameters[loc, turb],
+                                                                     rotorDiameter[turb], axialInduction[turb],
+                                                                     ke, n_std_dev)
+
+                        wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+
+                wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+                ws_array[loc] *= wakeEffCoeff
+
+            if integrate:
+                for turbI in range(0, nTurbines):
+                    wakeEffCoeff = 0.
+                    for turb in range(0, nTurbines):
+
+                        deltax = turbineXw[turbI] - turbineXw[turb]
+
+                        if deltax > 0.:
+                            deltay = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
+                            a = deltay - 0.5*rotorDiameter[turbI]
+                            b = deltay + 0.5*rotorDiameter[turbI]
+                            wakeEffCoeffTurbine, _ = quad(get_wake_deficit_integral, a, b,
+                                                       (deltax, deltay, wakeDiametersT[turbI, turb], rotorDiameter[turbI],
+                                                        axialInduction[turb], ke, n_std_dev))
+                            wakeEffCoeffTurbine /= 0.25*np.pi*rotorDiameter[turbI]**2
+                            wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+
+                    wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+
+                    velocitiesTurbines[turbI] *= wakeEffCoeff
+
+            else:
+                if spread_mode is 'bastankhah':
+                    indices = sorted(range(len(turbineXw)), key=lambda kidx: -turbineXw[kidx])
+                    for turbI in range(0, nTurbines):
+                        wakeEffCoeff = 0.
+
+                        for indx in indices:
+
+                            deltax = turbineXw[turbI] - turbineXw[indx]
+
+                            if deltax > 0.:
+
+                                R = abs(wakeCentersYT[turbI, indx] - turbineYw[turbI])
+                                wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, indx],
+                                                                             rotorDiameter[indx], axialInduction[indx], ke,
+                                                                             Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
+                                                                             mode=spread_mode)
+
+                                wakeEffCoeff += velocitiesTurbines[indx]*wakeEffCoeffTurbine
+                                #
+                                # half_width = (0.5/velocitiesTurbines[turbI])*get_wake_deficit_point(0.0, deltax, wakeDiametersT[turbI, indx],
+                                #                                                                     rotorDiameter[indx], axialInduction[indx], ke,
+                                #                                                                     Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
+                                #                                                                     mode=spread_mode)
+                                # print 'hw', half_width
+                        velocitiesTurbines[turbI] -= wakeEffCoeff
+                    # print velocitiesTurbines
+
+                else:
+                    for turbI in range(0, nTurbines):
+                        wakeEffCoeff = 0.
+                        for turb in range(0, nTurbines):
+
+                            deltax = turbineXw[turbI] - turbineXw[turb]
+
+                            if deltax > 0.:
+
+                                R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
+                                wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
+                                                                             rotorDiameter[turb], axialInduction[turb], ke,
+                                                                             Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
+                                                                             mode=spread_mode)
+
+                                wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+
+                                # print wakeEffCoeff
+
+
+                        # print wakeEffCoeff
+                        wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+
+
+                        velocitiesTurbines[turbI] *= wakeEffCoeff
+
+                        # print velocitiesTurbines
+
+        unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
+
+        if nSamples > 0.0:
+            print nSamples
+            unknowns['wsArray%i' % direction_id] = ws_array
+            print unknowns['wsArray%i' % direction_id]
+
+
 class GaussianWake(Component):
 
     def __init__(self, nTurbines, direction_id=0, options=None):
@@ -227,7 +560,14 @@ class GaussianWake(Component):
         self.add_param('model_params:ke', val=0.052, pass_by_object=True)
         self.add_param('model_params:rotation_offset_angle', val=1.56, units='deg', pass_by_object=True)
         self.add_param('model_params:spread_angle', val=5.84, units='deg', pass_by_object=True)
-        self.add_param('model_params:ky', val=0.5, pass_by_object=True)
+
+        # params for Bastankhah with yaw
+        self.add_param('model_params:ky', val=0.07, pass_by_object=True)
+        self.add_param('model_params:kz', val=0.07, pass_by_object=True)
+        self.add_param('model_params:alpha', val=2.32, pass_by_object=True)
+        self.add_param('model_params:beta', val=0.154, pass_by_object=True)
+        self.add_param('model_params:I', val=0.01, pass_by_object=True, desc='turbulence intensity')\
+
         self.add_param('model_params:Dw0', val=np.ones(3)*1.4, pass_by_object=True)
         self.add_param('model_params:m', val=np.ones(3)*0.33, pass_by_object=True)
         self.add_param('model_params:n_std_dev', val=4, desc='the number of standard deviations from the mean that are '
@@ -269,12 +609,19 @@ class GaussianWake(Component):
         rotation_offset_angle = params['model_params:rotation_offset_angle']
         spread_angle = params['model_params:spread_angle']
         n_std_dev = params['model_params:n_std_dev']
+
+        # params for Bastankhah model with yaw
         ky = params['model_params:ky']
+        kz = params['model_params:kz']
+        alpha = params['model_params:alpha']
+        beta = params['model_params:beta']
+        I = params['model_params:I']
+        spread_mode = params['model_params:spread_mode']
+        yaw_mode = params['model_params:yaw_mode']
+
         Dw0 = params['model_params:Dw0']
         m = params['model_params:m']
         integrate = params['model_params:integrate']
-        spread_mode = params['model_params:spread_mode']
-        yaw_mode = params['model_params:yaw_mode']
         yshift = params['model_params:yshift']
 
         # print Dw0
@@ -314,123 +661,124 @@ class GaussianWake(Component):
             velY = np.zeros([0, 0])
             velZ = np.zeros([0, 0])
 
-        # calculate crosswind locations of wake centers at downstream locations of interest
-        wakeCentersY = np.zeros((nSamples, nTurbines))
-        wakeCentersYT = np.zeros((nTurbines, nTurbines))
-        for turb in range(0, nTurbines):
-            # wakeAngleInit = 0.5*np.sin(yaw[turb])*Ct[turb] + rotation_offset_angle
-            # print turb
-            for loc in range(0, nSamples):  # at velX-locations
-                deltax = velX[loc]-turbineXw[turb]
-                wakeCentersY[loc, turb] = turbineYw[turb]
-                if deltax > 0.0:
+        if yaw_mode is spread_mode is 'bastankhah':
 
-                    wakeCentersY[loc, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
-                                                               rotation_offset_angle, mode=yaw_mode, ky=ky,
-                                                               Dw0=Dw0[0], m=m[0], yshift=yshift)
+            velocitiesTurbines = np.tile(wind_speed, nTurbines)
 
-            for turbI in range(0, nTurbines):  # at turbineX-locations
-                deltax = turbineXw[turbI]-turbineXw[turb]
-                wakeCentersYT[turbI, turb] = turbineYw[turb]
-
-                if deltax > 0.0:
-
-                    wakeCentersYT[turbI, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
-                                                                  rotation_offset_angle, mode=yaw_mode, ky=ky,
-                                                                  Dw0=Dw0[0], m=m[0], yshift=yshift)
-
-        # calculate wake zone diameters at locations of interest
-        wakeDiameters = np.zeros((nSamples, nTurbines))
-        wakeDiametersT = np.zeros((nTurbines, nTurbines))
-        for turb in range(0, nTurbines):
-            for loc in range(0, nSamples):  # at velX-locations
-                deltax = velX[loc]-turbineXw[turb]
-                if deltax > 0.0:
-                    wakeDiameters[loc, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
-                                                                 Dw0=Dw0[1], m=m[1], ke=ke)
-                    # wakeDiameters[loc, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-                    # if wakeDiameters[loc, turb] < 126.4:
-                    # print wakeDiameters[loc, turb]
-                    # quit()
-            for turbI in range(0, nTurbines):  # at turbineX-locations
-                deltax = turbineXw[turbI]-turbineXw[turb]
-                if deltax > 0.0:
-                    wakeDiametersT[turbI, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
-                                                                    Dw0=Dw0[1], m=m[1], ke=ke, Ct=Ct[turb])
-                    # wakeDiametersT[turbI, turb] = np.cos(yaw[turb])*rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-                    # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
-                    # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
-
-        velocitiesTurbines = np.tile(wind_speed, nTurbines)
-        # print velocitiesTurbines
-        ws_array = np.tile(wind_speed, nSamples)
-
-        for loc in range(0, nSamples):
-            wakeEffCoeff = 0
             for turb in range(0, nTurbines):
-                deltax = velX[loc] - turbineXw[turb]
+                x0 = rotorDiameter[turb] * (np.cos(yaw[turb]) * (1.0 + np.sqrt(1.0 - Ct[turb])) /
+                                             (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct[turb])))))
+                theta_c_0 = 0.3 * yaw[turb] * (1.0 - np.sqrt(1.0 - Ct[turb] * np.cos(yaw[turb]))) / np.cos(yaw[turb])
 
-                if deltax > 0:
-                    R = abs(wakeCentersY[loc, turb] - velY[loc])
-                    wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiameters[loc, turb],
-                                                                 rotorDiameter[turb], axialInduction[turb],
-                                                                 ke, n_std_dev)
+                # for loc in range(0, nSamples):  # at velX-locations
+                #
+                #     if deltax > 0.0:
 
-                    wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+                for turbI in range(0, nTurbines):  # at turbineX-locations
 
-            wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
-            ws_array[loc] *= wakeEffCoeff
+                    deltax0 = turbineXw[turbI] - x0
 
-        if integrate:
-            for turbI in range(0, nTurbines):
-                wakeEffCoeff = 0.
+                    if deltax0 > 0.0:
+                        sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
+                                                         + np.cos(yaw[turb]) / np.sqrt(8.0))
+                        sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
+                                                         + 1.0 / np.sqrt(8.0))
+                        wake_offset = rotorDiameter[turb] * (
+                            theta_c_0 * x0 / rotorDiameter[turb] +
+                            (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
+                            (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
+                            np.log(
+                                ((1.6 + np.sqrt(Ct[turb])) *
+                                 (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                                (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                                  - np.sqrt(Ct[turb]))) /
+                                ((1.6 - np.sqrt(Ct[turb])) *
+                                 (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                                (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                                  + np.sqrt(Ct[turb])))
+                            )
+                        )
+
+                        deltav = wind_speed * (
+                            (1.0 - np.sqrt(1.0 - Ct[turb] *
+                                           np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
+                                                                (rotorDiameter[turb] ** 2)))) *
+                            np.exp(-0.5 * ((turbineYw[turbI] - wake_offset) / sigmay) ** 2) *
+                            np.exp(-0.5 * ((turbineZ[turbI] - turbineZ[turb]) / sigmaz) ** 2)
+                        )
+
+                        velocitiesTurbines[turbI] -= deltav
+
+        else:
+
+            # calculate crosswind locations of wake centers at downstream locations of interest
+            wakeCentersY = np.zeros((nSamples, nTurbines))
+            wakeCentersYT = np.zeros((nTurbines, nTurbines))
+            for turb in range(0, nTurbines):
+                # wakeAngleInit = 0.5*np.sin(yaw[turb])*Ct[turb] + rotation_offset_angle
+                # print turb
+                for loc in range(0, nSamples):  # at velX-locations
+                    deltax = velX[loc]-turbineXw[turb]
+                    wakeCentersY[loc, turb] = turbineYw[turb]
+                    if deltax > 0.0:
+
+                        wakeCentersY[loc, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
+                                                                   rotation_offset_angle, mode=yaw_mode, ky=ky,
+                                                                   Dw0=Dw0[0], m=m[0], yshift=yshift)
+
+                for turbI in range(0, nTurbines):  # at turbineX-locations
+                    deltax = turbineXw[turbI]-turbineXw[turb]
+                    wakeCentersYT[turbI, turb] = turbineYw[turb]
+
+                    if deltax > 0.0:
+
+                        wakeCentersYT[turbI, turb] += get_wake_offset(deltax, yaw[turb], rotorDiameter[turb], Ct[turb],
+                                                                      rotation_offset_angle, mode=yaw_mode, ky=ky,
+                                                                      Dw0=Dw0[0], m=m[0], yshift=yshift)
+
+            # calculate wake zone diameters at locations of interest
+            wakeDiameters = np.zeros((nSamples, nTurbines))
+            wakeDiametersT = np.zeros((nTurbines, nTurbines))
+            for turb in range(0, nTurbines):
+                for loc in range(0, nSamples):  # at velX-locations
+                    deltax = velX[loc]-turbineXw[turb]
+                    if deltax > 0.0:
+                        wakeDiameters[loc, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
+                                                                     Dw0=Dw0[1], m=m[1], ke=ke)
+                        # wakeDiameters[loc, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # if wakeDiameters[loc, turb] < 126.4:
+                        # print wakeDiameters[loc, turb]
+                        # quit()
+                for turbI in range(0, nTurbines):  # at turbineX-locations
+                    deltax = turbineXw[turbI]-turbineXw[turb]
+                    if deltax > 0.0:
+                        wakeDiametersT[turbI, turb] = get_wake_diameter(deltax, rotorDiameter[turb], spread_mode, spread_angle,
+                                                                        Dw0=Dw0[1], m=m[1], ke=ke, Ct=Ct[turb])
+                        # wakeDiametersT[turbI, turb] = np.cos(yaw[turb])*rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*np.tan(spread_angle)*deltax
+                        # wakeDiametersT[turbI, turb] = rotorDiameter[turb]+2.0*ke*deltax
+
+            velocitiesTurbines = np.tile(wind_speed, nTurbines)
+            # print velocitiesTurbines
+            ws_array = np.tile(wind_speed, nSamples)
+
+            for loc in range(0, nSamples):
+                wakeEffCoeff = 0
                 for turb in range(0, nTurbines):
+                    deltax = velX[loc] - turbineXw[turb]
 
-                    deltax = turbineXw[turbI] - turbineXw[turb]
+                    if deltax > 0:
+                        R = abs(wakeCentersY[loc, turb] - velY[loc])
+                        wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiameters[loc, turb],
+                                                                     rotorDiameter[turb], axialInduction[turb],
+                                                                     ke, n_std_dev)
 
-                    if deltax > 0.:
-                        deltay = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
-                        a = deltay - 0.5*rotorDiameter[turbI]
-                        b = deltay + 0.5*rotorDiameter[turbI]
-                        wakeEffCoeffTurbine, _ = quad(get_wake_deficit_integral, a, b,
-                                                   (deltax, deltay, wakeDiametersT[turbI, turb], rotorDiameter[turbI],
-                                                    axialInduction[turb], ke, n_std_dev))
-                        wakeEffCoeffTurbine /= 0.25*np.pi*rotorDiameter[turbI]**2
                         wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
                 wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+                ws_array[loc] *= wakeEffCoeff
 
-                velocitiesTurbines[turbI] *= wakeEffCoeff
-
-        else:
-            if spread_mode is 'bastankhah':
-                indices = sorted(range(len(turbineXw)), key=lambda kidx: -turbineXw[kidx])
-                for turbI in range(0, nTurbines):
-                    wakeEffCoeff = 0.
-
-                    for indx in indices:
-
-                        deltax = turbineXw[turbI] - turbineXw[indx]
-
-                        if deltax > 0.:
-
-                            R = abs(wakeCentersYT[turbI, indx] - turbineYw[turbI])
-                            wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, indx],
-                                                                         rotorDiameter[indx], axialInduction[indx], ke,
-                                                                         Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
-                                                                         mode=spread_mode)
-
-                            wakeEffCoeff += velocitiesTurbines[indx]*wakeEffCoeffTurbine
-                            #
-                            # half_width = (0.5/velocitiesTurbines[turbI])*get_wake_deficit_point(0.0, deltax, wakeDiametersT[turbI, indx],
-                            #                                                                     rotorDiameter[indx], axialInduction[indx], ke,
-                            #                                                                     Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
-                            #                                                                     mode=spread_mode)
-                            # print 'hw', half_width
-                    velocitiesTurbines[turbI] -= wakeEffCoeff
-                # print velocitiesTurbines
-
-            else:
+            if integrate:
                 for turbI in range(0, nTurbines):
                     wakeEffCoeff = 0.
                     for turb in range(0, nTurbines):
@@ -438,25 +786,74 @@ class GaussianWake(Component):
                         deltax = turbineXw[turbI] - turbineXw[turb]
 
                         if deltax > 0.:
-
-                            R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
-                            wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
-                                                                         rotorDiameter[turb], axialInduction[turb], ke,
-                                                                         Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
-                                                                         mode=spread_mode)
-
+                            deltay = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
+                            a = deltay - 0.5*rotorDiameter[turbI]
+                            b = deltay + 0.5*rotorDiameter[turbI]
+                            wakeEffCoeffTurbine, _ = quad(get_wake_deficit_integral, a, b,
+                                                       (deltax, deltay, wakeDiametersT[turbI, turb], rotorDiameter[turbI],
+                                                        axialInduction[turb], ke, n_std_dev))
+                            wakeEffCoeffTurbine /= 0.25*np.pi*rotorDiameter[turbI]**2
                             wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
 
-                            # print wakeEffCoeff
-
-
-                    # print wakeEffCoeff
                     wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
-
 
                     velocitiesTurbines[turbI] *= wakeEffCoeff
 
+            else:
+                if spread_mode is 'bastankhah':
+                    indices = sorted(range(len(turbineXw)), key=lambda kidx: -turbineXw[kidx])
+                    for turbI in range(0, nTurbines):
+                        wakeEffCoeff = 0.
+
+                        for indx in indices:
+
+                            deltax = turbineXw[turbI] - turbineXw[indx]
+
+                            if deltax > 0.:
+
+                                R = abs(wakeCentersYT[turbI, indx] - turbineYw[turbI])
+                                wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, indx],
+                                                                             rotorDiameter[indx], axialInduction[indx], ke,
+                                                                             Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
+                                                                             mode=spread_mode)
+
+                                wakeEffCoeff += velocitiesTurbines[indx]*wakeEffCoeffTurbine
+                                #
+                                # half_width = (0.5/velocitiesTurbines[turbI])*get_wake_deficit_point(0.0, deltax, wakeDiametersT[turbI, indx],
+                                #                                                                     rotorDiameter[indx], axialInduction[indx], ke,
+                                #                                                                     Ct[indx], yaw[indx], n_std_dev, Dw0[2], m[2],
+                                #                                                                     mode=spread_mode)
+                                # print 'hw', half_width
+                        velocitiesTurbines[turbI] -= wakeEffCoeff
                     # print velocitiesTurbines
+
+                else:
+                    for turbI in range(0, nTurbines):
+                        wakeEffCoeff = 0.
+                        for turb in range(0, nTurbines):
+
+                            deltax = turbineXw[turbI] - turbineXw[turb]
+
+                            if deltax > 0.:
+
+                                R = abs(wakeCentersYT[turbI, turb] - turbineYw[turbI])
+                                wakeEffCoeffTurbine = get_wake_deficit_point(R, deltax, wakeDiametersT[turbI, turb],
+                                                                             rotorDiameter[turb], axialInduction[turb], ke,
+                                                                             Ct[turb], yaw[turb], n_std_dev, Dw0[2], m[2],
+                                                                             mode=spread_mode)
+
+                                wakeEffCoeff += np.power(wakeEffCoeffTurbine, 2.0)
+
+                                # print wakeEffCoeff
+
+
+                        # print wakeEffCoeff
+                        wakeEffCoeff = (1. - np.sqrt(wakeEffCoeff))
+
+
+                        velocitiesTurbines[turbI] *= wakeEffCoeff
+
+                        # print velocitiesTurbines
 
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
 
