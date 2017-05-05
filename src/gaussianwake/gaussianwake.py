@@ -145,7 +145,7 @@ class GaussianWake(Component):
                         )
                     )
 
-                    deltay = velX[loc] - (turbineYw[turb] + wake_offset)
+                    deltay = velY[loc] - (turbineYw[turb] + wake_offset)
 
                     deltav = wind_speed * (
                         (1.0 - np.sqrt(1.0 - Ct[turb] *
