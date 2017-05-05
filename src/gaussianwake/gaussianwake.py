@@ -44,11 +44,11 @@ class GaussianWake(Component):
         self.add_param('axialInduction', val=np.zeros(nTurbines)+1./3.)
 
         # params for Bastankhah with yaw
-        self.add_param('model_params:ky', val=0.075, pass_by_object=True)
-        self.add_param('model_params:kz', val=0.075, pass_by_object=True)
+        self.add_param('model_params:ky', val=0.022, pass_by_object=True)
+        self.add_param('model_params:kz', val=0.022, pass_by_object=True)
         self.add_param('model_params:alpha', val=2.32, pass_by_object=True)
         self.add_param('model_params:beta', val=0.154, pass_by_object=True)
-        self.add_param('model_params:I', val=0.1, pass_by_object=True, desc='turbulence intensity')\
+        self.add_param('model_params:I', val=0.075, pass_by_object=True, desc='turbulence intensity')\
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 

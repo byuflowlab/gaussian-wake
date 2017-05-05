@@ -87,11 +87,11 @@ if __name__ == "__main__":
     floris_prob['Cp_in'] = Cp
     # prob['model_params:spread_mode'] = 'bastankhah'
     # prob['model_params:yaw_mode'] = 'bastankhah'
-    gauss_prob['model_params:ky'] = 0.7
-    gauss_prob['model_params:kz'] = 0.7
-    gauss_prob['model_params:alpha'] = 2.32
-    gauss_prob['model_params:beta'] = 0.154
-    gauss_prob['model_params:I'] = 0.1
+    # gauss_prob['model_params:ky'] = 0.022 #0.7
+    # gauss_prob['model_params:kz'] = 0.022 #e0.7
+    # gauss_prob['model_params:alpha'] = 2.32
+    # gauss_prob['model_params:beta'] = 0.154
+    # gauss_prob['model_params:I'] = 0.075 #0.1
 
     # run the problem
     print 'start Bastankhah run'
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     toc = time.time()
 
     directions = np.arange(0.,360., 5.)
-    positions = np.arange(0.,10.*rotorDiameter[0], 5.)
+    positions = np.arange(0.,11.*rotorDiameter[0], 5.)
 
     gauss_dv = np.zeros([np.size(positions), 2])
 
