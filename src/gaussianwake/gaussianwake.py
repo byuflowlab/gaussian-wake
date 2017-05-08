@@ -125,7 +125,7 @@ class GaussianWake(Component):
 
             for loc in range(0, nSamples):  # at velX-locations
                 deltax0 = velX[loc] - (turbineXw[turb] + x0)
-                if deltax0 + x0 > 0.0:
+                if deltax0 > 0.0:
                     sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
                                                     + np.cos(yaw[turb]) / np.sqrt(8.0))
                     sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
@@ -162,7 +162,7 @@ class GaussianWake(Component):
 
                 deltax0 = turbineXw[turbI] - (turbineXw[turb] + x0)
 
-                if deltax0 + x0 > 0.0:
+                if deltax0 > 0.0:
                     sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
                                                      + np.cos(yaw[turb]) / np.sqrt(8.0))
                     sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
