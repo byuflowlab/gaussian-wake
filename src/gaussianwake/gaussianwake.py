@@ -13,8 +13,8 @@ class GaussianWake(Component):
         super(GaussianWake, self).__init__()
 
         self.deriv_options['type'] = 'fd'
-        self.deriv_options['form'] = 'forward'
-        self.deriv_options['step_size'] = 1.0e-6
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_size'] = 1.0e-12
         self.deriv_options['step_calc'] = 'relative'
 
         self.nTurbines = nTurbines
@@ -101,8 +101,9 @@ class GaussianWake(Component):
             else:
                 axialInduction[i] = 0.5*(1.0-np.sqrt(1.0-Ct[i]))
 
-        # print axialInduction
-        yaw *= np.pi/180.
+        print(yaw)
+        # NOTE: Bastankhah and Porte Agel 2016 defines yaw as positive clockwise, the negative below accounts for this
+        yaw *= -np.pi/180.
 
         if self.nSamples > 0:
             velX = params['wsPositionXw']

@@ -31,7 +31,7 @@ if __name__ == "__main__":
         # Cp[turbI] = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
         Cp[turbI] = 0.7737 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
         generatorEfficiency[turbI] = 1.0#0.944
-        yaw[turbI] = 0.     # deg.
+        yaw[turbI] = 30.     # deg.
 
     # Define flow properties
     wind_speed = 8.0        # m/s
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     gauss_prob['model_params:kz'] = 0.022  # e0.7
     gauss_prob['model_params:alpha'] = 2.32
     gauss_prob['model_params:beta'] = 0.154
-    gauss_prob['model_params:I'] = 0.075  # 0.1
+    gauss_prob['model_params:I'] = 0.07  # 0.1
 
     # run the problem
     print 'start Bastankhah run'
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # floris_prob.run()
     toc = time.time()
 
-    directions = np.arange(0.,360., 5.)
+    directions = np.arange(0.,360., 1.)
     positions = np.arange(-500.,500., 5.)
 
     gauss_AEP = np.zeros(np.size(directions))
