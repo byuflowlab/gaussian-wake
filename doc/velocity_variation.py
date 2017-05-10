@@ -135,9 +135,11 @@ if __name__ == "__main__":
 
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    ax1.plot(positions/rotorDiameter[0], gauss_dv[:, 1])
-    ax1.plot(positions/rotorDiameter[0], floris_dv[:, 1])
-    ax1.legend(labels=['gAEP', 'fAEP'],loc='lower center')
+    ax1.plot(positions/rotorDiameter[0], 1.-gauss_dv[:, 1])
+    ax1.plot(positions/rotorDiameter[0], 1.-floris_dv[:, 1])
+    ax1.legend(labels=['gvel', 'fvel'],loc='lower center')
+    ax1.set_xlabel('Downstream Position (x/D)')
+    ax1.set_ylabel('Downstream Effective Velocity (v/v0)')
 
     plt.plot()
 

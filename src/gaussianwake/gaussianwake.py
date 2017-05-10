@@ -78,7 +78,6 @@ def porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, vel
 
     # NOTE: Bastankhah and Porte Agel 2016 defines yaw as positive clockwise, the negative below accounts for this
     yaw *= -np.pi / 180.
-
     ws_array = np.tile(wind_speed, nSamples)
 
     for turb in range(0, nTurbines):
@@ -206,8 +205,10 @@ class GaussianWake(Component):
         wind_speed = params['wind_speed']
 
         # run the Bastankhah and Porte Agel model
-        velocitiesTurbines = porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, rotorDiameter, Ct,
-                                               axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
+        velocitiesTurbines = porteagel_analyze(nTurbines=nTurbines, turbineXw=turbineXw, turbineYw=turbineYw,
+                                               turbineZ=turbineZ, rotorDiameter=rotorDiameter, Ct=Ct,
+                                               axialInduction=axialInduction, wind_speed=wind_speed, yaw=np.copy(yaw),
+                                               ky=ky, kz=kz, alpha=alpha, beta=beta, I=I)
 
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
 
@@ -218,7 +219,7 @@ class GaussianWake(Component):
             velZ = params['wsPositionZ']
 
             ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
-                                           Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
+                                           Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
 
             unknowns['wsArray%i' % direction_id] = ws_array
 
