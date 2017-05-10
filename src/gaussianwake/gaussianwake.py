@@ -7,6 +7,123 @@ import time
 from openmdao.api import Component, Problem, Group
 
 
+def porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, rotorDiameter,
+                        Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
+
+    for i in range(0, nTurbines):
+        if (Ct[i] > 0.96):  # Glauert condition
+            axialInduction[i] = 0.143 + np.sqrt(0.0203 - 0.6427 * (0.889 - Ct[i]))
+        else:
+            axialInduction[i] = 0.5 * (1.0 - np.sqrt(1.0 - Ct[i]))
+
+    # NOTE: Bastankhah and Porte Agel 2016 defines yaw as positive clockwise, the negative below accounts for this
+    yaw *= -np.pi / 180.
+
+    velocitiesTurbines = np.tile(wind_speed, nTurbines)
+
+    for turb in range(0, nTurbines):
+        x0 = rotorDiameter[turb] * (np.cos(yaw[turb]) * (1.0 + np.sqrt(1.0 - Ct[turb])) /
+                                    (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct[turb])))))
+        theta_c_0 = 0.3 * yaw[turb] * (1.0 - np.sqrt(1.0 - Ct[turb] * np.cos(yaw[turb]))) / np.cos(yaw[turb])
+
+        for turbI in range(0, nTurbines):  # at turbineX-locations
+
+            deltax0 = turbineXw[turbI] - (turbineXw[turb] + x0)
+
+            if deltax0 > 0.0:
+                sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
+                                                + np.cos(yaw[turb]) / np.sqrt(8.0))
+                sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
+                                                + 1.0 / np.sqrt(8.0))
+                wake_offset = rotorDiameter[turb] * (
+                    theta_c_0 * x0 / rotorDiameter[turb] +
+                    (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
+                    (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
+                    np.log(
+                        ((1.6 + np.sqrt(Ct[turb])) *
+                         (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                        (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                          - np.sqrt(Ct[turb]))) /
+                        ((1.6 - np.sqrt(Ct[turb])) *
+                         (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                        (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                          + np.sqrt(Ct[turb])))
+                    )
+                )
+                # print wake_offset, turbineYw[turbI]
+
+                deltay = turbineYw[turbI] - (turbineYw[turb] + wake_offset)
+
+                deltav = wind_speed * (
+                    (1.0 - np.sqrt(1.0 - Ct[turb] *
+                                   np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
+                                                        (rotorDiameter[turb] ** 2)))) *
+                    np.exp(-0.5 * ((deltay) / sigmay) ** 2) *
+                    np.exp(-0.5 * ((turbineZ[turbI] - turbineZ[turb]) / sigmaz) ** 2)
+                )
+
+                velocitiesTurbines[turbI] -= deltav
+
+    return velocitiesTurbines
+
+
+def porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
+                        Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
+
+    for i in range(0, nTurbines):
+        if (Ct[i] > 0.96):  # Glauert condition
+            axialInduction[i] = 0.143 + np.sqrt(0.0203 - 0.6427 * (0.889 - Ct[i]))
+        else:
+            axialInduction[i] = 0.5 * (1.0 - np.sqrt(1.0 - Ct[i]))
+
+    # NOTE: Bastankhah and Porte Agel 2016 defines yaw as positive clockwise, the negative below accounts for this
+    yaw *= -np.pi / 180.
+
+    ws_array = np.tile(wind_speed, nSamples)
+
+    for turb in range(0, nTurbines):
+        x0 = rotorDiameter[turb] * (np.cos(yaw[turb]) * (1.0 + np.sqrt(1.0 - Ct[turb])) /
+                                    (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct[turb])))))
+        theta_c_0 = 0.3 * yaw[turb] * (1.0 - np.sqrt(1.0 - Ct[turb] * np.cos(yaw[turb]))) / np.cos(yaw[turb])
+
+        for loc in range(0, nSamples):  # at velX-locations
+            deltax0 = velX[loc] - (turbineXw[turb] + x0)
+            if deltax0 > 0.0:
+                sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
+                                                + np.cos(yaw[turb]) / np.sqrt(8.0))
+                sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
+                                                + 1.0 / np.sqrt(8.0))
+                wake_offset = rotorDiameter[turb] * (
+                    theta_c_0 * x0 / rotorDiameter[turb] +
+                    (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
+                    (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
+                    np.log(
+                        ((1.6 + np.sqrt(Ct[turb])) *
+                         (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                        (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                          - np.sqrt(Ct[turb]))) /
+                        ((1.6 - np.sqrt(Ct[turb])) *
+                         (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                                        (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
+                          + np.sqrt(Ct[turb])))
+                    )
+                )
+
+                deltay = velY[loc] - (turbineYw[turb] + wake_offset)
+
+                deltav = wind_speed * (
+                    (1.0 - np.sqrt(1.0 - Ct[turb] *
+                                   np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
+                                                        (rotorDiameter[turb] ** 2)))) *
+                    np.exp(-0.5 * ((deltay) / sigmay) ** 2) *
+                    np.exp(-0.5 * ((velZ[loc] - turbineZ[turb]) / sigmaz) ** 2)
+                )
+
+                ws_array[loc] -= deltav
+
+    return ws_array
+
+
 class GaussianWake(Component):
 
     def __init__(self, nTurbines, direction_id=0, options=None):
@@ -88,121 +205,22 @@ class GaussianWake(Component):
         axialInduction = params['axialInduction']
         wind_speed = params['wind_speed']
 
-        # print(turbineXw, turbineYw)
-
-        # Dw0[0] = Dw0[1]
-        # m[0] = m[1]
-
-        # rotorDiameter *= 2
-
-        for i in range(0, nTurbines):
-            if (Ct[i] > 0.96): # Glauert condition
-                axialInduction[i] = 0.143 + np.sqrt(0.0203-0.6427*(0.889 - Ct[i]))
-            else:
-                axialInduction[i] = 0.5*(1.0-np.sqrt(1.0-Ct[i]))
-
-        print(yaw)
-        # NOTE: Bastankhah and Porte Agel 2016 defines yaw as positive clockwise, the negative below accounts for this
-        yaw *= -np.pi/180.
-
-        if self.nSamples > 0:
-            velX = params['wsPositionXw']
-            velY = params['wsPositionYw']
-            velZ = params['wsPositionZ']
-        else:
-            velX = np.zeros([0, 0])
-            velY = np.zeros([0, 0])
-            velZ = np.zeros([0, 0])
-
-
-        velocitiesTurbines = np.tile(wind_speed, nTurbines)
-        ws_array = np.tile(wind_speed, nSamples)
-
-        for turb in range(0, nTurbines):
-            x0 = rotorDiameter[turb] * (np.cos(yaw[turb]) * (1.0 + np.sqrt(1.0 - Ct[turb])) /
-                                         (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct[turb])))))
-            theta_c_0 = 0.3 * yaw[turb] * (1.0 - np.sqrt(1.0 - Ct[turb] * np.cos(yaw[turb]))) / np.cos(yaw[turb])
-
-            for loc in range(0, nSamples):  # at velX-locations
-                deltax0 = velX[loc] - (turbineXw[turb] + x0)
-                if deltax0 > 0.0:
-                    sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
-                                                    + np.cos(yaw[turb]) / np.sqrt(8.0))
-                    sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
-                                                    + 1.0 / np.sqrt(8.0))
-                    wake_offset = rotorDiameter[turb] * (
-                        theta_c_0 * x0 / rotorDiameter[turb] +
-                        (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
-                        (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
-                        np.log(
-                            ((1.6 + np.sqrt(Ct[turb])) *
-                             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
-                                            (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
-                              - np.sqrt(Ct[turb]))) /
-                            ((1.6 - np.sqrt(Ct[turb])) *
-                             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
-                                            (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
-                              + np.sqrt(Ct[turb])))
-                        )
-                    )
-
-                    deltay = velY[loc] - (turbineYw[turb] + wake_offset)
-
-                    deltav = wind_speed * (
-                        (1.0 - np.sqrt(1.0 - Ct[turb] *
-                                       np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
-                                                            (rotorDiameter[turb] ** 2)))) *
-                        np.exp(-0.5 * ((deltay) / sigmay) ** 2) *
-                        np.exp(-0.5 * ((velZ[loc] - turbineZ[turb]) / sigmaz) ** 2)
-                    )
-
-                    ws_array[loc] -= deltav
-
-            for turbI in range(0, nTurbines):  # at turbineX-locations
-
-                deltax0 = turbineXw[turbI] - (turbineXw[turb] + x0)
-
-                if deltax0 > 0.0:
-                    sigmay = rotorDiameter[turb] * (ky * deltax0 / rotorDiameter[turb]
-                                                     + np.cos(yaw[turb]) / np.sqrt(8.0))
-                    sigmaz = rotorDiameter[turb] * (kz * deltax0 / rotorDiameter[turb]
-                                                     + 1.0 / np.sqrt(8.0))
-                    wake_offset = rotorDiameter[turb] * (
-                        theta_c_0 * x0 / rotorDiameter[turb] +
-                        (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw[turb]) / (ky * kz * Ct[turb])) *
-                        (2.9 + 1.3 * np.sqrt(1.0 - Ct[turb]) - Ct[turb]) *
-                        np.log(
-                            ((1.6 + np.sqrt(Ct[turb])) *
-                             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
-                                            (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
-                              - np.sqrt(Ct[turb]))) /
-                            ((1.6 - np.sqrt(Ct[turb])) *
-                             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
-                                            (np.cos(yaw[turb]) * rotorDiameter[turb] ** 2))
-                              + np.sqrt(Ct[turb])))
-                        )
-                    )
-                    # print wake_offset, turbineYw[turbI]
-
-                    deltay = turbineYw[turbI] - (turbineYw[turb] + wake_offset)
-
-                    deltav = wind_speed * (
-                        (1.0 - np.sqrt(1.0 - Ct[turb] *
-                                       np.cos(yaw[turb]) / (8.0 * sigmay * sigmaz /
-                                                            (rotorDiameter[turb] ** 2)))) *
-                        np.exp(-0.5 * ((deltay) / sigmay) ** 2) *
-                        np.exp(-0.5 * ((turbineZ[turbI] - turbineZ[turb]) / sigmaz) ** 2)
-                    )
-
-                    velocitiesTurbines[turbI] -= deltav
-
+        # run the Bastankhah and Porte Agel model
+        velocitiesTurbines = porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, rotorDiameter, Ct,
+                                               axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
 
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
 
         if nSamples > 0.0:
-            print nSamples
+
+            velX = params['wsPositionXw']
+            velY = params['wsPositionYw']
+            velZ = params['wsPositionZ']
+
+            ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
+                                           Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
+
             unknowns['wsArray%i' % direction_id] = ws_array
-            print unknowns['wsArray%i' % direction_id]
 
 
 if __name__ == "__main__":
