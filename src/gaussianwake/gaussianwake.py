@@ -6,6 +6,16 @@ import time
 
 from openmdao.api import Component, Problem, Group
 
+from _porteagel_fortran import porteagel_analyze as porteagel_analyze_fortran
+
+# def porteagel_analyze_fortran(turbineXw, turbineYw, turbineZ, rotorDiameter,
+#                         Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
+#
+#     velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
+#                         Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
+#     # print velocitiesTurbines, 'here'
+#     return velocitiesTurbines
+
 
 def porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, rotorDiameter,
                         Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
@@ -159,6 +169,9 @@ class GaussianWake(Component):
         self.add_param('wind_speed', val=8.0, units='m/s')
         self.add_param('axialInduction', val=np.zeros(nTurbines)+1./3.)
 
+        # options
+        # self.add_param('language', val='fortran')
+
         # params for Bastankhah with yaw
         self.add_param('model_params:ky', val=0.022, pass_by_object=True)
         self.add_param('model_params:kz', val=0.022, pass_by_object=True)
@@ -205,11 +218,19 @@ class GaussianWake(Component):
         wind_speed = params['wind_speed']
 
         # run the Bastankhah and Porte Agel model
-        velocitiesTurbines = porteagel_analyze(nTurbines=nTurbines, turbineXw=turbineXw, turbineYw=turbineYw,
-                                               turbineZ=turbineZ, rotorDiameter=rotorDiameter, Ct=Ct,
-                                               axialInduction=axialInduction, wind_speed=wind_speed, yaw=np.copy(yaw),
-                                               ky=ky, kz=kz, alpha=alpha, beta=beta, I=I)
+        # velocitiesTurbines = porteagel_analyze(nTurbines=nTurbines, turbineXw=turbineXw, turbineYw=turbineYw,
+        #                                        turbineZ=turbineZ, rotorDiameter=rotorDiameter, Ct=Ct,
+        #                                        axialInduction=axialInduction, wind_speed=wind_speed, yaw=np.copy(yaw),
+        #                                        ky=ky, kz=kz, alpha=alpha, beta=beta, I=I)
 
+        velocitiesTurbines = porteagel_analyze_fortran(turbineXw, turbineYw,
+                                               turbineZ, rotorDiameter, Ct,
+                                               axialInduction, wind_speed, np.copy(yaw),
+                                               ky, kz, alpha, beta, I)
+
+        # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
+        #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
+        # print 'velocities: ', velocitiesTurbines
         unknowns['wtVelocity%i' % direction_id] = velocitiesTurbines
 
         if nSamples > 0.0:
