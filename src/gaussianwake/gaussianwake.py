@@ -225,7 +225,7 @@ class GaussianWake(Component):
 
         velocitiesTurbines = porteagel_analyze_fortran(turbineXw, turbineYw,
                                                turbineZ, rotorDiameter, Ct,
-                                               axialInduction, wind_speed, np.copy(yaw),
+                                               wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
