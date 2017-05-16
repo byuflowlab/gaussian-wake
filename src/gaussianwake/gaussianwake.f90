@@ -3,7 +3,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                              yawDeg, ky, kz, alpha, beta, I, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
-    !                        yawDeg Ct turbineXw turbineYw rotorDiameter a_in
+    !                        Ct yawDeg
 
     ! dependent variables: wtVelocity
 

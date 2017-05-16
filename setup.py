@@ -3,7 +3,8 @@
 
 from numpy.distutils.core import setup, Extension
 
-module1 = Extension('_porteagel_fortran', sources=['src/gaussianwake/gaussianwake.f90'], extra_compile_args=['-O2', '-c'])
+module1 = Extension('_porteagel_fortran', sources=['src/gaussianwake/gaussianwake.f90', 'src/gaussianwake/adStack.c',
+                                                   'src/gaussianwake/adBuffer.f'], extra_compile_args=['-O2', '-c'])
 
 setup(
     name='GaussianWake',
