@@ -1,5 +1,5 @@
 subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
-                             rotorDiameter, Ct, axialInduction, wind_speed, &
+                             rotorDiameter, Ct, wind_speed, &
                              yawDeg, ky, kz, alpha, beta, I, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
@@ -16,7 +16,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     integer, intent(in) :: nTurbines
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
-    real(dp), dimension(nTurbines), intent(in) :: Ct, axialInduction
+    real(dp), dimension(nTurbines), intent(in) :: Ct
     real(dp), intent(in) :: ky, kz, alpha, beta, I, wind_speed
 
     ! local (General)
@@ -32,15 +32,6 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     intrinsic cos, atan, max, sqrt, log
 
     yaw = - yawDeg*pi/180.0_dp
-
-    ! Glauert correction
-    !do turb=1, nTurbines
-    !  if (Ct(turb) > 0.96_dp)  ! Glauert condition
-    !      axialInduction(turb) = 0.143_dp + sqrt(0.0203_dp - 0.6427_dp * (0.889_dp - Ct(turb)))
-    !  else if
-    !      axialInduction(turb) = 0.5_dp * (1.0_dp - sqrt(1.0_dp - Ct(turb)))
-    !  end if
-    !end do
 
     wtVelocity = wind_speed
 
