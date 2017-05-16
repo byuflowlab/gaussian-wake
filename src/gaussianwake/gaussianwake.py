@@ -7,6 +7,7 @@ import time
 from openmdao.api import Component, Problem, Group
 
 from _porteagel_fortran import porteagel_analyze as porteagel_analyze_fortran
+from _porteagel_fortran import porteagel_analyze_bv
 
 # def porteagel_analyze_fortran(turbineXw, turbineYw, turbineZ, rotorDiameter,
 #                         Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
@@ -138,10 +139,10 @@ class GaussianWake(Component):
     def __init__(self, nTurbines, direction_id=0, options=None):
         super(GaussianWake, self).__init__()
 
-        self.deriv_options['type'] = 'fd'
-        self.deriv_options['form'] = 'central'
-        self.deriv_options['step_size'] = 1.0e-12
-        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['type'] = 'user'
+        # self.deriv_options['form'] = 'central'
+        # self.deriv_options['step_size'] = 1.0e-12
+        # self.deriv_options['step_calc'] = 'relative'
 
         self.nTurbines = nTurbines
         self.direction_id = direction_id
@@ -154,7 +155,7 @@ class GaussianWake(Component):
             self.nSamples = nSamples = options['nSamples']
 
         # unused but required for compatibility
-        self.add_param('hubHeight', np.zeros(nTurbines), units='m')
+
         self.add_param('wakeCentersYT', np.zeros(nTurbines*nTurbines), units='m')
         self.add_param('wakeDiametersT', np.zeros(nTurbines*nTurbines), units='m')
         self.add_param('wakeOverlapTRel', np.zeros(nTurbines*nTurbines))
@@ -162,7 +163,7 @@ class GaussianWake(Component):
         # used
         self.add_param('turbineXw', val=np.zeros(nTurbines), units='m')
         self.add_param('turbineYw', val=np.zeros(nTurbines), units='m')
-        self.add_param('turbineZ', val=np.zeros(nTurbines), units='m')
+        self.add_param('hubHeight', val=np.zeros(nTurbines), units='m')
         self.add_param('yaw%i' % direction_id, np.zeros(nTurbines), units='deg')
         self.add_param('rotorDiameter', val=np.zeros(nTurbines)+126.4, units='m')
         self.add_param('Ct', np.zeros(nTurbines), desc='Turbine thrust coefficients')
@@ -210,7 +211,7 @@ class GaussianWake(Component):
         # rename inputs and outputs
         turbineXw = params['turbineXw']
         turbineYw = params['turbineYw']
-        turbineZ = params['turbineZ']
+        turbineZ = params['hubHeight']
         yaw = params['yaw%i' % direction_id]
         rotorDiameter = params['rotorDiameter']
         Ct = params['Ct']
@@ -243,6 +244,61 @@ class GaussianWake(Component):
                                            Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
 
             unknowns['wsArray%i' % direction_id] = ws_array
+
+
+    def linearize(self, params, unknowns, resids):
+
+        # obtain id for this wind direction
+        direction_id = self.direction_id
+
+        # x and y positions w.r.t. the wind dir. (wind dir. = +x)
+        turbineXw = params['turbineXw']
+        turbineYw = params['turbineYw']
+        turbineZ = params['hubHeight']
+
+        # yaw wrt wind dir. (wind dir. = +x)
+        yawDeg = params['yaw%i' % self.direction_id]
+
+        # turbine specs
+        rotorDiameter = params['rotorDiameter']
+
+        # air flow
+        wind_speed = params['wind_speed']
+        Ct = params['Ct']
+
+        # wake model parameters
+        ky = params['model_params:ky']
+        kz = params['model_params:kz']
+        alpha = params['model_params:alpha']
+        beta = params['model_params:beta']
+        I = params['model_params:I']
+
+        # define jacobian size
+        nTurbines = len(turbineXw)
+        nDirs = nTurbines
+
+        # define input array to direct differentiation
+        wtVelocityb = np.eye(nDirs, nTurbines)
+
+        # call to fortran code to obtain output values
+        turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb, _ = \
+            porteagel_analyze_bv(turbineXw, turbineYw, turbineZ,
+                                 rotorDiameter, Ct, wind_speed, yawDeg,
+                                 ky, kz, alpha, beta, I,
+                                 wtVelocityb)
+
+        # initialize Jacobian dict
+        J = {}
+
+        # collect values of the Jacobian
+        J['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwb
+        J['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
+        J['wtVelocity%i' % direction_id, 'turbineZ'] = turbineZb
+        J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegb
+        J['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterb
+        J['wtVelocity%i' % direction_id, 'Ct'] = Ctb
+        # print J
+        return J
 
 
 if __name__ == "__main__":
