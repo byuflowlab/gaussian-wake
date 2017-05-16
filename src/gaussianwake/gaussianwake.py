@@ -17,6 +17,34 @@ from _porteagel_fortran import porteagel_analyze_bv
 #     # print velocitiesTurbines, 'here'
 #     return velocitiesTurbines
 
+def wake_offset_func(turbineXw, position_x,rotorDiameter,Ct,yaw, ky, kz, alpha, beta, I):
+    #yaw = yaw * np.pi / 180.   # use if yaw is passed in as degrees
+    x0 = rotorDiameter * (np.cos(yaw) * (1.0 + np.sqrt(1.0 - Ct)) /
+                                (np.sqrt(2.0) * (alpha * I + beta * (1.0 - np.sqrt(1.0 - Ct)))))
+    theta_c_0 = 0.3 * yaw * (1.0 - np.sqrt(1.0 - Ct * np.cos(yaw))) / np.cos(yaw)
+
+    deltax0 = position_x - (turbineXw + x0)
+
+    sigmay = rotorDiameter * (ky * deltax0 / rotorDiameter
+                                    + np.cos(yaw) / np.sqrt(8.0))
+    sigmaz = rotorDiameter * (kz * deltax0 / rotorDiameter
+                                    + 1.0 / np.sqrt(8.0))
+    wake_offset = rotorDiameter * (
+        theta_c_0 * x0 / rotorDiameter +
+        (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw) / (ky * kz * Ct)) *
+        (2.9 + 1.3 * np.sqrt(1.0 - Ct) - Ct) *
+        np.log(
+            ((1.6 + np.sqrt(Ct)) *
+             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                            (np.cos(yaw) * rotorDiameter ** 2))
+              - np.sqrt(Ct))) /
+            ((1.6 - np.sqrt(Ct)) *
+             (1.6 * np.sqrt(8.0 * sigmay * sigmaz /
+                            (np.cos(yaw) * rotorDiameter ** 2))
+              + np.sqrt(Ct)))
+        )
+    )
+    return wake_offset
 
 def porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, rotorDiameter,
                         Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I):
