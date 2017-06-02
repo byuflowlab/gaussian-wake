@@ -7,6 +7,7 @@ import time
 from openmdao.api import Component, Problem, Group
 
 from _porteagel_fortran import porteagel_analyze as porteagel_analyze_fortran
+from _porteagel_fortran import porteagel_visualize as porteagel_visualize_fortran
 from _porteagel_fortran import porteagel_analyze_bv
 
 # def porteagel_analyze_fortran(turbineXw, turbineYw, turbineZ, rotorDiameter,
@@ -268,8 +269,11 @@ class GaussianWake(Component):
             velY = params['wsPositionYw']
             velZ = params['wsPositionZ']
 
-            ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
-                                           Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
+            # ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
+            #                                Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
+            ws_array = porteagel_visualize_fortran(turbineXw, turbineYw, turbineZ,
+                                           rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
+                                                   alpha, beta, I, velX, velY, velZ)
 
             unknowns['wsArray%i' % direction_id] = ws_array
 

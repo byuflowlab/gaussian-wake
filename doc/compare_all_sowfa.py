@@ -100,7 +100,8 @@ def setup_probs():
 
         turbineX = np.array([1118.1, 1881.9])
         turbineY = np.array([1279.5, 1720.5])
-
+        # prob['gen_params:CTcorrected'] = False
+        # prob['gen_params:CPcorrected'] = False
         prob['turbineX'] = turbineX
         prob['turbineY'] = turbineY
         prob['rotorDiameter'] = rotorDiameter
@@ -115,19 +116,19 @@ def setup_probs():
     return probs
 
 
-def set_params(probs):
+# def set_params(probs):
 
     # floris params
-    probs[2]['model_params:kd'] = 0.224109
-    probs[2]['model_params:initialWakeAngle'] = 3.384485
-    probs[2]['model_params:initialWakeDisplacement'] = 8.407578
-    probs[2]['model_params:bd'] = -0.010000
-    probs[2]['model_params:ke'] = 0.055072
-    probs[2]['model_params:me'] = np.array([-0.000001, 0.181752, 1.0])
-    probs[2]['model_params:MU'] = np.array([0.933389, 1.0, 17.558286])
-    probs[2]['model_params:aU'] = 6.751072
-    probs[2]['model_params:bU'] = 1.681766
-    probs[2]['model_params:cos_spread'] = 9.989090
+    # probs[2]['model_params:kd'] = 0.224109
+    # probs[2]['model_params:initialWakeAngle'] = 3.384485
+    # probs[2]['model_params:initialWakeDisplacement'] = 8.407578
+    # probs[2]['model_params:bd'] = -0.010000
+    # probs[2]['model_params:ke'] = 0.055072
+    # probs[2]['model_params:me'] = np.array([-0.000001, 0.181752, 1.0])
+    # probs[2]['model_params:MU'] = np.array([0.933389, 1.0, 17.558286])
+    # probs[2]['model_params:aU'] = 6.751072
+    # probs[2]['model_params:bU'] = 1.681766
+    # probs[2]['model_params:cos_spread'] = 9.989090
 
     # gauss params
     # probs[0]['model_params:ke'] = 0.052
@@ -388,10 +389,10 @@ def set_params(probs):
 
     # power law as per Aitken et all plus axial induction*2, added y shift tunable
     # excellent fit, but no wake expansion and uses linear yaw offset
-    probs[0]['model_params:rotation_offset_angle'] = 8.466369
-    probs[0]['model_params:Dw0'] = np.array([1.893739, 1.586107, 0.987548])
-    probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.524822])
-    probs[0]['model_params:yshift'] = -21.775754
+    # probs[0]['model_params:rotation_offset_angle'] = 8.466369
+    # probs[0]['model_params:Dw0'] = np.array([1.893739, 1.586107, 0.987548])
+    # probs[0]['model_params:m'] = np.array([0.00000, 0.000000, -0.524822])
+    # probs[0]['model_params:yshift'] = -21.775754
 
     # probs[0]['model_params:rotation_offset_angle'] = 10.762858
     # probs[0]['model_params:Dw0'] = np.array([1.748372, 1.345945, 1.045982])
@@ -457,17 +458,17 @@ def set_params(probs):
     # probs[0]['model_params:rotation_offset_angle'] = 1.235173
     # probs[0]['model_params:ky'] = 0.205729
 
-    probs[0]['model_params:integrate'] = False
-    probs[0]['model_params:spread_mode'] = 'power'
-    probs[0]['model_params:yaw_mode'] = 'power'
-    probs[0]['model_params:n_std_dev'] = 4.
+    # probs[0]['model_params:integrate'] = False
+    # probs[0]['model_params:spread_mode'] = 'power'
+    # probs[0]['model_params:yaw_mode'] = 'power'
+    # probs[0]['model_params:n_std_dev'] = 4.
 
 
 if __name__ == "__main__":
 
     probs = setup_probs()
 
-    set_params(probs)
+    # set_params(probs)
 
     # time the models
     import time
@@ -901,18 +902,18 @@ if __name__ == "__main__":
     plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange,
                        modely=FlorisVelocity/PFvelocity, modellabel='FLORIS',
                        modelcolor=floris_color, modelline=floris_line,
-                       xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False)
+                       xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False, legend=True)
 
     plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=GaussianVelocity/PFvelocity, title='Downstream (inline)',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Gauss', modelcolor=gauss_color, modelline=gauss_line,
-                       xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False)
+                       xscalar=distance_scalar, yscalar=velocity_scalar, sum=False, front=False, legend=True)
 
     plot_data_vs_model(ax=PosVelAx[1, 1], modelx=posrange, modely=FlorisVelocityTuned/PFvelocity, title='Downstream (inline)',
                        xlabel='y/D', ylabel='Velocity (m/s)',
                        modellabel='Floris Re-Tuned', modelcolor=floris_tuned_color,
                        modelline=floris_tuned_line, xscalar=distance_scalar, yscalar=velocity_scalar,
-                       sum=False, front=False)
+                       sum=False, front=False, legend=True)
 
     PosVelAx[1, 1].plot(np.array([7.0, 7.0]), np.array([0.0, 1.2]), ':k', label='Tuning Point')
 

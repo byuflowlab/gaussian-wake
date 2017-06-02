@@ -172,9 +172,9 @@ if __name__ == "__main__":
             # gauss_prob['model_params:Dw0'] = 0.602132
             # gauss_prob['model_params:ky'] = 0.191178
 
-            gauss_prob['model_params:integrate'] = False
-            gauss_prob['model_params:spread_mode'] = 'linear'
-            gauss_prob['model_params:n_std_dev'] = 4
+            # gauss_prob['model_params:integrate'] = False
+            # gauss_prob['model_params:spread_mode'] = 'linear'
+            # gauss_prob['model_params:n_std_dev'] = 4
 
 
 
