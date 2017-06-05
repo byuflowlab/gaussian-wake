@@ -83,28 +83,14 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
             else if (deltax0 > -x0) then
 
                 ! horizontal spread
-                sigmay = rotorDiameter(turb) * (ky * deltax0 / rotorDiameter(turb) &
-                                                + cos(yaw(turb)) / sqrt(8.0_dp))
+                call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+                
                 ! vertical spread
-                sigmaz = rotorDiameter(turb) * (kz * deltax0 / rotorDiameter(turb) &
-                                                + 1.0_dp / sqrt(8.0_dp))
+                call sigmaz_func(kz, deltax0, rotorDiameter(turb), sigmaz)
                                                 
                 ! horizontal cross-wind wake displacement from hub
-                wake_offset = rotorDiameter(turb) * (                           &
-                    theta_c_0 * x0 / rotorDiameter(turb) +                      &
-                    (theta_c_0 / 14.7_dp) * sqrt(cos(yaw(turb)) / (ky * kz * Ct(turb))) * &
-                    (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct(turb)) - Ct(turb)) *    &
-                    log(                                                        &
-                        ((1.6_dp + sqrt(Ct(turb))) *                            &
-                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /              &
-                                        (cos(yaw(turb)) * rotorDiameter(turb) ** 2)) &
-                          - sqrt(Ct(turb)))) /                                  &
-                        ((1.6_dp - sqrt(Ct(turb))) *                            &
-                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /              &
-                                        (cos(yaw(turb)) * rotorDiameter(turb) ** 2)) &
-                          + sqrt(Ct(turb))))                                    &
-                    )                                                           &
-                )
+                call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
+                                     & ky, kz, Ct(turb), sigmay, sigmaz, wake_offset)
                 
                 ! distance from downstream hub location to wake center
                 deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
@@ -122,30 +108,6 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                 
                 ! linear wake superposition (additive)
                 wtVelocity(turbI) = wtVelocity(turbI) - deltav
-
-                ! first try
-                ! xpc = deltax0 + x0
-! 
-!                 ! wind speed at onset of far wake
-!                 u_0 = wind_speed * sqrt(1.0_dp - Ct(turb))
-! 
-!                 ! velocity deficit at the wake center at onset of far wake
-!                 C_0 = 1.0_dp - u_0 / wind_speed
-! 
-!                 ! wind velocity at the rotor
-!                 u_r = Ct(turb)*cos(yaw(turb))/(2.0_dp*(1.0_dp - sqrt(1.0_dp - Ct(turb)*cos(yaw(turb)))))
-! 
-!                 ! potential core heighth at the rotor
-!                 z_r = rotorDiameter(turb)*sqrt(u_r/wind_speed)
-! 
-!                 ! potential core width at the rotor
-!                 y_r = rotorDiameter(turb)*cos(yaw(turb))*sqrt(u_r/wind_speed)
-! 
-!                 sigmaz_0 = 0.5_dp*rotorDiameter(turb)*sqrt(u_r/(wind_speed+u_0)
-!                 sigmay_0 = rotorDiameter(turb) * (ky * x0 / rotorDiameter(turb) &
-!                                                 + cos(yaw(turb)) / sqrt(8.0_dp))
-!                 s = (sigmay_0/x0)*(deltax0+x0)
-!                 r_pc =
 
             end if
         end do
