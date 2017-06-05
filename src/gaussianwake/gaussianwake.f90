@@ -266,7 +266,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
                 deltav = (((deltav0m - deltavs)/x0) * x + deltavs) *  &
                     exp(-0.5_dp * ((deltay) / sigmay) ** 2) *                   &
                     exp(-0.5_dp * ((velZ(loc) - turbineZ(turb)) / sigmaz) ** 2)
-                print *, deltav, deltav0m, x/rotorDiameter(turb)
+                ! print *, deltav, deltav0m, x/rotorDiameter(turb)
                 ! linear wake superposition (additive)
                 wsArray(loc) = wsArray(loc) - deltav
 
