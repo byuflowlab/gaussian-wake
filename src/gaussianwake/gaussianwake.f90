@@ -59,11 +59,15 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
             if (deltax0 > 0.0_dp) then
             
                 ! horizontal spread
-                sigmay = rotorDiameter(turb) * (ky * deltax0 / rotorDiameter(turb) &
-                                                + cos(yaw(turb)) / sqrt(8.0_dp))
+                ! sigmay = rotorDiameter(turb) * (ky * deltax0 / rotorDiameter(turb) &
+!                                                 + cos(yaw(turb)) / sqrt(8.0_dp))
+                call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+                
                 ! vertical spread
-                sigmaz = rotorDiameter(turb) * (kz * deltax0 / rotorDiameter(turb) &
-                                                + 1.0_dp / sqrt(8.0_dp))
+                ! sigmaz = rotorDiameter(turb) * (kz * deltax0 / rotorDiameter(turb) &
+!                                                 + 1.0_dp / sqrt(8.0_dp))
+                call sigmaz_func(kz, deltax0, rotorDiameter(turb), sigmaz)
+                
                 ! horizontal cross-wind wake displacement from hub
                 wake_offset = rotorDiameter(turb) * (                           &
                     theta_c_0 * x0 / rotorDiameter(turb) +                      &
@@ -204,15 +208,15 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
 
     intrinsic cos, atan, max, sqrt, log
 
-	! bastankhah and porte agel 2016 define yaw to be positive clockwise, this is reversed
+    ! bastankhah and porte agel 2016 define yaw to be positive clockwise, this is reversed
     yaw = - yawDeg*pi/180.0_dp
 
-	! initialize location velocities to free stream
+    ! initialize location velocities to free stream
     wsArray = wind_speed
 
     do, turb=1, nTurbines
-    	
-    	! downstream distance to far wake onset
+        
+        ! downstream distance to far wake onset
         x0 = rotorDiameter(turb) * (cos(yaw(turb)) * (1.0_dp + sqrt(1.0_dp - Ct(turb))) / &
                                     (sqrt(2.0_dp) * (alpha * I + beta * (1.0_dp - sqrt(1.0_dp - Ct(turb))))))
         
@@ -220,34 +224,34 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
         theta_c_0 = 0.3_dp * yaw(turb) * (1.0_dp - sqrt(1.0_dp - Ct(turb) * cos(yaw(turb)))) / cos(yaw(turb))
         
         ! horizontal spread at far wake onset
-		sigmay0 = rotorDiameter(turb) * (ky * 0.0_dp / rotorDiameter(turb) &
-										+ cos(yaw(turb)) / sqrt(8.0_dp))
-		! vertical spread
-		sigmaz0 = rotorDiameter(turb) * (kz * 0.0_dp / rotorDiameter(turb) &
-										+ 1.0_dp / sqrt(8.0_dp))
-										
+        sigmay0 = rotorDiameter(turb) * (ky * 0.0_dp / rotorDiameter(turb) &
+                                        + cos(yaw(turb)) / sqrt(8.0_dp))
+        ! vertical spread
+        sigmaz0 = rotorDiameter(turb) * (kz * 0.0_dp / rotorDiameter(turb) &
+                                        + 1.0_dp / sqrt(8.0_dp))
+                                        
         ! magnitude term of gaussian at x0
         deltav0m = wind_speed * (                                         &
                     (1.0_dp - sqrt(1.0_dp - Ct(turb) *                     &
                     cos(yaw(turb)) / (8.0_dp * sigmay0 * sigmaz0 /           &
                                                 (rotorDiameter(turb) ** 2)))))
 
-		deltavs = 0.9*wind_speed
-		
+        deltavs = 0.9*wind_speed
+        
         do, loc=1, nSamples ! at turbineX-locations
-        	t = 0
+            t = 0
             ! downstream distance between turbines
             x = velX(loc) - turbineXw(turb)
                 
             ! downstream distance from far wake onset to downstream turbine
             deltax0 = x - x0
-			
-!  			print *, x0, x, deltax0
+            
+!              print *, x0, x, deltax0
 
             ! far wake region
             if (x >= x0) then
-            	t = t + 1
-!             	print *, "here, here"
+                t = t + 1
+!                 print *, "here, here"
                 ! horizontal spread
                 sigmay = rotorDiameter(turb) * (ky * deltax0 / rotorDiameter(turb) &
                                                 + cos(yaw(turb)) / sqrt(8.0_dp))
@@ -296,7 +300,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
                                                 
                 ! horizontal cross-wind wake displacement from hub
                 wake_offset = rotorDiameter(turb) * (                           &
-                    theta_c_0 * x0 / rotorDiameter(turb) +                      &
+                    (theta_c_0 * x0 / rotorDiameter(turb)) +                      &
                     (theta_c_0 / 14.7_dp) * sqrt(cos(yaw(turb)) / (ky * kz * Ct(turb))) * &
                     (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct(turb)) - Ct(turb)) *    &
                     log(                                                        &
@@ -358,6 +362,107 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
 
 end subroutine porteagel_visualize
 
+subroutine sigmay_func(ky, deltax0, rotor_diameter, yaw, sigmay)
+    
+    implicit none
+
+    ! define precision to be the standard for a double precision on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: ky, deltax0, rotor_diameter, yaw
+
+    ! out
+    real(dp), intent(out) :: sigmay
+
+    intrinsic cos, sqrt
+    
+    ! horizontal spread
+    sigmay = rotor_diameter * (ky * deltax0 / rotor_diameter + cos(yaw) / sqrt(8.0_dp))
+    
+end subroutine sigmay_func
+    
+subroutine sigmaz_func(kz, deltax0, rotor_diameter, sigmaz)
+    
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: kz, deltax0, rotor_diameter
+
+    ! out
+    real(dp), intent(out) :: sigmaz
+
+    ! load necessary intrinsic functions
+    intrinsic cos, sqrt
+    
+    ! vertical spread
+    sigmaz = rotor_diameter * (kz * deltax0 / rotor_diameter + 1.0_dp / sqrt(8.0_dp))
+    
+end subroutine sigmaz_func
+
+subroutine wake_offset_func(rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay, &
+                            & sigmaz, wake_offset)
+                            
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay
+    real(dp), intent(in) :: sigmaz
+
+    ! out
+    real(dp), intent(out) :: wake_offset
+
+    intrinsic cos, sqrt, log
+                            
+    ! horizontal cross-wind wake displacement from hub
+    wake_offset = rotor_diameter * (                                           &
+                  theta_c_0 * x0 / rotor_diameter +                            &
+                  (theta_c_0 / 14.7_dp) * sqrt(cos(yaw) / (ky * kz * Ct)) *    &
+                  (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct) - Ct) *                 &
+                  log(                                                         &
+                    ((1.6_dp + sqrt(Ct)) *                                     &
+                     (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
+                                    (cos(yaw) * rotor_diameter ** 2))          &
+                      - sqrt(Ct))) /                                           &
+                    ((1.6_dp - sqrt(Ct)) *                                     &
+                     (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
+                                    (cos(yaw) * rotor_diameter ** 2))          &
+                      + sqrt(Ct)))                                             &
+                  )                                                            &
+    )
+end subroutine wake_offset_func
+
+subroutine deltav_func(deltay, deltaz, wake_offset, wind_speed, Ct, yaw, sigmay, sigmaz, &
+                       & rotor_diameter, deltav) 
+                       
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: deltay, deltaz, wake_offset, wind_speed, Ct, yaw, sigmay
+    real(dp), intent(in) :: sigmaz, rotor_diameter
+
+    ! out
+    real(dp), intent(out) :: deltav
+
+    intrinsic cos, sqrt, exp
+    
+    ! velocity difference in the wake
+    deltav = wind_speed * (                                                              &
+        (1.0_dp - sqrt(1.0_dp - Ct *                                                     &
+                       cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter ** 2)))) * &
+        exp(-0.5_dp * ((deltay) / sigmay) ** 2) * exp(-0.5_dp * ((deltaz) / sigmaz) ** 2)&
+    )
+
+end subroutine deltav_func
 
 !        Generated by TAPENADE     (INRIA, Ecuador team)
 !  Tapenade 3.12 (r6213) - 13 Oct 2016 10:54

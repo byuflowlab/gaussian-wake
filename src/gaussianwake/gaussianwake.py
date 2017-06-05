@@ -30,8 +30,8 @@ def wake_offset_func(turbineXw, position_x,rotorDiameter,Ct,yaw, ky, kz, alpha, 
                                     + np.cos(yaw) / np.sqrt(8.0))
     sigmaz = rotorDiameter * (kz * deltax0 / rotorDiameter
                                     + 1.0 / np.sqrt(8.0))
-    wake_offset = rotorDiameter * (
-        theta_c_0 * x0 / rotorDiameter +
+    wake_offset = rotorDiameter * ((
+        theta_c_0 * x0 / rotorDiameter) +
         (theta_c_0 / 14.7) * np.sqrt(np.cos(yaw) / (ky * kz * Ct)) *
         (2.9 + 1.3 * np.sqrt(1.0 - Ct) - Ct) *
         np.log(
