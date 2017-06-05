@@ -40,8 +40,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     do, turb=1, nTurbines
         
         ! determine the onset location of far wake
-        x0 = rotorDiameter(turb) * (cos(yaw(turb)) * (1.0_dp + sqrt(1.0_dp - Ct(turb))) / &
-                                    (sqrt(2.0_dp) * (alpha * I + beta * (1.0_dp - sqrt(1.0_dp - Ct(turb))))))
+        call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, I, beta, x0)
         
         ! determine the initial wake angle at the onset of far wake
         theta_c_0 = 0.3_dp * yaw(turb) * (1.0_dp - sqrt(1.0_dp - Ct(turb) * cos(yaw(turb)))) / cos(yaw(turb))
@@ -346,6 +345,48 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
 
 end subroutine porteagel_visualize
 
+subroutine x0_func(rotor_diameter, yaw, Ct, alpha, I, beta, x0)
+
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: rotor_diameter, yaw, Ct, alpha, I, beta
+
+    ! out
+    real(dp), intent(out) :: x0
+
+    intrinsic cos, sqrt, log
+                            
+
+    ! determine the onset location of far wake
+	x0 = rotor_diameter * (cos(yaw) * (1.0_dp + sqrt(1.0_dp - Ct)) / &
+								(sqrt(2.0_dp) * (alpha * I + beta * &
+												& (1.0_dp - sqrt(1.0_dp - Ct)))))
+
+end subroutine x0_func
+
+subroutine theta_c_0_func(yaw, Ct, theta_c_0)
+
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: yaw, Ct
+
+    ! out
+    real(dp), intent(out) :: theta_c_0
+
+    intrinsic cos, sqrt
+    
+	! determine the initial wake angle at the onset of far wake
+	theta_c_0 = 0.3_dp * yaw * (1.0_dp - sqrt(1.0_dp - Ct * cos(yaw))) / cos(yaw)
+
+end subroutine theta_c_0_func
 subroutine sigmay_func(ky, deltax0, rotor_diameter, yaw, sigmay)
     
     implicit none
