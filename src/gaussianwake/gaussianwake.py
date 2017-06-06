@@ -301,7 +301,7 @@ class GaussianWake(Component):
         wtVelocityb = np.eye(nDirs, nTurbines)
 
         # call to fortran code to obtain output values
-        turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb, _ = \
+        turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
             porteagel_analyze_bv(turbineXw, turbineYw, turbineZ,
                                  rotorDiameter, Ct, wind_speed, yawDeg,
                                  ky, kz, alpha, beta, I,
