@@ -1,7 +1,8 @@
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
 subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                              rotorDiameter, Ct, wind_speed, &
-                             yawDeg, ky, kz, alpha, beta, I, wtVelocity)
+                             yawDeg, ky, kz, alpha, beta, I, wake_combination_method, &
+                             TI_calculation_method, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -15,6 +16,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
 
     ! in
     integer, intent(in) :: nTurbines
+    integer, intent(in) :: wake_combination_method, TI_calculation_method
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines), intent(in) :: Ct
@@ -112,13 +114,14 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                                  
                 ! linear wake superposition (additive)
                 wtVelocity(turbI) = wtVelocity(turbI) - deltav
-                
-                
 
             end if
+            
+            ! make sure turbine inflow velocity is non-negative
             if (wtVelocity(turbI) .lt. 0.0_dp) then 
                 wtVelocity(turbI) = 0.0_dp
             end if
+            
         end do
     end do
 
@@ -243,6 +246,12 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
                 wsArray(loc) = wsArray(loc) - deltav
 
             end if
+            
+            ! make sure turbine flow-field velocity is non-negative
+            if (wsArray(loc) .lt. 0.0_dp) then 
+                wsArray(loc) = 0.0_dp
+            end if
+            
         end do
     end do
 
@@ -514,3 +523,54 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     end if
                              
 end subroutine overlap_area_func
+
+! combine wakes using various methods
+subroutine wake_combination_func(Uinf, Ueffu, Ueffd, tmp, wake_combination_method, &
+                                 deficit)
+    ! combines wakes to calculate velocity at a given turbine
+    ! Uinf      = Free stream velocity
+    ! Ueffu     = Effective velocity as seen by the upstream rotor
+    ! Ueffd     = Current effective velocity as seen by the downstream rotor
+    ! tmp       =
+    ! velocity  = new effective velocity at this turbine
+     
+    implicit none
+        
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+    
+    ! in
+    real(dp), intent(in) :: Uinf, Ueffu, Ueffd, tmp
+    integer, intent(in) :: wake_combination_method
+    
+    ! out    
+    real(dp), intent(out) :: deficit
+    
+    ! local
+    real(dp), parameter :: pi = 3.141592653589793_dp
+    
+    intrinsic sqrt
+    
+    ! freestream linear superposition
+    if (wake_combination_method == 0) then
+        deficit = (Uinf - Ueffd) + tmp
+
+    ! local velocity linear superposition
+    else if (wake_combination_method == 1) then
+        deficit = (Ueffu - Ueffd) + tmp
+        
+    ! sum of squares freestream superposition
+    else if (wake_combination_method == 2) then 
+        deficit = sqrt((Uinf - Ueffd)**2 + tmp**2)
+    
+    !sum of squares local velocity superposition
+    else if (wake_combination_method == 3) then
+        deficit = sqrt((Ueffu - Ueffd)**2 + tmp**2)
+    
+    ! error
+    else
+        print *, "Invalid wake combination method. Must be one of [0,1,2,3]."
+        stop 1
+    end if                       
+    
+end subroutine wake_combination_func
