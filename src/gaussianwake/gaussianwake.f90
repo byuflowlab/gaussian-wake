@@ -105,6 +105,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                 ! vertical spread at far wake onset
                 call sigmaz_func(kz, 0.0_dp, rotorDiameter(turb), sigmaz0)
                 
+                ! velocity deficit in the nearwake (linear model)
                 call deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, &
                                  & Ct(turb), yaw(turb), sigmay, sigmaz, & 
                                  & rotorDiameter(turb), x, x0, sigmay0, sigmaz0, deltav)
@@ -233,6 +234,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbin
                 ! vertical spread at far wake onset
                 call sigmaz_func(kz, 0.0_dp, rotorDiameter(turb), sigmaz0)
                 
+                ! velocity deficit in the nearwake (linear model)
                 call deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, &
                                  & Ct(turb), yaw(turb), sigmay, sigmaz, & 
                                  & rotorDiameter(turb), x, x0, sigmay0, sigmaz0, deltav)
