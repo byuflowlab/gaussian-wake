@@ -55,7 +55,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
             deltax0 = x - x0
 
             ! far wake region
-            if (deltax0 > 0.0_dp) then
+            if (x > x0) then
             
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -81,7 +81,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                 wtVelocity(turbI) = wtVelocity(turbI) - deltav
 
             ! near wake region (linearized)
-            else if (deltax0 > -x0) then
+            else if (x > 0.0_dp) then
     
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -116,8 +116,8 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
 
             end if
             if (wtVelocity(turbI) .lt. 0.0_dp) then 
-				wtVelocity(turbI) = 0.0_dp
-			end if
+                wtVelocity(turbI) = 0.0_dp
+            end if
         end do
     end do
 
@@ -445,8 +445,70 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, Ct
     deltav = (((deltav0m - deltavs)/x0) * x + deltavs) *              &
         exp(-0.5_dp * (deltay / sigmay) ** 2) *                       &
         exp(-0.5_dp * (deltaz / sigmaz) ** 2)
-	! deltav = deltav0m *              &
+    ! deltav = deltav0m *              &
 !         exp(-0.5_dp * (deltay / sigmay) ** 2) *                       &
 !         exp(-0.5_dp * (deltaz / sigmaz) ** 2)
     
 end subroutine deltav_near_wake_lin_func
+
+! calculates the overlap area between a given wake and a rotor area
+subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
+                            wake_center_y, wake_center_z, wake_diameter, &
+                            wake_overlap)
+!   calculate overlap of rotors and wake zones (wake zone location defined by wake 
+!   center and wake diameter)
+!   turbineX,turbineY is x,y-location of center of rotor
+
+    implicit none
+        
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+    
+    ! in
+    real(dp), intent(in) :: turbine_y, turbine_z, rotor_diameter
+    real(dp), intent(in) :: wake_center_y, wake_center_z, wake_diameter
+    
+    ! out    
+    real(dp), intent(out) :: wake_overlap
+    
+    ! local
+    real(dp), parameter :: pi = 3.141592653589793_dp, tol = 0.000001_dp
+    real(dp) :: OVdYd, OVr, OVRR, OVL, OVz
+    
+    intrinsic dacos
+    
+    OVdYd = wake_center_y-turbine_y        ! distance between wake center and rotor center
+    OVr = rotor_diameter/2.0_dp            ! rotor diameter
+    OVRR = wake_diameter/2.0_dp            ! wake diameter
+    OVdYd = abs(OVdYd)
+    if (OVdYd >= 0.0_dp + tol) then
+        ! calculate the distance from the wake center to the vertical line between
+        ! the two circle intersection points
+        OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
+    else
+        OVL = 0.0_dp
+    end if
+
+    OVz = OVRR*OVRR-OVL*OVL
+
+    ! Finish calculating the distance from the intersection line to the outer edge of the wake
+    if (OVz > 0.0_dp + tol) then
+        OVz = sqrt(OVz)
+    else
+        OVz = 0.0_dp
+    end if
+
+    if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake zone
+
+        if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
+            wake_overlap = OVRR*OVRR*dacos(OVL/OVRR) + OVr*OVr*dacos((OVdYd-OVL)/OVr) - OVdYd*OVz
+        else if (OVRR > OVr) then
+            wake_overlap = pi*OVr*OVr
+        else
+            wake_overlap = pi*OVRR*OVRR
+        end if
+    else
+        wake_overlap = 0.0_dp
+    end if
+                             
+end subroutine overlap_area_func
