@@ -55,7 +55,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
             deltax0 = x - x0
 
             ! far wake region
-            if (x > x0) then
+            if (x >= x0) then
             
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
