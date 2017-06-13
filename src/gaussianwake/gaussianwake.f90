@@ -111,8 +111,13 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                                  
                 ! linear wake superposition (additive)
                 wtVelocity(turbI) = wtVelocity(turbI) - deltav
+                
+                
 
             end if
+            if (wtVelocity(turbI) .lt. 0.0_dp) then 
+				wtVelocity(turbI) = 0.0_dp
+			end if
         end do
     end do
 
@@ -440,5 +445,8 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, Ct
     deltav = (((deltav0m - deltavs)/x0) * x + deltavs) *              &
         exp(-0.5_dp * (deltay / sigmay) ** 2) *                       &
         exp(-0.5_dp * (deltaz / sigmaz) ** 2)
+	! deltav = deltav0m *              &
+!         exp(-0.5_dp * (deltay / sigmay) ** 2) *                       &
+!         exp(-0.5_dp * (deltaz / sigmaz) ** 2)
     
 end subroutine deltav_near_wake_lin_func

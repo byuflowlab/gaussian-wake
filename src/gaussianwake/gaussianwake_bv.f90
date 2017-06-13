@@ -3,16 +3,19 @@
 !
 !  Differentiation of porteagel_analyze in reverse (adjoint) mode:
 !   gradient     of useful results: wtvelocity
-!   with respect to varying inputs: rotordiameter turbinez turbinexw
-!                wtvelocity turbineyw yawdeg ct
-!   RW status of diff variables: rotordiameter:out turbinez:out
-!                turbinexw:out wtvelocity:in-zero turbineyw:out
-!                yawdeg:out ct:out
+!   with respect to varying inputs: i rotordiameter turbinez alpha
+!                turbinexw wtvelocity ky kz wind_speed turbineyw
+!                beta yawdeg ct
+!   RW status of diff variables: i:out rotordiameter:out turbinez:out
+!                alpha:out turbinexw:out wtvelocity:in-zero ky:out
+!                kz:out wind_speed:out turbineyw:out beta:out yawdeg:out
+!                ct:out
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
 SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
 & turbineyw, turbineywb, turbinez, turbinezb, rotordiameter, &
-& rotordiameterb, ct, ctb, wind_speed, yawdeg, yawdegb, ky, kz, alpha, &
-& beta, i, wtvelocityb, nbdirs)
+& rotordiameterb, ct, ctb, wind_speed, yawdeg, yawdegb, ky&
+& , kz, alpha, beta, i, &
+& wtvelocityb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -30,6 +33,8 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
   REAL(dp), DIMENSION(nturbines), INTENT(IN) :: ct
   REAL(dp), DIMENSION(nbdirs, nturbines), intent(out) :: ctb
   REAL(dp), INTENT(IN) :: ky, kz, alpha, beta, i, wind_speed
+  REAL(dp), DIMENSION(nbdirs) :: kyb, kzb, alphab, betab, ib, &
+& wind_speedb
 ! local (General)
   REAL(dp), DIMENSION(nturbines) :: yaw
   REAL(dp), DIMENSION(nbdirs, nturbines) :: yawb
@@ -122,10 +127,16 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
     END DO
   END DO
   DO nd=1,nbdirs
+    ib(nd) = 0.0
     rotordiameterb(nd, :) = 0.0
     turbinezb(nd, :) = 0.0
+    alphab(nd) = 0.0
     turbinexwb(nd, :) = 0.0
+    kyb(nd) = 0.0
+    kzb(nd) = 0.0
+    wind_speedb(nd) = 0.0
     turbineywb(nd, :) = 0.0
+    betab(nd) = 0.0
     ctb(nd, :) = 0.0
     yawb(nd, :) = 0.0
   END DO
@@ -148,21 +159,22 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
         x = turbinexw(turbi) - turbinexw(turb)
         deltaz = turbinez(turbi) - turbinez(turb)
         CALL DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, &
-&                                   deltazb, wake_offset, wind_speed, ct&
-&                                   (turb), ctb(1, turb), yaw(turb), &
-&                                   yawb(1, turb), sigmay, sigmayb, &
-&                                   sigmaz, sigmazb, rotordiameter(turb)&
-&                                   , rotordiameterb(1, turb), x, xb, x0&
-&                                   , x0b, sigmay0, sigmay0b, sigmaz0, &
-&                                   sigmaz0b, deltav, deltavb, nbdirs)
+&                                   deltazb, wake_offset, wind_speed, &
+&                                   wind_speedb, ct(turb), ctb(1, turb)&
+&                                   , yaw(turb), yawb(1, turb), sigmay, &
+&                                   sigmayb, sigmaz, sigmazb, &
+&                                   rotordiameter(turb), rotordiameterb(&
+&                                   1, turb), x, xb, x0, x0b, sigmay0, &
+&                                   sigmay0b, sigmaz0, sigmaz0b, deltav&
+&                                   , deltavb, nbdirs)
         CALL POPREAL4ARRAY(sigmaz0, dp/4)
-        CALL SIGMAZ_FUNC_BV(kz, 0.0_dp, dummydiffb0, rotordiameter(turb)&
-&                     , rotordiameterb(1, turb), sigmaz0, sigmaz0b, &
-&                     nbdirs)
+        CALL SIGMAZ_FUNC_BV(kz, kzb, 0.0_dp, dummydiffb0, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), sigmaz0, sigmaz0b&
+&                     , nbdirs)
         CALL POPREAL4ARRAY(sigmay0, dp/4)
-        CALL SIGMAY_FUNC_BV(ky, 0.0_dp, dummydiffb, rotordiameter(turb)&
-&                     , rotordiameterb(1, turb), yaw(turb), yawb(1, turb&
-&                     ), sigmay0, sigmay0b, nbdirs)
+        CALL SIGMAY_FUNC_BV(ky, kyb, 0.0_dp, dummydiffb, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), yaw(turb), yawb(1&
+&                     , turb), sigmay0, sigmay0b, nbdirs)
         CALL POPREAL4ARRAY(deltay, dp/4)
         deltax0 = x - x0
         DO nd=1,nbdirs
@@ -174,26 +186,27 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
         END DO
         CALL WAKE_OFFSET_FUNC_BV(rotordiameter(turb), rotordiameterb(1, &
 &                          turb), theta_c_0, theta_c_0b, x0, x0b, yaw(&
-&                          turb), yawb(1, turb), ky, kz, ct(turb), ctb(1&
-&                          , turb), sigmay, sigmayb, sigmaz, sigmazb, &
-&                          wake_offset, wake_offsetb, nbdirs)
+&                          turb), yawb(1, turb), ky, kyb, kz, kzb, ct(&
+&                          turb), ctb(1, turb), sigmay, sigmayb, sigmaz&
+&                          , sigmazb, wake_offset, wake_offsetb, nbdirs)
         CALL POPREAL4ARRAY(sigmaz, dp/4)
-        CALL SIGMAZ_FUNC_BV(kz, deltax0, deltax0b, rotordiameter(turb), &
-&                     rotordiameterb(1, turb), sigmaz, sigmazb, nbdirs)
+        CALL SIGMAZ_FUNC_BV(kz, kzb, deltax0, deltax0b, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), sigmaz, sigmazb, &
+&                     nbdirs)
         CALL POPREAL4ARRAY(sigmay, dp/4)
-        CALL SIGMAY_FUNC_BV(ky, deltax0, deltax0b, rotordiameter(turb), &
-&                     rotordiameterb(1, turb), yaw(turb), yawb(1, turb)&
-&                     , sigmay, sigmayb, nbdirs)
+        CALL SIGMAY_FUNC_BV(ky, kyb, deltax0, deltax0b, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), yaw(turb), yawb(1&
+&                     , turb), sigmay, sigmayb, nbdirs)
       ELSE
         DO nd=1,nbdirs
           deltavb(nd) = -wtvelocityb(nd, turbi)
         END DO
         deltaz = turbinez(turbi) - turbinez(turb)
         CALL DELTAV_FUNC_BV(deltay, deltayb, deltaz, deltazb, &
-&                     wake_offset, wind_speed, ct(turb), ctb(1, turb), &
-&                     yaw(turb), yawb(1, turb), sigmay, sigmayb, sigmaz&
-&                     , sigmazb, rotordiameter(turb), rotordiameterb(1, &
-&                     turb), deltav, deltavb, nbdirs)
+&                     wake_offset, wind_speed, wind_speedb, ct(turb), &
+&                     ctb(1, turb), yaw(turb), yawb(1, turb), sigmay, &
+&                     sigmayb, sigmaz, sigmazb, rotordiameter(turb), &
+&                     rotordiameterb(1, turb), deltav, deltavb, nbdirs)
         CALL POPREAL4ARRAY(deltay, dp/4)
         x = turbinexw(turbi) - turbinexw(turb)
         deltax0 = x - x0
@@ -206,16 +219,17 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
         END DO
         CALL WAKE_OFFSET_FUNC_BV(rotordiameter(turb), rotordiameterb(1, &
 &                          turb), theta_c_0, theta_c_0b, x0, x0b, yaw(&
-&                          turb), yawb(1, turb), ky, kz, ct(turb), ctb(1&
-&                          , turb), sigmay, sigmayb, sigmaz, sigmazb, &
-&                          wake_offset, wake_offsetb, nbdirs)
+&                          turb), yawb(1, turb), ky, kyb, kz, kzb, ct(&
+&                          turb), ctb(1, turb), sigmay, sigmayb, sigmaz&
+&                          , sigmazb, wake_offset, wake_offsetb, nbdirs)
         CALL POPREAL4ARRAY(sigmaz, dp/4)
-        CALL SIGMAZ_FUNC_BV(kz, deltax0, deltax0b, rotordiameter(turb), &
-&                     rotordiameterb(1, turb), sigmaz, sigmazb, nbdirs)
+        CALL SIGMAZ_FUNC_BV(kz, kzb, deltax0, deltax0b, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), sigmaz, sigmazb, &
+&                     nbdirs)
         CALL POPREAL4ARRAY(sigmay, dp/4)
-        CALL SIGMAY_FUNC_BV(ky, deltax0, deltax0b, rotordiameter(turb), &
-&                     rotordiameterb(1, turb), yaw(turb), yawb(1, turb)&
-&                     , sigmay, sigmayb, nbdirs)
+        CALL SIGMAY_FUNC_BV(ky, kyb, deltax0, deltax0b, rotordiameter(&
+&                     turb), rotordiameterb(1, turb), yaw(turb), yawb(1&
+&                     , turb), sigmay, sigmayb, nbdirs)
         DO nd=1,nbdirs
           xb(nd) = 0.0
         END DO
@@ -233,10 +247,11 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
 &                    turb), theta_c_0, theta_c_0b, nbdirs)
     CALL POPREAL4ARRAY(x0, dp/4)
     CALL X0_FUNC_BV(rotordiameter(turb), rotordiameterb(1, turb), yaw(&
-&             turb), yawb(1, turb), ct(turb), ctb(1, turb), alpha, i, &
-&             beta, x0, x0b, nbdirs)
+&             turb), yawb(1, turb), ct(turb), ctb(1, turb), alpha, &
+&             alphab, i, ib, beta, betab, x0, x0b, nbdirs)
   END DO
   DO nd=1,nbdirs
+    wind_speedb(nd) = wind_speedb(nd) + SUM(wtvelocityb(nd, :))
     yawdegb(nd, :) = 0.0
     yawdegb(nd, :) = -(pi*yawb(nd, :)/180.0_dp)
   END DO
@@ -246,11 +261,13 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, turbinexw, turbinexwb, &
 END SUBROUTINE PORTEAGEL_ANALYZE_BV
 
 !  Differentiation of x0_func in reverse (adjoint) mode:
-!   gradient     of useful results: yaw rotor_diameter x0 ct
-!   with respect to varying inputs: yaw rotor_diameter ct
+!   gradient     of useful results: i yaw alpha rotor_diameter
+!                x0 beta ct
+!   with respect to varying inputs: i yaw alpha rotor_diameter
+!                beta ct
 ! calculates the onset of far-wake conditions
 SUBROUTINE X0_FUNC_BV(rotor_diameter, rotor_diameterb, yaw, yawb, ct, &
-& ctb, alpha, i, beta, x0, x0b, nbdirs)
+& ctb, alpha, alphab, i, ib, beta, betab, x0, x0b, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -258,7 +275,8 @@ SUBROUTINE X0_FUNC_BV(rotor_diameter, rotor_diameterb, yaw, yawb, ct, &
   INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   REAL(dp), INTENT(IN) :: rotor_diameter, yaw, ct, alpha, i, beta
-  REAL(dp), DIMENSION(nbdirs) :: rotor_diameterb, yawb, ctb
+  REAL(dp), DIMENSION(nbdirs) :: rotor_diameterb, yawb, ctb, alphab, &
+& ib, betab
 ! out
   REAL(dp) :: x0
   REAL(dp), DIMENSION(nbdirs) :: x0b
@@ -272,6 +290,7 @@ SUBROUTINE X0_FUNC_BV(rotor_diameter, rotor_diameterb, yaw, yawb, ct, &
   REAL(dp) :: temp3
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
+  REAL(dp), DIMENSION(nbdirs) :: tempb0
   INTEGER :: nbdirs
   temp3 = SQRT(-ct + 1.0_dp)
   temp2 = SQRT(2.0_dp)
@@ -280,13 +299,17 @@ SUBROUTINE X0_FUNC_BV(rotor_diameter, rotor_diameterb, yaw, yawb, ct, &
   temp = COS(yaw)
   DO nd=1,nbdirs
     tempb(nd) = x0b(nd)/temp1
+    tempb0(nd) = -(rotor_diameter*temp*(temp0+1.0_dp)*temp2*tempb(nd)/&
+&     temp1)
     rotor_diameterb(nd) = rotor_diameterb(nd) + (temp0+1.0_dp)*temp*&
 &     tempb(nd)
     yawb(nd) = yawb(nd) - rotor_diameter*(temp0+1.0_dp)*SIN(yaw)*tempb(&
 &     nd)
-    IF (.NOT.1.0_dp - ct .EQ. 0.0) ctb(nd) = ctb(nd) + (-(beta*temp2*&
-&       rotor_diameter*temp*(temp0+1.0_dp)/(2.0*temp3*temp1))-&
-&       rotor_diameter*temp/(2.0*temp0))*tempb(nd)
+    IF (.NOT.1.0_dp - ct .EQ. 0.0) ctb(nd) = ctb(nd) + beta*tempb0(nd)/(&
+&       2.0*temp3) - rotor_diameter*temp*tempb(nd)/(2.0*temp0)
+    alphab(nd) = alphab(nd) + i*tempb0(nd)
+    ib(nd) = ib(nd) + alpha*tempb0(nd)
+    betab(nd) = betab(nd) + (1.0_dp-temp3)*tempb0(nd)
   END DO
 END SUBROUTINE X0_FUNC_BV
 
@@ -334,11 +357,12 @@ SUBROUTINE THETA_C_0_FUNC_BV(yaw, yawb, ct, ctb, theta_c_0, theta_c_0b, &
 END SUBROUTINE THETA_C_0_FUNC_BV
 
 !  Differentiation of sigmay_func in reverse (adjoint) mode:
-!   gradient     of useful results: yaw sigmay rotor_diameter deltax0
-!   with respect to varying inputs: yaw rotor_diameter deltax0
+!   gradient     of useful results: yaw sigmay ky rotor_diameter
+!                deltax0
+!   with respect to varying inputs: yaw ky rotor_diameter deltax0
 ! calculates the horizontal spread of the wake at a given distance from the onset of far 
 ! wake condition
-SUBROUTINE SIGMAY_FUNC_BV(ky, deltax0, deltax0b, rotor_diameter, &
+SUBROUTINE SIGMAY_FUNC_BV(ky, kyb, deltax0, deltax0b, rotor_diameter, &
 & rotor_diameterb, yaw, yawb, sigmay, sigmayb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
@@ -347,7 +371,7 @@ SUBROUTINE SIGMAY_FUNC_BV(ky, deltax0, deltax0b, rotor_diameter, &
   INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   REAL(dp), INTENT(IN) :: ky, deltax0, rotor_diameter, yaw
-  REAL(dp), DIMENSION(nbdirs) :: deltax0b, rotor_diameterb, yawb
+  REAL(dp), DIMENSION(nbdirs) :: kyb, deltax0b, rotor_diameterb, yawb
 ! out
   REAL(dp) :: sigmay
   REAL(dp), DIMENSION(nbdirs) :: sigmayb
@@ -355,26 +379,28 @@ SUBROUTINE SIGMAY_FUNC_BV(ky, deltax0, deltax0b, rotor_diameter, &
   INTRINSIC KIND
 ! horizontal spread
   REAL(dp) :: temp
+  REAL(dp) :: temp0
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
   INTEGER :: nbdirs
-  temp = SQRT(8.0_dp)
+  temp0 = SQRT(8.0_dp)
+  temp = ky*deltax0/rotor_diameter
   DO nd=1,nbdirs
-    tempb(nd) = ky*sigmayb(nd)
-    rotor_diameterb(nd) = rotor_diameterb(nd) + (ky*(deltax0/&
-&     rotor_diameter)+COS(yaw)/temp)*sigmayb(nd) - deltax0*tempb(nd)/&
-&     rotor_diameter
-    deltax0b(nd) = deltax0b(nd) + tempb(nd)
-    yawb(nd) = yawb(nd) - rotor_diameter*SIN(yaw)*sigmayb(nd)/temp
+    tempb(nd) = sigmayb(nd)
+    rotor_diameterb(nd) = rotor_diameterb(nd) + (temp+COS(yaw)/temp0)*&
+&     sigmayb(nd) - temp*tempb(nd)
+    kyb(nd) = kyb(nd) + deltax0*tempb(nd)
+    deltax0b(nd) = deltax0b(nd) + ky*tempb(nd)
+    yawb(nd) = yawb(nd) - rotor_diameter*SIN(yaw)*sigmayb(nd)/temp0
   END DO
 END SUBROUTINE SIGMAY_FUNC_BV
 
 !  Differentiation of sigmaz_func in reverse (adjoint) mode:
-!   gradient     of useful results: sigmaz rotor_diameter
-!   with respect to varying inputs: rotor_diameter deltax0
+!   gradient     of useful results: sigmaz kz rotor_diameter
+!   with respect to varying inputs: kz rotor_diameter deltax0
 ! calculates the vertical spread of the wake at a given distance from the onset of far 
 ! wake condition
-SUBROUTINE SIGMAZ_FUNC_BV(kz, deltax0, deltax0b, rotor_diameter, &
+SUBROUTINE SIGMAZ_FUNC_BV(kz, kzb, deltax0, deltax0b, rotor_diameter, &
 & rotor_diameterb, sigmaz, sigmazb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
@@ -383,7 +409,7 @@ SUBROUTINE SIGMAZ_FUNC_BV(kz, deltax0, deltax0b, rotor_diameter, &
   INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   REAL(dp), INTENT(IN) :: kz, deltax0, rotor_diameter
-  REAL(dp), DIMENSION(nbdirs) :: deltax0b, rotor_diameterb
+  REAL(dp), DIMENSION(nbdirs) :: kzb, deltax0b, rotor_diameterb
 ! out
   REAL(dp) :: sigmaz
   REAL(dp), DIMENSION(nbdirs) :: sigmazb
@@ -391,28 +417,30 @@ SUBROUTINE SIGMAZ_FUNC_BV(kz, deltax0, deltax0b, rotor_diameter, &
   INTRINSIC COS, SQRT
   INTRINSIC KIND
 ! vertical spread
+  REAL(dp) :: temp
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
   INTEGER :: nbdirs
+  temp = kz*deltax0/rotor_diameter
   DO nd=1,nbdirs
-    tempb(nd) = kz*sigmazb(nd)
-    rotor_diameterb(nd) = rotor_diameterb(nd) + (1.0/SQRT(8.0_dp)+kz*(&
-&     deltax0/rotor_diameter))*sigmazb(nd) - deltax0*tempb(nd)/&
-&     rotor_diameter
-    deltax0b(nd) = tempb(nd)
+    tempb(nd) = sigmazb(nd)
+    rotor_diameterb(nd) = rotor_diameterb(nd) + (1.0/SQRT(8.0_dp)+temp)*&
+&     sigmazb(nd) - temp*tempb(nd)
+    kzb(nd) = kzb(nd) + deltax0*tempb(nd)
+    deltax0b(nd) = kz*tempb(nd)
   END DO
 END SUBROUTINE SIGMAZ_FUNC_BV
 
 !  Differentiation of wake_offset_func in reverse (adjoint) mode:
 !   gradient     of useful results: theta_c_0 yaw sigmay sigmaz
-!                rotor_diameter x0 wake_offset ct
+!                ky kz rotor_diameter x0 wake_offset ct
 !   with respect to varying inputs: theta_c_0 yaw sigmay sigmaz
-!                rotor_diameter x0 ct
+!                ky kz rotor_diameter x0 ct
 ! calculates the horizontal distance from the wake center to the hub of the turbine making
 ! the wake
 SUBROUTINE WAKE_OFFSET_FUNC_BV(rotor_diameter, rotor_diameterb, &
-& theta_c_0, theta_c_0b, x0, x0b, yaw, yawb, ky, kz, ct, ctb, sigmay, &
-& sigmayb, sigmaz, sigmazb, wake_offset, wake_offsetb, nbdirs)
+& theta_c_0, theta_c_0b, x0, x0b, yaw, yawb, ky, kyb, kz, kzb, ct, ctb, &
+& sigmay, sigmayb, sigmaz, sigmazb, wake_offset, wake_offsetb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -422,7 +450,7 @@ SUBROUTINE WAKE_OFFSET_FUNC_BV(rotor_diameter, rotor_diameterb, &
   REAL(dp), INTENT(IN) :: rotor_diameter, theta_c_0, x0, yaw, ky, kz, ct&
 & , sigmay
   REAL(dp), DIMENSION(nbdirs) :: rotor_diameterb, theta_c_0b, x0b, &
-& yawb, ctb, sigmayb
+& yawb, kyb, kzb, ctb, sigmayb
   REAL(dp), INTENT(IN) :: sigmaz
   REAL(dp), DIMENSION(nbdirs) :: sigmazb
 ! out
@@ -454,6 +482,8 @@ SUBROUTINE WAKE_OFFSET_FUNC_BV(rotor_diameter, rotor_diameterb, &
   REAL(dp) :: temp19
   REAL(dp) :: temp20
   REAL(dp) :: temp21
+  REAL(dp) :: temp22
+  REAL(dp) :: temp23
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
   REAL(dp), DIMENSION(nbdirs) :: tempb0
@@ -467,70 +497,74 @@ SUBROUTINE WAKE_OFFSET_FUNC_BV(rotor_diameter, rotor_diameterb, &
   REAL(dp), DIMENSION(nbdirs) :: tempb8
   REAL(dp), DIMENSION(nbdirs) :: tempb9
   INTEGER :: nbdirs
-  temp21 = SQRT(ct)
-  temp20 = COS(yaw)
-  temp6 = temp20*rotor_diameter**2
-  temp5 = sigmay*sigmaz/temp6
-  temp19 = SQRT(8.0_dp*temp5)
-  temp18 = SQRT(ct)
-  temp4 = (-temp18+1.6_dp)*(1.6_dp*temp19+temp21)
-  temp17 = SQRT(ct)
-  temp16 = COS(yaw)
-  temp3 = temp16*rotor_diameter**2
-  temp2 = sigmay*sigmaz/temp3
-  temp15 = SQRT(8.0_dp*temp2)
-  temp14 = 1.6_dp*temp15 - temp17
-  temp13 = SQRT(ct)
-  temp1 = (temp13+1.6_dp)*temp14/temp4
-  temp12 = LOG(temp1)
-  temp11 = SQRT(-ct + 1.0_dp)
-  temp10 = theta_c_0*(1.3_dp*temp11-ct+2.9_dp)/14.7_dp
-  temp9 = ky*kz*ct
-  temp8 = COS(yaw)
-  temp0 = temp8/temp9
-  temp7 = SQRT(temp0)
+  temp23 = SQRT(ct)
+  temp22 = COS(yaw)
+  temp7 = temp22*rotor_diameter**2
+  temp6 = sigmay*sigmaz/temp7
+  temp21 = SQRT(8.0_dp*temp6)
+  temp20 = SQRT(ct)
+  temp5 = (-temp20+1.6_dp)*(1.6_dp*temp21+temp23)
+  temp19 = SQRT(ct)
+  temp18 = COS(yaw)
+  temp4 = temp18*rotor_diameter**2
+  temp3 = sigmay*sigmaz/temp4
+  temp17 = SQRT(8.0_dp*temp3)
+  temp16 = 1.6_dp*temp17 - temp19
+  temp15 = SQRT(ct)
+  temp2 = (temp15+1.6_dp)*temp16/temp5
+  temp14 = LOG(temp2)
+  temp13 = SQRT(-ct + 1.0_dp)
+  temp12 = 1.3_dp*temp13 - ct + 2.9_dp
+  temp11 = theta_c_0/14.7_dp
+  temp1 = ky*kz*ct
+  temp10 = COS(yaw)
+  temp0 = temp10/temp1
+  temp9 = SQRT(temp0)
+  temp8 = temp9*temp11*temp12
   temp = theta_c_0*x0/rotor_diameter
   DO nd=1,nbdirs
     tempb(nd) = rotor_diameter*wake_offsetb(nd)
     tempb0(nd) = tempb(nd)/rotor_diameter
-    tempb1(nd) = temp12*tempb(nd)
     IF (temp0 .EQ. 0.0) THEN
-      tempb2(nd) = 0.0
+      tempb1(nd) = 0.0
     ELSE
-      tempb2(nd) = temp10*tempb1(nd)/(2.0*temp7*temp9)
+      tempb1(nd) = temp11*temp12*temp14*tempb(nd)/(2.0*temp9*temp1)
     END IF
-    tempb3(nd) = temp7*theta_c_0*tempb1(nd)/14.7_dp
-    tempb4(nd) = temp7*temp10*tempb(nd)/(temp1*temp4)
-    IF (8.0_dp*temp2 .EQ. 0.0) THEN
+    tempb2(nd) = -(temp0*tempb1(nd))
+    tempb3(nd) = temp14*temp9*tempb(nd)
+    tempb4(nd) = temp8*tempb(nd)/(temp2*temp5)
+    IF (8.0_dp*temp3 .EQ. 0.0) THEN
       tempb5(nd) = 0.0
     ELSE
-      tempb5(nd) = 8.0_dp*1.6_dp*(temp13+1.6_dp)*tempb4(nd)/(2.0*temp15*&
-&       temp3)
+      tempb5(nd) = 8.0_dp*1.6_dp*(temp15+1.6_dp)*tempb4(nd)/(2.0*temp17*&
+&       temp4)
     END IF
-    tempb6(nd) = -(temp2*tempb5(nd))
-    tempb7(nd) = -(temp1*tempb4(nd))
-    IF (8.0_dp*temp5 .EQ. 0.0) THEN
+    tempb6(nd) = -(temp3*tempb5(nd))
+    tempb7(nd) = -(temp2*tempb4(nd))
+    IF (8.0_dp*temp6 .EQ. 0.0) THEN
       tempb8(nd) = 0.0
     ELSE
-      tempb8(nd) = 8.0_dp*1.6_dp*(1.6_dp-temp18)*tempb7(nd)/(2.0*temp19*&
-&       temp6)
+      tempb8(nd) = 8.0_dp*1.6_dp*(1.6_dp-temp20)*tempb7(nd)/(2.0*temp21*&
+&       temp7)
     END IF
-    tempb9(nd) = -(temp5*tempb8(nd))
-    rotor_diameterb(nd) = rotor_diameterb(nd) + temp20*2*rotor_diameter*&
-&     tempb9(nd) + temp16*2*rotor_diameter*tempb6(nd) - temp*tempb0(nd) &
-&     + (temp+temp7*temp10*temp12)*wake_offsetb(nd)
-    theta_c_0b(nd) = theta_c_0b(nd) + (1.3_dp*temp11-ct+2.9_dp)*temp7*&
-&     tempb1(nd)/14.7_dp + x0*tempb0(nd)
+    tempb9(nd) = -(temp6*tempb8(nd))
+    rotor_diameterb(nd) = rotor_diameterb(nd) + temp22*2*rotor_diameter*&
+&     tempb9(nd) + temp18*2*rotor_diameter*tempb6(nd) - temp*tempb0(nd) &
+&     + (temp+temp8*temp14)*wake_offsetb(nd)
+    theta_c_0b(nd) = theta_c_0b(nd) + temp12*tempb3(nd)/14.7_dp + x0*&
+&     tempb0(nd)
     x0b(nd) = x0b(nd) + theta_c_0*tempb0(nd)
     yawb(nd) = yawb(nd) - rotor_diameter**2*SIN(yaw)*tempb9(nd) - &
-&     rotor_diameter**2*SIN(yaw)*tempb6(nd) - SIN(yaw)*tempb2(nd)
+&     rotor_diameter**2*SIN(yaw)*tempb6(nd) - SIN(yaw)*tempb1(nd)
+    kyb(nd) = kyb(nd) + ct*kz*tempb2(nd)
+    kzb(nd) = kzb(nd) + ct*ky*tempb2(nd)
     IF (1.0_dp - ct .EQ. 0.0) THEN
-      ctb(nd) = ctb(nd) - tempb3(nd) - temp0*ky*kz*tempb2(nd)
+      ctb(nd) = ctb(nd) + ky*kz*tempb2(nd) - temp11*tempb3(nd)
     ELSE
-      ctb(nd) = ctb(nd) + ((1.6_dp-temp18)/(2.0*temp21)-(1.6_dp*temp19+&
-&       temp21)/(2.0*temp18))*tempb7(nd) + (temp14/(2.0*temp13)-(temp13+&
-&       1.6_dp)/(2.0*temp17))*tempb4(nd) + ((-1.0)-1.3_dp/(2.0*temp11))*&
-&       tempb3(nd) - temp0*ky*kz*tempb2(nd)
+      ctb(nd) = ctb(nd) + ((1.6_dp-temp20)/(2.0*temp23)-(1.6_dp*temp21+&
+&       temp23)/(2.0*temp20))*tempb7(nd) + (temp16/(2.0*temp15)-(temp15+&
+&       1.6_dp)/(2.0*temp19))*tempb4(nd) + (-temp11-1.3_dp*temp11/(2.0*&
+&       temp13))*tempb3(nd) + ky*kz*tempb2(nd)
     END IF
     sigmayb(nd) = sigmayb(nd) + sigmaz*tempb8(nd) + sigmaz*tempb5(nd)
     sigmazb(nd) = sigmazb(nd) + sigmay*tempb8(nd) + sigmay*tempb5(nd)
@@ -538,14 +572,15 @@ SUBROUTINE WAKE_OFFSET_FUNC_BV(rotor_diameter, rotor_diameterb, &
 END SUBROUTINE WAKE_OFFSET_FUNC_BV
 
 !  Differentiation of deltav_func in reverse (adjoint) mode:
-!   gradient     of useful results: yaw rotor_diameter deltav ct
+!   gradient     of useful results: yaw rotor_diameter wind_speed
+!                deltav ct
 !   with respect to varying inputs: yaw sigmay sigmaz rotor_diameter
-!                deltay deltaz ct
+!                wind_speed deltay deltaz ct
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the far wake region
 SUBROUTINE DELTAV_FUNC_BV(deltay, deltayb, deltaz, deltazb, wake_offset&
-& , wind_speed, ct, ctb, yaw, yawb, sigmay, sigmayb, sigmaz, sigmazb, &
-& rotor_diameter, rotor_diameterb, deltav, deltavb, nbdirs)
+& , wind_speed, wind_speedb, ct, ctb, yaw, yawb, sigmay, sigmayb, sigmaz&
+& , sigmazb, rotor_diameter, rotor_diameterb, deltav, deltavb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -554,7 +589,8 @@ SUBROUTINE DELTAV_FUNC_BV(deltay, deltayb, deltaz, deltazb, wake_offset&
 ! in
   REAL(dp), INTENT(IN) :: deltay, deltaz, wake_offset, wind_speed, ct, &
 & yaw, sigmay
-  REAL(dp), DIMENSION(nbdirs) :: deltayb, deltazb, ctb, yawb, sigmayb
+  REAL(dp), DIMENSION(nbdirs) :: deltayb, deltazb, wind_speedb, ctb, &
+& yawb, sigmayb
   REAL(dp), INTENT(IN) :: sigmaz, rotor_diameter
   REAL(dp), DIMENSION(nbdirs) :: sigmazb, rotor_diameterb
 ! out
@@ -597,35 +633,38 @@ SUBROUTINE DELTAV_FUNC_BV(deltay, deltayb, deltaz, deltazb, wake_offset&
     IF (1.0_dp - temp4*temp .EQ. 0.0) THEN
       tempb(nd) = 0.0
     ELSE
-      tempb(nd) = -(temp6*temp8*wind_speed*deltavb(nd)/(2.0*temp3))
+      tempb(nd) = -(wind_speed*temp6*temp8*deltavb(nd)/(2.0*temp3))
     END IF
     tempb0(nd) = -(temp4*tempb(nd)/temp0)
     tempb1(nd) = -(temp*tempb0(nd))
-    tempb2(nd) = wind_speed*(1.0_dp-temp3)*deltavb(nd)
-    tempb3(nd) = -(0.5_dp*EXP(-(0.5_dp*temp1))*temp8*tempb2(nd)/temp7)
-    tempb4(nd) = -(0.5_dp*EXP(-(0.5_dp*temp2))*temp6*tempb2(nd)/temp9)
+    tempb2(nd) = (1.0_dp-temp3)*deltavb(nd)
+    tempb3(nd) = -(0.5_dp*EXP(-(0.5_dp*temp1))*wind_speed*temp8*tempb2(&
+&     nd)/temp7)
+    tempb4(nd) = -(0.5_dp*EXP(-(0.5_dp*temp2))*wind_speed*temp6*tempb2(&
+&     nd)/temp9)
     yawb(nd) = yawb(nd) + temp*SIN(yaw)*tempb(nd)
     ctb(nd) = ctb(nd) + rotor_diameter**2*tempb0(nd)
     rotor_diameterb(nd) = rotor_diameterb(nd) + ct*2*rotor_diameter*&
 &     tempb0(nd)
     sigmayb(nd) = sigmaz*8.0_dp*tempb1(nd) - temp1*2*sigmay*tempb3(nd)
     sigmazb(nd) = 8.0_dp*sigmay*tempb1(nd) - temp2*2*sigmaz*tempb4(nd)
+    wind_speedb(nd) = wind_speedb(nd) + temp8*temp6*tempb2(nd)
     deltayb(nd) = 2*deltay*tempb3(nd)
     deltazb(nd) = 2*deltaz*tempb4(nd)
   END DO
 END SUBROUTINE DELTAV_FUNC_BV
 
 !  Differentiation of deltav_near_wake_lin_func in reverse (adjoint) mode:
-!   gradient     of useful results: yaw rotor_diameter deltav x0
-!                ct
+!   gradient     of useful results: yaw rotor_diameter wind_speed
+!                deltav x0 ct
 !   with respect to varying inputs: yaw x sigmay sigmaz rotor_diameter
-!                deltay deltaz sigmay0 x0 ct sigmaz0
+!                wind_speed deltay deltaz sigmay0 x0 ct sigmaz0
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the near wake region only
 SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, deltazb&
-& , wake_offset, wind_speed, ct, ctb, yaw, yawb, sigmay, sigmayb, sigmaz&
-& , sigmazb, rotor_diameter, rotor_diameterb, x, xb, x0, x0b, sigmay0, &
-& sigmay0b, sigmaz0, sigmaz0b, deltav, deltavb, nbdirs)
+& , wake_offset, wind_speed, wind_speedb, ct, ctb, yaw, yawb, sigmay, &
+& sigmayb, sigmaz, sigmazb, rotor_diameter, rotor_diameterb, x, xb, x0, &
+& x0b, sigmay0, sigmay0b, sigmaz0, sigmaz0b, deltav, deltavb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -634,14 +673,15 @@ SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, deltazb&
 ! in
   REAL(dp), INTENT(IN) :: deltay, deltaz, wake_offset, wind_speed, ct, &
 & yaw, sigmay
-  REAL(dp), DIMENSION(nbdirs) :: deltayb, deltazb, ctb, yawb, sigmayb
+  REAL(dp), DIMENSION(nbdirs) :: deltayb, deltazb, wind_speedb, ctb, &
+& yawb, sigmayb
   REAL(dp), INTENT(IN) :: sigmaz, rotor_diameter, x, x0, sigmay0, &
 & sigmaz0
   REAL(dp), DIMENSION(nbdirs) :: sigmazb, rotor_diameterb, xb, x0b, &
 & sigmay0b, sigmaz0b
 ! local
   REAL(dp) :: deltav0m, deltavs
-  REAL(dp), DIMENSION(nbdirs) :: deltav0mb
+  REAL(dp), DIMENSION(nbdirs) :: deltav0mb, deltavsb
 ! out
   REAL(dp) :: deltav
   REAL(dp), DIMENSION(nbdirs) :: deltavb
@@ -658,6 +698,7 @@ SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, deltazb&
   REAL(dp) :: temp7
   REAL(dp) :: temp8
   REAL(dp) :: temp9
+  REAL(dp) :: temp10
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
   REAL(dp), DIMENSION(nbdirs) :: tempb0
@@ -666,50 +707,55 @@ SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, deltazb&
   REAL(dp), DIMENSION(nbdirs) :: tempb3
   REAL(dp), DIMENSION(nbdirs) :: tempb4
   REAL(dp), DIMENSION(nbdirs) :: tempb5
+  REAL(dp), DIMENSION(nbdirs) :: tempb6
   INTEGER :: nbdirs
   deltavs = 0.9*wind_speed
 ! magnitude term of gaussian at x0
   deltav0m = wind_speed*(1.0_dp-SQRT(1.0_dp-ct*COS(yaw)/(8.0_dp*sigmay0*&
 &   sigmaz0/rotor_diameter**2)))
 ! linearized gaussian magnitude term for near wake
-  temp9 = sigmaz**2
-  temp5 = deltaz**2/temp9
-  temp8 = sigmay**2
-  temp4 = deltay**2/temp8
-  temp7 = EXP(-(0.5_dp*temp4))
-  temp3 = x/x0
-  temp6 = deltavs + (deltav0m-deltavs)*temp3
+  temp10 = sigmaz**2
+  temp7 = deltaz**2/temp10
+  temp9 = sigmay**2
+  temp6 = deltay**2/temp9
+  temp8 = EXP(-(0.5_dp*temp6))
+  temp5 = x/x0
+  temp4 = (deltav0m-deltavs)*temp5 + deltavs
   temp0 = 8.0_dp*sigmay0*sigmaz0
-  temp2 = ct*rotor_diameter**2
-  temp = temp2/temp0
-  temp1 = COS(yaw)
+  temp3 = ct*rotor_diameter**2
+  temp = temp3/temp0
+  temp2 = COS(yaw)
+  temp1 = SQRT(-(temp2*temp) + 1.0_dp)
   DO nd=1,nbdirs
-    tempb(nd) = EXP(-(0.5_dp*temp5))*deltavb(nd)
-    tempb0(nd) = (deltav0m-deltavs)*temp7*tempb(nd)/x0
-    tempb1(nd) = -(0.5_dp*EXP(-(0.5_dp*temp4))*temp6*tempb(nd)/temp8)
-    tempb2(nd) = -(0.5_dp*EXP(-(0.5_dp*temp5))*temp6*temp7*deltavb(nd)/&
-&     temp9)
-    deltav0mb(nd) = temp7*temp3*tempb(nd)
-    xb(nd) = tempb0(nd)
-    x0b(nd) = x0b(nd) - temp3*tempb0(nd)
-    deltayb(nd) = 2*deltay*tempb1(nd)
-    sigmayb(nd) = -(temp4*2*sigmay*tempb1(nd))
-    deltazb(nd) = 2*deltaz*tempb2(nd)
-    sigmazb(nd) = -(temp5*2*sigmaz*tempb2(nd))
-    IF (1.0_dp - temp1*temp .EQ. 0.0) THEN
-      tempb3(nd) = 0.0
+    tempb(nd) = EXP(-(0.5_dp*temp7))*deltavb(nd)
+    tempb0(nd) = temp8*tempb(nd)
+    tempb1(nd) = (deltav0m-deltavs)*tempb0(nd)/x0
+    tempb2(nd) = -(0.5_dp*EXP(-(0.5_dp*temp6))*temp4*tempb(nd)/temp9)
+    tempb3(nd) = -(0.5_dp*EXP(-(0.5_dp*temp7))*temp4*temp8*deltavb(nd)/&
+&     temp10)
+    deltav0mb(nd) = temp5*tempb0(nd)
+    deltavsb(nd) = (1.0-temp5)*tempb0(nd)
+    xb(nd) = tempb1(nd)
+    x0b(nd) = x0b(nd) - temp5*tempb1(nd)
+    deltayb(nd) = 2*deltay*tempb2(nd)
+    sigmayb(nd) = -(temp6*2*sigmay*tempb2(nd))
+    deltazb(nd) = 2*deltaz*tempb3(nd)
+    sigmazb(nd) = -(temp7*2*sigmaz*tempb3(nd))
+    IF (1.0_dp - temp2*temp .EQ. 0.0) THEN
+      tempb4(nd) = 0.0
     ELSE
-      tempb3(nd) = -(wind_speed*deltav0mb(nd)/(2.0*SQRT(1.0_dp-temp1*&
-&       temp)))
+      tempb4(nd) = -(wind_speed*deltav0mb(nd)/(2.0*temp1))
     END IF
-    tempb4(nd) = -(temp1*tempb3(nd)/temp0)
-    tempb5(nd) = -(temp*tempb4(nd))
-    yawb(nd) = yawb(nd) + temp*SIN(yaw)*tempb3(nd)
-    ctb(nd) = ctb(nd) + rotor_diameter**2*tempb4(nd)
+    tempb5(nd) = -(temp2*tempb4(nd)/temp0)
+    tempb6(nd) = -(temp*tempb5(nd))
+    wind_speedb(nd) = wind_speedb(nd) + 0.9*deltavsb(nd) + (1.0_dp-temp1&
+&     )*deltav0mb(nd)
+    yawb(nd) = yawb(nd) + temp*SIN(yaw)*tempb4(nd)
+    ctb(nd) = ctb(nd) + rotor_diameter**2*tempb5(nd)
     rotor_diameterb(nd) = rotor_diameterb(nd) + ct*2*rotor_diameter*&
-&     tempb4(nd)
-    sigmay0b(nd) = sigmaz0*8.0_dp*tempb5(nd)
-    sigmaz0b(nd) = 8.0_dp*sigmay0*tempb5(nd)
+&     tempb5(nd)
+    sigmay0b(nd) = sigmaz0*8.0_dp*tempb6(nd)
+    sigmaz0b(nd) = 8.0_dp*sigmay0*tempb6(nd)
   END DO
 END SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV
 
