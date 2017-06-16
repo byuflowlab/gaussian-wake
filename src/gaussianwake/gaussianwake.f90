@@ -1,5 +1,5 @@
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
-subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
+subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turbineZ, &
                              rotorDiameter, Ct, wind_speed, &
                              yawDeg, ky, kz, alpha, beta, I, wake_combination_method, &
                              TI_calculation_method, wtVelocity)
@@ -18,6 +18,7 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     integer, intent(in) :: nTurbines
     integer, intent(in) :: wake_combination_method, TI_calculation_method
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
+    integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines), intent(in) :: Ct
     real(dp), intent(in) :: ky, kz, alpha, beta, I, wind_speed
@@ -25,8 +26,8 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset
-    real(dp) :: x, deltav, deltav0m, deltaz, sigmay0, sigmaz0
-    Integer :: turb, turbI
+    real(dp) :: x, deltav, deltav0m, deltaz, sigmay0, sigmaz0, deficit_sum
+    Integer :: u, d, turb, turbI
     real(dp), parameter :: pi = 3.141592653589793_dp
 
     ! model out
@@ -37,18 +38,26 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
     ! bastankhah and porte agel 2016 define yaw to be positive clockwise, this is reversed
     yaw = - yawDeg*pi/180.0_dp
 
-    ! initialize wind turbine velocity array to the free-stream wind speed
-    wtVelocity = wind_speed
-
-    do, turb=1, nTurbines
+    do, d=1, nTurbines
+    
+        ! get index of downstream turbine
+        turbI = sorted_x_idx(d) + 1
+    
+        ! initialize deficit summation term to zero
+        deficit_sum = 0.0_dp
         
-        ! determine the onset location of far wake
-        call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, I, beta, x0)
+!         print *, turbineXw(turbI)
         
-        ! determine the initial wake angle at the onset of far wake
-        call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+        do, u=1, nTurbines ! at turbineX-locations
+            
+            ! set this iterations velocity deficit to 0
+            deltav = 0.0_dp
         
-        do, turbI=1, nTurbines ! at turbineX-locations
+            ! get index of upstream turbine
+            turb = sorted_x_idx(u) + 1
+        
+            ! determine the onset location of far wake
+            call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, I, beta, x0)
         
             ! downstream distance between turbines
             x = turbineXw(turbI) - turbineXw(turb)
@@ -58,6 +67,9 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
 
             ! far wake region
             if (x >= x0) then
+                
+                ! determine the initial wake angle at the onset of far wake
+                call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
             
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -78,12 +90,19 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                 ! velocity difference in the wake
                 call deltav_func(deltay, deltaz, wake_offset, wind_speed, Ct(turb), & 
                                  & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)
-                                 
-                ! linear wake superposition (additive)
-                wtVelocity(turbI) = wtVelocity(turbI) - deltav
+    
+                ! linear supposition
+                !deficit_sum = deficit_sum + deltav
+            
+                ! combine deficits according to selected method wake combination method
+                call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+                                           wake_combination_method, deficit_sum)  
 
             ! near wake region (linearized)
             else if (x > 0.0_dp) then
+                
+                ! determine the initial wake angle at the onset of far wake
+                call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
     
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -111,21 +130,30 @@ subroutine porteagel_analyze(nTurbines, turbineXw, turbineYw, turbineZ, &
                 call deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, &
                                  & Ct(turb), yaw(turb), sigmay, sigmaz, & 
                                  & rotorDiameter(turb), x, x0, sigmay0, sigmaz0, deltav)
-                                 
-                ! linear wake superposition (additive)
-                wtVelocity(turbI) = wtVelocity(turbI) - deltav
-
+                ! linear supposition
+                !deficit_sum = deficit_sum + deltav
+            
+                ! combine deficits according to selected method wake combination method
+                call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+                                           wake_combination_method, deficit_sum)                
             end if
             
-            ! make sure turbine inflow velocity is non-negative
-            if (wtVelocity(turbI) .lt. 0.0_dp) then 
-                wtVelocity(turbI) = 0.0_dp
-            end if
+            
             
         end do
-    end do
+        
+        ! final velocity calculation for turbine turbI
+        wtVelocity(turbI) = wind_speed - deficit_sum
 
+    !! make sure turbine inflow velocity is non-negative
+!             if (wtVelocity(turbI) .lt. 0.0_dp) then 
+!                 wtVelocity(turbI) = 0.0_dp
+!             end if
     !print *, "fortran"
+    
+    end do
+    
+    
 
 end subroutine porteagel_analyze
 
@@ -412,7 +440,7 @@ subroutine deltav_func(deltay, deltaz, wake_offset, wind_speed, Ct, yaw, sigmay,
     intrinsic cos, sqrt, exp
     
     ! velocity difference in the wake
-    deltav = wind_speed * (                                                 &
+    deltav = (                                                 &
         (1.0_dp - sqrt(1.0_dp - Ct *                                                     &
                        cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter ** 2)))) * &
         exp(-0.5_dp * ((deltay) / sigmay) ** 2) * exp(-0.5_dp * ((deltaz) / sigmaz) ** 2)&
@@ -444,10 +472,10 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, wake_offset, wind_speed, Ct
 
     intrinsic cos, sqrt, exp
     
-    deltavs = 0.9*wind_speed
+    deltavs = 0.9
 
     ! magnitude term of gaussian at x0
-    deltav0m = wind_speed * (                                         &
+    deltav0m = (                                         &
                 (1.0_dp - sqrt(1.0_dp - Ct *                          &
                 cos(yaw) / (8.0_dp * sigmay0 * sigmaz0 /              &
                                             (rotor_diameter ** 2)))))
@@ -524,9 +552,10 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
                              
 end subroutine overlap_area_func
 
-! combine wakes using various methods
-subroutine wake_combination_func(Uinf, Ueffu, Ueffd, tmp, wake_combination_method, &
-                                 deficit)
+! combines wakes using various methods
+subroutine wake_combination_func(wind_speed, turb_inflow, deltav,                  &
+                                 wake_combination_method, deficit_sum)
+                                 
     ! combines wakes to calculate velocity at a given turbine
     ! Uinf      = Free stream velocity
     ! Ueffu     = Effective velocity as seen by the upstream rotor
@@ -540,34 +569,32 @@ subroutine wake_combination_func(Uinf, Ueffu, Ueffd, tmp, wake_combination_metho
     integer, parameter :: dp = kind(0.d0)
     
     ! in
-    real(dp), intent(in) :: Uinf, Ueffu, Ueffd, tmp
+    real(dp), intent(in) :: wind_speed, turb_inflow, deltav
     integer, intent(in) :: wake_combination_method
     
     ! out    
-    real(dp), intent(out) :: deficit
+    real(dp), intent(inout) :: deficit_sum
     
-    ! local
-    real(dp), parameter :: pi = 3.141592653589793_dp
-    
+    ! intrinsic functions
     intrinsic sqrt
     
-    ! freestream linear superposition
+    ! freestream linear superposition (Lissaman 1979)
     if (wake_combination_method == 0) then
-        deficit = (Uinf - Ueffd) + tmp
+        deficit_sum = deficit_sum + wind_speed*deltav
 
-    ! local velocity linear superposition
+    ! local velocity linear superposition (Niayifar and Porte Agel 2015, 2016)
     else if (wake_combination_method == 1) then
-        deficit = (Ueffu - Ueffd) + tmp
+        deficit_sum = deficit_sum + turb_inflow*deltav
         
-    ! sum of squares freestream superposition
+    ! sum of squares freestream superposition (Katic et al. 1986)
     else if (wake_combination_method == 2) then 
-        deficit = sqrt((Uinf - Ueffd)**2 + tmp**2)
+        deficit_sum = sqrt(deficit_sum**2 + (wind_speed*deltav)**2)
     
-    !sum of squares local velocity superposition
+    ! sum of squares local velocity superposition (Voutsinas 1990)
     else if (wake_combination_method == 3) then
-        deficit = sqrt((Ueffu - Ueffd)**2 + tmp**2)
+        deficit_sum = sqrt(deficit_sum**2 + (turb_inflow*deltav)**2)
     
-    ! error
+    ! wake combination method error
     else
         print *, "Invalid wake combination method. Must be one of [0,1,2,3]."
         stop 1

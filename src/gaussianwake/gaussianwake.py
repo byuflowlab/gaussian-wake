@@ -195,7 +195,13 @@ class GaussianWake(Component):
         self.add_param('model_params:kz', val=0.022, pass_by_object=True)
         self.add_param('model_params:alpha', val=2.32, pass_by_object=True)
         self.add_param('model_params:beta', val=0.154, pass_by_object=True)
-        self.add_param('model_params:I', val=0.075, pass_by_object=True, desc='turbulence intensity')\
+        self.add_param('model_params:I', val=0.075, pass_by_object=True, desc='turbulence intensity')
+        self.add_param('model_params:wake_combination_method', val=0, pass_by_object=True,
+                       desc='select how the wakes should be combined')
+        self.add_param('model_params:ti_calculation_method', val=0, pass_by_object=True,
+                       desc='select how the wakes should be combined')
+        self.add_param('model_params:sort', val=True, pass_by_object=True,
+                       desc='decide whether turbines should be sorted before solving for directional power')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
@@ -224,6 +230,10 @@ class GaussianWake(Component):
         alpha = params['model_params:alpha']
         beta = params['model_params:beta']
         I = params['model_params:I']
+        wake_combination_method = params['model_params:wake_combination_method']
+        ti_calculation_method = params['model_params:ti_calculation_method']
+        sort_turbs = params['model_params:sort']
+
 
         # rename inputs and outputs
         turbineXw = params['turbineXw']
@@ -240,11 +250,14 @@ class GaussianWake(Component):
         #                                        turbineZ=turbineZ, rotorDiameter=rotorDiameter, Ct=Ct,
         #                                        axialInduction=axialInduction, wind_speed=wind_speed, yaw=np.copy(yaw),
         #                                        ky=ky, kz=kz, alpha=alpha, beta=beta, I=I)
-
-        velocitiesTurbines = porteagel_analyze_fortran(turbineXw, turbineYw,
+        if sort_turbs:
+            sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
+        else:
+            sorted_x_idx = np.arange(0, nTurbines)
+        velocitiesTurbines = porteagel_analyze_fortran(turbineXw, sorted_x_idx, turbineYw,
                                                turbineZ, rotorDiameter, Ct,
                                                wind_speed, np.copy(yaw),
-                                               ky, kz, alpha, beta, I)
+                                               ky, kz, alpha, beta, I, wake_combination_method, ti_calculation_method)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
