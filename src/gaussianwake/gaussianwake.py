@@ -200,6 +200,8 @@ class GaussianWake(Component):
                        desc='select how the wakes should be combined')
         self.add_param('model_params:ti_calculation_method', val=0, pass_by_object=True,
                        desc='select how the wakes should be combined')
+        self.add_param('model_params:calc_k_star', val=True, pass_by_object=True,
+                       desc='choose to calculate wake expansion based on TI if True')
         self.add_param('model_params:sort', val=True, pass_by_object=True,
                        desc='decide whether turbines should be sorted before solving for directional power')
 
@@ -232,6 +234,7 @@ class GaussianWake(Component):
         I = params['model_params:I']
         wake_combination_method = params['model_params:wake_combination_method']
         ti_calculation_method = params['model_params:ti_calculation_method']
+        calc_k_star = params['model_params:calc_k_star']
         sort_turbs = params['model_params:sort']
 
 
@@ -242,7 +245,6 @@ class GaussianWake(Component):
         yaw = params['yaw%i' % direction_id]
         rotorDiameter = params['rotorDiameter']
         Ct = params['Ct']
-        axialInduction = params['axialInduction']
         wind_speed = params['wind_speed']
 
         # run the Bastankhah and Porte Agel model
@@ -257,7 +259,8 @@ class GaussianWake(Component):
         velocitiesTurbines = porteagel_analyze_fortran(turbineXw, sorted_x_idx, turbineYw,
                                                turbineZ, rotorDiameter, Ct,
                                                wind_speed, np.copy(yaw),
-                                               ky, kz, alpha, beta, I, wake_combination_method, ti_calculation_method)
+                                               ky, kz, alpha, beta, I, wake_combination_method, ti_calculation_method,
+                                               calc_k_star)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)

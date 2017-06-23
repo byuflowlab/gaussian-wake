@@ -692,6 +692,24 @@ subroutine added_ti_func(Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diamet
     
 end subroutine added_ti_func
 
+! combines wakes using various methods
+subroutine k_star_func(TI_ust, k_star_ust)
+                                 
+    implicit none
+        
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+    
+    ! in
+    real(dp), intent(in) :: TI_ust
+    
+    ! out  
+    real(dp), intent(out) :: k_star_ust
+    
+    k_star_ust = 0.3837*TI_ust+0.003678
+    
+end subroutine k_star_func
+
 ! calculate axial induction from Ct
 subroutine ct_to_axial_ind_func(CT, axial_induction)
     
