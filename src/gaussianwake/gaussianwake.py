@@ -200,7 +200,7 @@ class GaussianWake(Component):
                        desc='select how the wakes should be combined')
         self.add_param('model_params:ti_calculation_method', val=0, pass_by_object=True,
                        desc='select how the wakes should be combined')
-        self.add_param('model_params:calc_k_star', val=True, pass_by_object=True,
+        self.add_param('model_params:calc_k_star', val=False, pass_by_object=True,
                        desc='choose to calculate wake expansion based on TI if True')
         self.add_param('model_params:sort', val=True, pass_by_object=True,
                        desc='decide whether turbines should be sorted before solving for directional power')

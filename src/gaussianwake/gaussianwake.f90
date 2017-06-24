@@ -25,9 +25,10 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed
 
     ! local (General)
-    real(dp), dimension(nTurbines) :: yaw, TIturbs, k_star, ky_local, kz_local
+    real(dp), dimension(nTurbines) :: yaw, TIturbs, k_star
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset
     real(dp) :: x, deltav, deltav0m, deltaz, sigmay0, sigmaz0, deficit_sum
+    real(dp) :: ky_local, kz_local
     Integer :: u, d, turb, turbI
     real(dp), parameter :: pi = 3.141592653589793_dp
 
@@ -40,8 +41,9 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
     yaw = - yawDeg*pi/180.0_dp
     
     ! initialize TI of all turbines to free-stream value
+    print *, "start TIturbs: ", TIturbs
     TIturbs = TI
-    
+    print *, "initialized TIturbs: ", TIturbs
     ky_local = ky
     kz_local = kz
 
@@ -83,6 +85,12 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
                     kz_local = k_star(turb)
                 end if
                 
+                print *, "ky, kz"
+                print *, ky
+                print *, ky_local
+                print *, kz
+                print *, kz_local
+                
                 ! far wake region
                 if (x >= x0) then
                 
@@ -91,14 +99,14 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
             
                     ! horizontal spread
                     call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                
+                    print *, "sigmay ", sigmay
                     ! vertical spread
                     call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
-                
+                    print *, "sigmaz ", sigmaz
                     ! horizontal cross-wind wake displacement from hub
                     call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
                                          & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
-                                     
+                    print *, "wake_offset ", wake_offset                 
                     ! cross wind distance from downstream hub location to wake center
                     deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
                 
@@ -124,14 +132,15 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
     
                     ! horizontal spread
                     call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                
+                    print *, "near sigmay ", sigmay
                     ! vertical spread
                     call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
-                                                
+                    print *, "near sigmaz ", sigmaz                   
                     ! horizontal cross-wind wake displacement from hub
                     call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
-                
+                                         & ky_local, kz_local, Ct(turb), sigmay, sigmaz, &
+                                         & wake_offset)
+                    print *, "near wake_offset ", wake_offset
                     ! distance from downstream hub location to wake center
                     deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
                 
@@ -156,14 +165,14 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
                                                wake_combination_method, deficit_sum)                
                 end if
                 
-                
                 if ((x > 0.0_dp) .and. (TI_calculation_method > 0)) then
                 
                     ! calculate TI value at each turbine
-                    call added_ti_func(Ct, x, k_star(turb), rotorDiameter(turb), & 
+                    call added_ti_func(TI, Ct, x, k_star(turb), rotorDiameter(turb), & 
                                        & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                        & turbineZ(turbI), TIturbs(turb), &
-                                       & TI_calculation_method, TIturbs(turbI))
+                                       & TI_calculation_method, &
+                                       & TIturbs(turbI))
                 end if
                 
             end if
@@ -631,7 +640,7 @@ subroutine wake_combination_func(wind_speed, turb_inflow, deltav,               
 end subroutine wake_combination_func
 
 ! combines wakes using various methods
-subroutine added_ti_func(Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, & 
+subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, & 
                         & deltay, wake_height, turbine_height, TI_ust, &
                         & TI_calculation_method, TI_dst)
                                  
@@ -642,12 +651,12 @@ subroutine added_ti_func(Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diamet
     
     ! in
     real(dp), intent(in) :: Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst
-    real(dp), intent(in) :: deltay, wake_height, turbine_height, TI_ust
+    real(dp), intent(in) :: deltay, wake_height, turbine_height, TI_ust, TI
     integer, intent(in) :: TI_calculation_method
     
     ! local
     real(dp) :: axial_induction_ust, beta, epsilon, sigma, wake_diameter, wake_overlap
-    real(dp) :: TI_added
+    real(dp) :: TI_added, TI_tmp, sum_of_squares, rotor_area_dst
     real(dp), parameter :: pi = 3.141592653589793_dp
     
     ! out  
@@ -655,10 +664,41 @@ subroutine added_ti_func(Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diamet
     
     ! intrinsic functions
     intrinsic sqrt
-    
+    print *, "TI_dst in: ", TI_dst
     ! Niayifar and Porte Agel 2015, 2016 (adjusted by Annoni and Thomas for SOWFA match 
     ! and optimization)
     if (TI_calculation_method == 1) then
+        call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
+        
+        ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
+        beta = 0.5_dp*((1.0_dp + sqrt(1.0_dp - Ct_ust))/sqrt(1.0_dp - Ct_ust))
+        epsilon = 0.2_dp*sqrt(beta)
+        print *, "epsilon = ", epsilon
+        ! calculate wake spread for TI calcs
+        sigma = k_star_ust*x + rotor_diameter_ust*epsilon
+        wake_diameter = 4.0_dp*sigma
+        print *, "sigma = ", sigma
+        ! calculate wake overlap ratio
+        call overlap_area_func(deltay, turbine_height, rotor_diameter_dst, &
+                            0.0_dp, wake_height, wake_diameter, &
+                            wake_overlap)
+        print *, "wake_overlap = ", wake_overlap   
+        ! Calculate the turbulence added to the inflow of the downstream turbine by the 
+        ! wake of the upstream turbine
+        TI_added = 0.73_dp*(axial_induction_ust**0.8325)*(TI_ust**0.0325)* & 
+                    ((x/rotor_diameter_ust)**-0.32)
+        print *, "TI_added = ", TI_added
+        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2
+        ! Calculate the total turbulence intensity at the downstream turbine
+        !sum_of_squares = TI_dst**2 + (TI_added*wake_overlap)**2
+        ! print *, "sum of squares = ", sum_of_squares
+!         TI_dst = sqrt(sum_of_squares)
+!         print *, "TI_dst = ", TI_dst
+        TI_dst = sqrt(TI_dst**2 + (TI_added*wake_overlap/rotor_area_dst)**2)
+        
+    
+    ! Niayifar and Porte Agel 2015, 2016
+    else if (TI_calculation_method == 2) then
         call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
         
         ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
@@ -679,17 +719,25 @@ subroutine added_ti_func(Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diamet
         TI_added = 0.73_dp*(axial_induction_ust**0.8325)*(TI_ust**0.0325)* & 
                     ((x/rotor_diameter_ust)**-0.32)
         
-        ! Calculate the total turbulence intensity at the downstream turbine
-        TI_dst = sqrt(TI_dst**2 + (TI_added*wake_overlap)**2)
+        ! Calculate the total turbulence intensity at the downstream turbine based on 
+        ! current upstream turbine
+        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2
+        TI_tmp = sqrt(TI**2 + (TI_added*wake_overlap/rotor_area_dst)**2)
         
+        ! Check if this is the max and use it if it is
+        if (TI_tmp > TI_dst) then
+            TI_dst = TI_tmp
+        end if
+    
     ! TODO add other TI calculation methods
         
     ! wake combination method error
+    
     else
         print *, "Invalid added TI calculation method. Must be one of [1,2,3]."
         stop 1
     end if                       
-    
+    print *, "TI_dst out: ", TI_dst
 end subroutine added_ti_func
 
 ! combines wakes using various methods
@@ -704,7 +752,7 @@ subroutine k_star_func(TI_ust, k_star_ust)
     real(dp), intent(in) :: TI_ust
     
     ! out  
-    real(dp), intent(out) :: k_star_ust
+    real(dp), intent(inout) :: k_star_ust
     
     k_star_ust = 0.3837*TI_ust+0.003678
     
