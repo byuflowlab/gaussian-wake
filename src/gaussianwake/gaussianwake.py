@@ -275,9 +275,10 @@ class GaussianWake(Component):
 
             # ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
             #                                Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
-            ws_array = porteagel_visualize_fortran(turbineXw, turbineYw, turbineZ,
-                                           rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
-                                                   alpha, beta, I, velX, velY, velZ)
+            ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+                                                   rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
+                                                   alpha, beta, I, velX, velY, velZ, wake_combination_method,
+                                                   ti_calculation_method, calc_k_star)
 
             unknowns['wsArray%i' % direction_id] = ws_array
 
