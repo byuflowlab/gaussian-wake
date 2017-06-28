@@ -55,8 +55,6 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
         ! initialize deficit summation term to zero
         deficit_sum = 0.0_dp
         
-!         print *, turbineXw(turbI)
-        
         do, u=1, nTurbines ! at turbineX-locations
             
             ! get index of upstream turbine
@@ -84,68 +82,35 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
                     ky_local = k_star(turb)
                     kz_local = k_star(turb)
                 end if
-                
-                !print *, "ky, kz"
-                !print *, ky
-                !print *, ky_local
-                !print *, kz
-                !print *, kz_local
+
+                ! determine the initial wake angle at the onset of far wake
+                call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+        
+                ! horizontal spread
+                call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+                !print *, "sigmay ", sigmay
+                ! vertical spread
+                call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
+                !print *, "sigmaz ", sigmaz
+                ! horizontal cross-wind wake displacement from hub
+                call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
+                                     & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
+                !print *, "wake_offset ", wake_offset                 
+                ! cross wind distance from downstream hub location to wake center
+                deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
+            
+                ! cross wind distance from hub height to height of point of interest
+                deltaz = turbineZ(turbI) - turbineZ(turb)
                 
                 ! far wake region
                 if (x >= x0) then
-                
-                    ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
-            
-                    ! horizontal spread
-                    call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                    !print *, "sigmay ", sigmay
-                    ! vertical spread
-                    call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
-                    !print *, "sigmaz ", sigmaz
-                    ! horizontal cross-wind wake displacement from hub
-                    call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
-                    !print *, "wake_offset ", wake_offset                 
-                    ! cross wind distance from downstream hub location to wake center
-                    deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
-                
-                    ! cross wind distance from hub height to height of point of interest
-                    deltaz = turbineZ(turbI) - turbineZ(turb)
-                
+    
                     ! velocity difference in the wake
                     call deltav_func(deltay, deltaz, Ct(turb), & 
-                                     & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)
-    
-                    ! linear supposition
-                    !deficit_sum = deficit_sum + deltav
-            
-                    ! combine deficits according to selected method wake combination method
-                    call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                               wake_combination_method, deficit_sum)  
+                                     & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)  
 
                 ! near wake region (linearized)
                 else
-                
-                    ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
-    
-                    ! horizontal spread at point of interest (currently same as x0)
-                    call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                    
-                    ! vertical spread at point of interest (currently same as x0)
-                    call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
-                             
-                    ! horizontal cross-wind wake displacement from hub
-                    call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local, kz_local, Ct(turb), sigmay, sigmaz, &
-                                         & wake_offset)
-                    
-                    ! distance from downstream hub location to wake center
-                    deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
-                
-                    ! vertical distance from downstream hub location to wake center
-                    deltaz = turbineZ(turbI) - turbineZ(turb)
                 
                     ! horizontal spread at far wake onset
                     call sigmay_func(ky_local, 0.0_dp, rotorDiameter(turb), yaw(turb), sigmay0)
@@ -157,11 +122,12 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
                     call deltav_near_wake_lin_func(deltay, deltaz, &
                                      & Ct(turb), yaw(turb), sigmay0, sigmaz0, & 
                                      & rotorDiameter(turb), x, x0, sigmay0, sigmaz0, deltav)
-
-                    ! combine deficits according to selected method wake combination method
-                    call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                               wake_combination_method, deficit_sum)                
+              
                 end if
+                
+                ! combine deficits according to selected method wake combination method
+                call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+                                           wake_combination_method, deficit_sum)
                 
                 if ((deltax0 > 0.0_dp) .and. (TI_calculation_method > 0)) then
                 
@@ -174,20 +140,19 @@ subroutine porteagel_analyze(nTurbines, turbineXw, sorted_x_idx, turbineYw, turb
                 end if
                 
             end if
+            
         end do
         
         ! final velocity calculation for turbine turbI
         wtVelocity(turbI) = wind_speed - deficit_sum
+    
+    end do
 
     !! make sure turbine inflow velocity is non-negative
 !             if (wtVelocity(turbI) .lt. 0.0_dp) then 
 !                 wtVelocity(turbI) = 0.0_dp
 !             end if
     !print *, "fortran"
-    
-    end do
-    
-    
 
 end subroutine porteagel_analyze
 
@@ -253,6 +218,8 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, sorted_x_idx, tur
         ! initialize deficit summation term to zero
         deficit_sum = 0.0_dp
         
+!         print *, turbineXw(turbI)
+        
         do, u=1, nTurbines ! at turbineX-locations
             
             ! get index of upstream turbine
@@ -277,66 +244,38 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, sorted_x_idx, tur
                 ! calculate wake spreading parameter at each turbine if desired
                 if (calc_k_star .eqv. .true.) then
                     call k_star_func(TIturbs(turb), k_star(turb))
-                    ky_local(turb) = k_star(turb)
-                    kz_local(turb) = k_star(turb)
+                    ky_local = k_star(turb)
+                    kz_local = k_star(turb)
                 end if
+
+                ! determine the initial wake angle at the onset of far wake
+                call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+        
+                ! horizontal spread
+                call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+                !print *, "sigmay ", sigmay
+                ! vertical spread
+                call sigmaz_func(kz_local, deltax0, rotorDiameter(turb), sigmaz)
+                !print *, "sigmaz ", sigmaz
+                ! horizontal cross-wind wake displacement from hub
+                call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
+                                     & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
+                !print *, "wake_offset ", wake_offset                 
+                ! cross wind distance from downstream hub location to wake center
+                deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
+            
+                ! cross wind distance from hub height to height of point of interest
+                deltaz = turbineZ(turbI) - turbineZ(turb)
                 
                 ! far wake region
                 if (x >= x0) then
-                
-                    ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
-            
-                    ! horizontal spread
-                    call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), &
-                                    & yaw(turb), sigmay)
-                    !print *, "sigmay ", sigmay
-                    ! vertical spread
-                    call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
-                    !print *, "sigmaz ", sigmaz
-                    ! horizontal cross-wind wake displacement from hub
-                    call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local(turb), kz_local(turb), Ct(turb), sigmay, sigmaz, wake_offset)
-                    !print *, "wake_offset ", wake_offset                 
-                    ! cross wind distance from downstream hub location to wake center
-                    deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
-                
-                    ! cross wind distance from hub height to height of point of interest
-                    deltaz = turbineZ(turbI) - turbineZ(turb)
-                
+    
                     ! velocity difference in the wake
                     call deltav_func(deltay, deltaz, Ct(turb), & 
-                                     & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)
-    
-                    ! linear supposition
-                    !deficit_sum = deficit_sum + deltav
-            
-                    ! combine deficits according to selected method wake combination method
-                    call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                               wake_combination_method, deficit_sum)  
+                                     & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)  
 
                 ! near wake region (linearized)
                 else
-                
-                    ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
-    
-                    ! horizontal spread at point of interest (currently same as x0)
-                    call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                    
-                    ! vertical spread at point of interest (currently same as x0)
-                    call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
-                             
-                    ! horizontal cross-wind wake displacement from hub
-                    call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local(turb), kz_local(turb), Ct(turb), sigmay, sigmaz, &
-                                         & wake_offset)
-                    
-                    ! distance from downstream hub location to wake center
-                    deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)
-                
-                    ! vertical distance from downstream hub location to wake center
-                    deltaz = turbineZ(turbI) - turbineZ(turb)
                 
                     ! horizontal spread at far wake onset
                     call sigmay_func(ky_local, 0.0_dp, rotorDiameter(turb), yaw(turb), sigmay0)
@@ -348,11 +287,12 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, sorted_x_idx, tur
                     call deltav_near_wake_lin_func(deltay, deltaz, &
                                      & Ct(turb), yaw(turb), sigmay0, sigmaz0, & 
                                      & rotorDiameter(turb), x, x0, sigmay0, sigmaz0, deltav)
-
-                    ! combine deficits according to selected method wake combination method
-                    call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                               wake_combination_method, deficit_sum)                
+              
                 end if
+                
+                ! combine deficits according to selected method wake combination method
+                call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+                                           wake_combination_method, deficit_sum)
                 
                 if ((deltax0 > 0.0_dp) .and. (TI_calculation_method > 0)) then
                 
@@ -366,16 +306,22 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, sorted_x_idx, tur
                 
             end if
         end do
-  
+        
         ! final velocity calculation for turbine turbI
         wtVelocity(turbI) = wind_speed - deficit_sum
-        print *, deficit_sum
+    
     end do
 
-    do, loc=1, nTurbines
+    do, loc=1, nSamples
          
-        do, turb=1, nSamples ! at turbineX-locations
+        ! set combined velocity deficit to zero for loc
+        deficit_sum = 0.0_dp
         
+        do, turb=1, nTurbines ! at turbineX-locations
+        
+            ! set velocity deficit at loc due to turb to zero
+            deltav = 0.0_dp
+
             ! determine the onset location of far wake
             call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, TIturbs(turb), &
                         & beta, x0)
@@ -388,74 +334,68 @@ subroutine porteagel_visualize(nTurbines, nSamples, turbineXw, sorted_x_idx, tur
                 
             ! downstream distance from far wake onset to downstream turbine
             deltax0 = x - x0
-
-            ! far wake region
-            if (x >= x0) then
-                
+            
+            if (x > 0.0_dp) then
+            
                 ! horizontal spread
                 call sigmay_func(ky, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
-                
+            
                 ! vertical spread
                 call sigmaz_func(kz, deltax0, rotorDiameter(turb), sigmaz)
-                
+            
                 ! horizontal cross-wind wake displacement from hub
                 call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
                                      & ky_local(turb), kz_local(turb), Ct(turb), sigmay, &
                                      & sigmaz, wake_offset)
-                                     
+                                 
                 ! horizontal distance from downstream hub location to wake center
                 deltay = velY(loc) - (turbineYw(turb) + wake_offset)
-                
+            
                 ! vertical distance from downstream hub location to wake center
                 deltaz = velZ(loc) - turbineZ(turb)
-                
-                ! velocity difference in the wake
-                call deltav_func(deltay, deltaz, Ct(turb), & 
-                                 & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)
 
-            ! near wake region (linearized)
-            else if (x > 0.0_dp) then
+                ! far wake region
+                if (x >= x0) then
 
-                ! horizontal spread at point of interest
-                call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), &
-                                & yaw(turb), sigmay)
-                
-                ! vertical spread at point of interest
-                call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
-                                                
-                ! horizontal cross-wind wake displacement from hub
-                call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                     & ky_local(turb), kz_local(turb), Ct(turb), sigmay, &
-                                     & sigmaz, wake_offset)
-                
-                ! horizontal distance from downstream hub location to wake center
-                deltay = velY(loc) - (turbineYw(turb) + wake_offset)
-                
-                ! vertical distance from downstream hub location to wake center
-                deltaz = velZ(loc) - turbineZ(turb)
-                
-                ! horizontal spread at far wake onset
-                call sigmay_func(ky_local(turb), 0.0_dp, rotorDiameter(turb), yaw(turb), &
-                                & sigmay0)
-                
-                ! vertical spread at far wake onset
-                call sigmaz_func(kz_local(turb), 0.0_dp, rotorDiameter(turb), sigmaz0)
-                
-                ! velocity deficit in the nearwake (linear model)
-                call deltav_near_wake_lin_func(deltay, deltaz, Ct(turb), yaw(turb), & 
-                                              & sigmay0, sigmaz0, rotorDiameter(turb), & 
-                                              & x, x0, sigmay0, sigmaz0, deltav)
+                    ! velocity difference in the wake
+                    call deltav_func(deltay, deltaz, Ct(turb), & 
+                                     & yaw(turb), sigmay, sigmaz, rotorDiameter(turb), deltav)
 
+                ! near wake region (linearized)
+                else
+                
+                    ! horizontal spread at far wake onset
+                    call sigmay_func(ky_local(turb), 0.0_dp, rotorDiameter(turb), yaw(turb), &
+                                    & sigmay0)
+                
+                    ! vertical spread at far wake onset
+                    call sigmaz_func(kz_local(turb), 0.0_dp, rotorDiameter(turb), sigmaz0)
+                
+                    ! velocity deficit in the nearwake (linear model)
+                    call deltav_near_wake_lin_func(deltay, deltaz, Ct(turb), yaw(turb), & 
+                                                  & sigmay0, sigmaz0, rotorDiameter(turb), & 
+                                                  & x, x0, sigmay0, sigmaz0, deltav)
+
+                end if
+            
+                ! combine deficits according to selected method wake combination method
+                call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+                                           wake_combination_method, deficit_sum) 
+            
             end if
             
-            ! combine deficits according to selected method wake combination method
-            call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                       wake_combination_method, deficit_sum)  
+            ! if (x < 0.0_dp ) then
+!                 print *, "deltav: ", deltav
+!                 print *, "deficit sum at ", turb, ": ", deficit_sum 
+!                 print *, "deltax: ", x
+!                 print *, "deltav: ", deltav
+!             end if
+            
         end do
         
         ! final velocity calculation for location loc
         wsArray(loc) = wind_speed - deficit_sum
-        print *, deficit_sum
+        ! print *, 'deficit sum: ', deficit_sum
     end do
 
 end subroutine porteagel_visualize
@@ -656,9 +596,9 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
     deltav = (((deltav0m - deltavr)/x0) * x + deltavr) *              &
         exp(-0.5_dp * (deltay / sigmay) ** 2) *                       &
         exp(-0.5_dp * (deltaz / sigmaz) ** 2)
-    if (deltav > 0.5) then
-        print *, deltav
-    end if
+    ! if (deltav > 0.5) then
+!         print *, deltav
+!     end if
     
 end subroutine deltav_near_wake_lin_func
 
