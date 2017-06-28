@@ -204,6 +204,10 @@ class GaussianWake(Component):
                        desc='choose to calculate wake expansion based on TI if True')
         self.add_param('model_params:sort', val=True, pass_by_object=True,
                        desc='decide whether turbines should be sorted before solving for directional power')
+        self.add_param('model_params:RotorPointsY', val=np.array([0.0]), pass_by_object=True,
+                       desc='rotor swept area sampling Y points centered at (y,z)=(0,0) normalized by rotor radius')
+        self.add_param('model_params:RotorPointsZ', val=np.array([0.0]), pass_by_object=True,
+                       desc='rotor swept area sampling Z points centered at (y,z)=(0,0) normalized by rotor radius')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
@@ -236,6 +240,8 @@ class GaussianWake(Component):
         ti_calculation_method = params['model_params:ti_calculation_method']
         calc_k_star = params['model_params:calc_k_star']
         sort_turbs = params['model_params:sort']
+        RotorPointsY = params['model_params:RotorPointsY']
+        RotorPointsZ = params['model_params:RotorPointsZ']
 
 
         # rename inputs and outputs
@@ -259,7 +265,8 @@ class GaussianWake(Component):
         velocitiesTurbines = porteagel_analyze_fortran(turbineXw, sorted_x_idx, turbineYw,
                                                turbineZ, rotorDiameter, Ct,
                                                wind_speed, np.copy(yaw),
-                                               ky, kz, alpha, beta, I, wake_combination_method, ti_calculation_method,
+                                               ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
+                                               wake_combination_method, ti_calculation_method,
                                                calc_k_star)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
@@ -277,7 +284,8 @@ class GaussianWake(Component):
             #                                Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
             ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ,
                                                    rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
-                                                   alpha, beta, I, velX, velY, velZ, wake_combination_method,
+                                                   alpha, beta, I, RotorPointsY, RotorPointsZ,
+                                                   velX, velY, velZ, wake_combination_method,
                                                    ti_calculation_method, calc_k_star)
 
             unknowns['wsArray%i' % direction_id] = ws_array
