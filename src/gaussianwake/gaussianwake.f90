@@ -1,3 +1,9 @@
+! Implementation of the Bastankhah and Porte Agel gaussian-shaped wind turbine wake 
+! model (2016) with various farm modeling (TI and wake combination) methods included
+! Created by Jared J. Thomas, 2017.
+! FLight Optimization and Wind Laboratory (FLOW Lab)
+! Brigham Young University
+
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
 subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, turbineYw, turbineZ, &
                              rotorDiameter, Ct, wind_speed, &
@@ -575,28 +581,29 @@ subroutine deltav_func(nPoints, deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
     ! load intrinsic functions
     intrinsic cos, sqrt, exp
     
-    !print *, "here 1.1"
-    
+    ! set the velocity sum across all points to zero
     deltav_sum = 0.0_dp
     
+    ! calculate the velocity at each rotor sample point
     do, point=1, nPoints
+    
+        ! scale rotor sample point locations by rotor radius and place them in the wake 
+        ! reference frame
         deltay_p = deltay + 0.5_dp*pointsY(point)*rotor_diameter_dst
         deltaz_p = deltaz + 0.5_dp*pointsZ(point)*rotor_diameter_dst
         
-        ! velocity difference in the wake
+        ! velocity difference in the wake at each sample point
         deltav_sum = deltav_sum + (                                                              &
             (1.0_dp - sqrt(1.0_dp - Ct *                                                         &
                            cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter_ust ** 2)))) *     &
-            exp(-0.5_dp * ((deltay_p) / sigmay) ** 2) * exp(-0.5_dp * ((deltaz_p) / sigmaz) ** 2)&
+            exp(-0.5_dp * (deltay_p / sigmay) ** 2) * exp(-0.5_dp * (deltaz_p / sigmaz) ** 2)&
         )
 
     end do 
     
-    ! take the average of the velocity at all points
+    ! compute effective hub velocity by taking the average of the velocity at all points
     deltav = deltav_sum/nPoints
-    
-    !print *, "here 1.2"
-    
+
 end subroutine deltav_func
 
 
@@ -626,44 +633,37 @@ subroutine deltav_near_wake_lin_func(nPoints, deltay, deltaz, Ct, yaw,  &
     ! out
     real(dp), intent(out) :: deltav
 
+    ! load intrinsic functions
     intrinsic cos, sqrt, exp
-    
-    !print *, "here 2.1", nPoints, pointsY(1), pointsZ(1)
-    
-    !deltavr = 0.9
-    
-    !print *, "inputs = ", nPoints, deltay, deltaz, Ct, yaw,  &
-              !                    & sigmay, sigmaz, rotor_diameter_ust,  &
-!                                  & rotor_diameter_dst, x, x0,           &
-!                                  & sigmay0, sigmaz0, pointsY, pointsZ
 
     ! magnitude term of gaussian at x0
     deltav0m = (                                         &
                 (1.0_dp - sqrt(1.0_dp - Ct *                          &
                 cos(yaw) / (8.0_dp * sigmay0 * sigmaz0 /              &
                                             (rotor_diameter_ust ** 2)))))
+    ! initialize the gaussian magnitude term at the rotor for the linear interpolation
     deltavr = deltav0m
-    !print *, "deltav0m = ", deltav0m
+    
+    ! set the velocity sum across all points to zero
     deltav_sum = 0.0_dp
     
+    ! calculate the velocity at each rotor sample point
     do, point=1, nPoints
-        !print *, "point= ", point
+    
+        ! scale rotor sample point locations by rotor radius and place them in the wake 
+        ! reference frame
         deltay_p = deltay + 0.5_dp*pointsY(point)*rotor_diameter_dst
         deltaz_p = deltaz + 0.5_dp*pointsZ(point)*rotor_diameter_dst    
-        !print *, "dyp, dzp: ", deltay_p, deltaz_p
-        !print *, "sum a = ", deltav_sum
+
         ! linearized gaussian magnitude term for near wake
         deltav_sum = deltav_sum + (((deltav0m - deltavr)/x0) * x + deltavr) *       &
             exp(-0.5_dp * (deltay_p / sigmay) ** 2) *                                 &
             exp(-0.5_dp * (deltaz_p / sigmaz) ** 2)
-        !print *, "sum b = ", deltav_sum
     
     end do
     
-    ! take the average of the velocity at all points
+    ! compute effective hub velocity by taking the average of the velocity at all points
     deltav = deltav_sum/nPoints
-    
-    !print *, "here 2.2"
                 
 end subroutine deltav_near_wake_lin_func
 
@@ -671,9 +671,6 @@ end subroutine deltav_near_wake_lin_func
 subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
                             wake_center_y, wake_center_z, wake_diameter, &
                             wake_overlap)
-!   calculate overlap of rotors and wake zones (wake zone location defined by wake 
-!   center and wake diameter)
-!   turbineX,turbineY is x,y-location of center of rotor
 
     implicit none
         
@@ -691,15 +688,24 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     real(dp), parameter :: pi = 3.141592653589793_dp, tol = 0.000001_dp
     real(dp) :: OVdYd, OVr, OVRR, OVL, OVz
     
-    intrinsic dacos
+    ! load intrinsic functions
+    intrinsic dacos, sqrt
     
-    OVdYd = wake_center_y-turbine_y        ! distance between wake center and rotor center
-    OVr = rotor_diameter/2.0_dp            ! rotor diameter
-    OVRR = wake_diameter/2.0_dp            ! wake diameter
-    OVdYd = abs(OVdYd)
-    if (OVdYd >= 0.0_dp + tol) then
-        ! calculate the distance from the wake center to the vertical line between
-        ! the two circle intersection points
+    ! distance between wake center and rotor center
+    OVdYd = sqrt((wake_center_y-turbine_y)**2 + (wake_center_z - turbine_z)**2) 
+
+    ! find rotor radius
+    OVr = rotor_diameter/2.0_dp
+    
+    ! find wake radius
+    OVRR = wake_diameter/2.0_dp
+    
+    ! make sure the distance from wake center to turbine hub is positive
+    ! OVdYd = abs(OVdYd) !!! commented out since change to 2D distance (y,z) will always be positive
+    
+    ! calculate the distance from the wake center to the line perpendicular to the 
+    ! line between the two circle intersection points
+    if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
     else
         OVL = 0.0_dp
@@ -714,7 +720,7 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
         OVz = 0.0_dp
     end if
 
-    if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake zone
+    if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake
 
         if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
             wake_overlap = OVRR*OVRR*dacos(OVL/OVRR) + OVr*OVr*dacos((OVdYd-OVL)/OVr) - OVdYd*OVz
@@ -809,6 +815,8 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     ! Niayifar and Porte Agel 2015, 2016 (adjusted by Annoni and Thomas for SOWFA match 
     ! and optimization)
     if (TI_calculation_method == 1) then
+    
+        ! calculate axial induction based on the Ct value
         call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
         
         ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
@@ -840,6 +848,8 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
     ! Niayifar and Porte Agel 2015, 2016
     else if (TI_calculation_method == 2) then
+    
+        ! calculate axial induction based on the Ct value
         call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
         
         ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
@@ -872,16 +882,15 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
     ! TODO add other TI calculation methods
         
-    ! wake combination method error
-    
+    ! wake combination method error 
     else
         print *, "Invalid added TI calculation method. Must be one of [1,2,3]."
         stop 1
     end if                       
-    !print *, "TI_dst out: ", TI_dst
+    
 end subroutine added_ti_func
 
-! combines wakes using various methods
+! compute wake spread parameter based on local turbulence intensity
 subroutine k_star_func(TI_ust, k_star_ust)
                                  
     implicit none
@@ -895,6 +904,7 @@ subroutine k_star_func(TI_ust, k_star_ust)
     ! out  
     real(dp), intent(inout) :: k_star_ust
     
+    ! calculate wake spread parameter from Niayifar and Porte Agel (2015, 2016)
     k_star_ust = 0.3837*TI_ust+0.003678
     
 end subroutine k_star_func
@@ -913,9 +923,10 @@ subroutine ct_to_axial_ind_func(CT, axial_induction)
     ! out
     real(dp), intent(out) :: axial_induction
 
+    ! initialize axial induction to zero
     axial_induction = 0.0_dp
 
-    ! execute
+    ! calculate axial induction
     if (CT > 0.96) then  ! Glauert condition
         axial_induction = 0.143_dp + sqrt(0.0203_dp-0.6427_dp*(0.889_dp - CT))
     else
