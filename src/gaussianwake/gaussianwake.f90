@@ -934,3 +934,25 @@ subroutine ct_to_axial_ind_func(CT, axial_induction)
     end if
     
 end subroutine ct_to_axial_ind_func
+
+! adjust wind speed for wind shear
+subroutine wind_shear_func(point_z, u_ref, z_ref, z_0, shear_exp, adjusted_wind_speed)
+    
+    implicit none
+    
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: point_z, u_ref, z_ref, z_0, shear_exp
+
+    ! out
+    real(dp), intent(out) :: adjusted_wind_speed
+
+    ! initialize adjusted wind speed to zero
+    adjusted_wind_speed = 0.0_dp
+
+    ! adjusted wind speed for wind shear
+    adjusted_wind_speed = u_ref*((point_z-z_0)/(z_ref-z_0))**shear_exp
+    
+end subroutine wind_shear_func
