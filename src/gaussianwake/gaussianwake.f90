@@ -85,6 +85,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
                 ! get index of upstream turbine
                 turb = sorted_x_idx(u) + 1
                 
+                ! skip this loop if turb = turbI (turbines impact on itself)
                 if (turb .eq. turbI) cycle
             
                 !print *, "rotorDiameter, turbI, turb ", rotorDiameter, turbI, turb
