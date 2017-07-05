@@ -84,6 +84,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
             
                 ! get index of upstream turbine
                 turb = sorted_x_idx(u) + 1
+                
+                if (turb .eq. turbI) cycle
             
                 !print *, "rotorDiameter, turbI, turb ", rotorDiameter, turbI, turb
             
@@ -148,7 +150,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
                     !print *, "local y,z : ", LocalRotorPointY, LocalRotorPointZ, turb, turbI, p
                     !print *, deltaz, deltay
                     ! far wake region
-                    if (x >= x0) then
+                    
+                    !discontinuity_point = x0
+                    
+                    if (x >= 0.0) then
+                    
+                        print *, x
     
                         ! velocity difference in the wake
                         call deltav_func(deltay, deltaz, Ct(turb), yaw(turb), &
