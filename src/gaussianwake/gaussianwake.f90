@@ -539,11 +539,17 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, turbineXw, sor
         
         ! adjust sample point velocity for shear
         call wind_shear_func(point_z, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
-        
+
+            
         ! final velocity calculation for location loc
         wsArray(loc) = point_velocity_with_shear
         
-        !print *, 'deficit sum: ', deficit_sum
+        ! if (velZ(loc) < 0.000003) then
+!             print *, 'deficit sum: ', deficit_sum
+!             print *, "point vel w/o shear: ", point_z
+!             print *, "point vel w/ shear: ", point_velocity_with_shear
+!         end if
+!         
     end do
 
 end subroutine porteagel_visualize
@@ -1040,8 +1046,14 @@ subroutine wind_shear_func(point_z, u_ref, z_ref, z_0, shear_exp, adjusted_wind_
     ! initialize adjusted wind speed to zero
     adjusted_wind_speed = 0.0_dp
 
-    ! adjusted wind speed for wind shear
-    adjusted_wind_speed = u_ref*((point_z-z_0)/(z_ref-z_0))**shear_exp
+    ! check that the point of interest is above ground level
+    if (point_z >= z_0) then
+        ! adjusted wind speed for wind shear if point is above ground
+        adjusted_wind_speed = u_ref*((point_z-z_0)/(z_ref-z_0))**shear_exp
+    else 
+        ! if the point of interest is below ground, set the wind speed to 0.0
+        adjusted_wind_speed = 0.0_dp
+    end if
     
 end subroutine wind_shear_func
 
