@@ -180,7 +180,7 @@ class GaussianWake(Component):
         # used
         self.add_param('turbineXw', val=np.zeros(nTurbines), units='m')
         self.add_param('turbineYw', val=np.zeros(nTurbines), units='m')
-        self.add_param('hubHeight', val=np.zeros(nTurbines), units='m')
+        self.add_param('hubHeight', val=np.ones(nTurbines)*90.0, units='m')
         self.add_param('yaw%i' % direction_id, np.zeros(nTurbines), units='deg')
         self.add_param('rotorDiameter', val=np.zeros(nTurbines)+126.4, units='m')
         self.add_param('Ct', np.zeros(nTurbines), desc='Turbine thrust coefficients')
