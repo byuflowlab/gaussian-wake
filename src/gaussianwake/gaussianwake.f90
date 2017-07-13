@@ -9,7 +9,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
                              rotorDiameter, Ct, wind_speed, &
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
-                             TI_calculation_method, calc_k_star, wtVelocity)
+                             TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
+                             wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -24,12 +25,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     ! in
     integer, intent(in) :: nTurbines, nRotorPoints
     integer, intent(in) :: wake_combination_method, TI_calculation_method
-    logical, intent(in) :: calc_k_star
+    logical, intent(in) :: calc_k_star, print_ti
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines), intent(in) :: Ct
-    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp
+    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
 
     ! local (General)
@@ -162,7 +163,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     
                         ! velocity difference in the wake
                         call deltav_func(deltay, deltaz, Ct(turb), yaw(turb), &
-                                        & sigmay, sigmaz, rotorDiameter(turb), deltav)  
+                                        & sigmay, sigmaz, rotorDiameter(turb), opt_exp_fac, deltav)  
                         !print *, "rotorDiameter after far deltav ", rotorDiameter
                     ! near wake region (linearized)
                     else
@@ -181,7 +182,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, x0, sigmay_dp, sigmaz_dp, & 
-                                         & deltav)
+                                         & opt_exp_fac, deltav)
                         !print *, "rotorDiameter after deltav near ", rotorDiameter
                     end if
                 
@@ -231,11 +232,13 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     end do
     
     ! print TIturbs values to a file
-    !open(unit=2, file="TIturbs_tmp.txt")
-    !do, turb=1, nTurbines 
-    !    write(2,*) TIturbs(turb)
-    !end do
-    !close(2)
+    if (print_ti) then
+        open(unit=2, file="TIturbs_tmp.txt")
+        do, turb=1, nTurbines 
+            write(2,*) TIturbs(turb)
+        end do
+        close(2)
+    end if
     !print *, "TIturbs: ", TIturbs
     !print *, wtVelocity
 
@@ -253,7 +256,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, turbineXw, sor
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, & 
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
-                             calc_k_star, wsArray)
+                             calc_k_star, opt_exp_fac, wsArray)
                              
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -271,7 +274,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, turbineXw, sor
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines), intent(in) :: Ct
-    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp
+    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nSamples), intent(in) :: velX, velY, velZ
     integer, intent(in) :: wake_combination_method, TI_calculation_method
@@ -386,7 +389,8 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, turbineXw, sor
     
                         ! velocity difference in the wake
                         call deltav_func(deltay, deltaz, Ct(turb), yaw(turb),  &
-                                        & sigmay, sigmaz, rotorDiameter(turb), deltav)  
+                                        & sigmay, sigmaz, rotorDiameter(turb), &
+                                        & opt_exp_fac, deltav)  
 
                     ! near wake region (linearized)
                     else
@@ -404,7 +408,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, turbineXw, sor
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, & 
-                                         & deltav)
+                                         & opt_exp_fac, deltav)
               
                     end if
                 
@@ -700,7 +704,7 @@ end subroutine wake_offset_func
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the far wake region
 subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, & 
-                      & rotor_diameter_ust, deltav) 
+                      & rotor_diameter_ust, opt_exp_fac, deltav) 
                        
     implicit none
 
@@ -709,7 +713,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
 
     ! in
     real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay
-    real(dp), intent(in) :: sigmaz, rotor_diameter_ust
+    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, opt_exp_fac
      
     ! out
     real(dp), intent(out) :: deltav
@@ -723,7 +727,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
     deltav = (                                                                    &
         (1.0_dp - sqrt(1.0_dp - Ct *                                                         &
                        cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter_ust ** 2)))) *     &
-        exp(-0.5_dp * (deltay / sigmay) ** 2) * exp(-0.5_dp * (deltaz / sigmaz) ** 2)&
+        exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) * exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)&
     )
     
     !print *, "rotor_diameter in deltav exit", rotor_diameter_ust
@@ -735,7 +739,7 @@ end subroutine deltav_func
 ! for use in the near wake region only
 subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
-                                 & discontinuity_point, sigmay0, sigmaz0, deltav) 
+                                 & discontinuity_point, sigmay0, sigmaz0, opt_exp_fac, deltav) 
                        
     implicit none
 
@@ -744,7 +748,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
     ! in
     real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay
-    real(dp), intent(in) :: sigmaz, rotor_diameter_ust
+    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, opt_exp_fac
     real(dp), intent(in) :: x, discontinuity_point, sigmay0, sigmaz0
     
     ! local
@@ -766,8 +770,8 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
     ! linearized gaussian magnitude term for near wake
     deltav = (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *       &
-        exp(-0.5_dp * (deltay / sigmay) ** 2) *                                 &
-        exp(-0.5_dp * (deltaz / sigmaz) ** 2)
+        exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) *                                 &
+        exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)
                 
 end subroutine deltav_near_wake_lin_func
 
@@ -879,6 +883,7 @@ subroutine wake_combination_func(wind_speed, turb_inflow, deltav,               
     ! local velocity linear superposition (Niayifar and Porte Agel 2015, 2016)
     else if (wake_combination_method == 1) then
         deficit_sum = deficit_sum + turb_inflow*deltav
+        !print *, "here"
         
     ! sum of squares freestream superposition (Katic et al. 1986)
     else if (wake_combination_method == 2) then 

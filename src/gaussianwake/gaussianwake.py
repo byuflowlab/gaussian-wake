@@ -211,6 +211,11 @@ class GaussianWake(Component):
                        desc='rotor swept area sampling Y points centered at (y,z)=(0,0) normalized by rotor radius')
         self.add_param('model_params:RotorPointsZ', val=np.array([0.0]), pass_by_object=True,
                        desc='rotor swept area sampling Z points centered at (y,z)=(0,0) normalized by rotor radius')
+        self.add_param('model_params:print_ti', val=False, pass_by_object=True,
+                       desc='print TI values to a file for use in plotting etc')
+
+        self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
+                       desc='increase spread for optimization')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
@@ -249,6 +254,10 @@ class GaussianWake(Component):
         z_0 = params['model_params:z_0']
         shear_exp = params['model_params:shear_exp']
 
+        opt_exp_fac = params['model_params:opt_exp_fac']
+
+        print_ti = params['model_params:print_ti']
+
 
         # rename inputs and outputs
         turbineXw = params['turbineXw']
@@ -273,7 +282,7 @@ class GaussianWake(Component):
                                                wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
-                                               calc_k_star)
+                                               calc_k_star, opt_exp_fac, print_ti)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
@@ -292,7 +301,7 @@ class GaussianWake(Component):
                                                    rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
                                                    alpha, beta, I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                                    velX, velY, velZ, wake_combination_method,
-                                                   ti_calculation_method, calc_k_star)
+                                                   ti_calculation_method, calc_k_star, opt_exp_fac)
 
             unknowns['wsArray%i' % direction_id] = ws_array
 
