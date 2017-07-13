@@ -277,6 +277,9 @@ class GaussianWake(Component):
             sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
         else:
             sorted_x_idx = np.arange(0, nTurbines)
+
+        self.sorted_x_idx = sorted_x_idx
+
         velocitiesTurbines = porteagel_analyze_fortran(turbineXw, sorted_x_idx, turbineYw,
                                                turbineZ, rotorDiameter, Ct,
                                                wind_speed, np.copy(yaw),
@@ -333,6 +336,22 @@ class GaussianWake(Component):
         beta = params['model_params:beta']
         I = params['model_params:I']
 
+        wake_combination_method = params['model_params:wake_combination_method']
+        ti_calculation_method = params['model_params:ti_calculation_method']
+        calc_k_star = params['model_params:calc_k_star']
+        sort_turbs = params['model_params:sort']
+        RotorPointsY = params['model_params:RotorPointsY']
+        RotorPointsZ = params['model_params:RotorPointsZ']
+        z_ref = params['model_params:z_ref']
+        z_0 = params['model_params:z_0']
+        shear_exp = params['model_params:shear_exp']
+
+        opt_exp_fac = params['model_params:opt_exp_fac']
+
+        print_ti = False
+
+        sorted_x_idx = self.sorted_x_idx
+
         # define jacobian size
         nTurbines = len(turbineXw)
         nDirs = nTurbines
@@ -342,10 +361,12 @@ class GaussianWake(Component):
 
         # call to fortran code to obtain output values
         turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
-            porteagel_analyze_bv(turbineXw, turbineYw, turbineZ,
+            porteagel_analyze_bv(turbineXw, sorted_x_idx, turbineYw, turbineZ,
                                  rotorDiameter, Ct, wind_speed, yawDeg,
-                                 ky, kz, alpha, beta, I,
-                                 wtVelocityb)
+                                 ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,z_ref, z_0,
+                                 shear_exp, wake_combination_method, ti_calculation_method, calc_k_star,
+                                 opt_exp_fac, print_ti, wtVelocityb)
+
 
         # initialize Jacobian dict
         J = {}
