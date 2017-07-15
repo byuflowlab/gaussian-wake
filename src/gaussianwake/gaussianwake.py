@@ -173,9 +173,9 @@ class GaussianWake(Component):
 
         # unused but required for compatibility
 
-        self.add_param('wakeCentersYT', np.zeros(nTurbines*nTurbines), units='m')
-        self.add_param('wakeDiametersT', np.zeros(nTurbines*nTurbines), units='m')
-        self.add_param('wakeOverlapTRel', np.zeros(nTurbines*nTurbines))
+        # self.add_param('wakeCentersYT', np.zeros(nTurbines*nTurbines), units='m')
+        # self.add_param('wakeDiametersT', np.zeros(nTurbines*nTurbines), units='m')
+        # self.add_param('wakeOverlapTRel', np.zeros(nTurbines*nTurbines))
 
         # used
         self.add_param('turbineXw', val=np.zeros(nTurbines), units='m')
