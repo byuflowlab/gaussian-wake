@@ -10,13 +10,14 @@ from pyoptsparse import Optimization, SNOPT
 from wakeexchange.OptimizationGroups import OptAEP
 from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 from wakeexchange.floris import floris_wrapper, add_floris_params_IndepVarComps
+from wakeexchange.utilities import sunflower_points
 
 
-def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offset_angle': 2.0, 'ky': 6.0}, plot=False):
+def tuning_obj_function(xdict={'ky': 0.022, 'kz': 0.022, 'I': 0.06, 'shear_exp': 0.15}, plot=False):
 
     global prob
     global model
-
+    # prob.setup()
     set_param_vals(xdict)
 
     turbineX = np.array([1118.1, 1881.9])
@@ -47,6 +48,7 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
     prob['turbineX'] = turbineX
     prob['turbineY'] = turbineY
     prob['rotorDiameter'] = rotorDiameter
+    prob['hubHeight'] = rotorDiameter
     prob['axialInduction'] = axialInduction
     prob['generatorEfficiency'] = generatorEfficiency
     prob['air_density'] = air_density
@@ -215,9 +217,9 @@ def tuning_obj_function(xdict={'ke': 0.052, 'spread_angle': 7.0, 'rotation_offse
     error_turbine2 += np.sum((SOWFApower[:, 1]-Power[:, 1])**2)
 
     if model is 'gauss':
-        print 'error_turbine2: ', error_turbine2, 'Dw0: ', prob['model_params:Dw0'], \
-            'Angle: ', prob['model_params:rotation_offset_angle'], 'm: ', prob['model_params:m'], \
-            'ky: ', prob['model_params:ky']
+        print 'error_turbine2: ', error_turbine2, 'ky: ', prob['model_params:ky'], \
+            'kz: ', prob['model_params:kz'], 'I: ', prob['model_params:I'], \
+            'shear_exp: ', prob['model_params:shear_exp']
     elif model is 'floris':
         print 'error_turbine2: ', error_turbine2
         print 'kd: ', xdict['kd'], 'initialWakeAngle: ', xdict['initialWakeAngle'], \
@@ -235,57 +237,30 @@ def set_param_vals(xdict):
 
     global prob
     global model
+    # I = xdict['I']
+    ky = 0.3837 * TI + 0.003678
+    kz = 0.3837 * TI + 0.003678
 
     if model is 'gauss':
         try:
-            prob['model_params:ke'] = xdict['ke']
+            prob['model_params:ky'] = ky
         except:
-            temp = 0
+            tmp = 0
         try:
-            prob['model_params:spread_angle'] = xdict['spread_angle']
+            prob['model_params:kz'] = kz
         except:
-            temp = 0
+            tmp = 0
         try:
-            prob['model_params:rotation_offset_angle'] = xdict['rotation_offset_angle']
+            prob['model_params:I'] = xdict['I']
         except:
-            temp = 0
+            tmp = 0
         try:
-            prob['model_params:n_std_dev'] = xdict['n_std_dev']
+            prob['model_params:shear_exp'] = xdict['shear_exp']
             # print prob['model_params:n_std_dev']
         except:
-            # print "here here"
+            tmp = 0
             # quit()
-            temp = 0
-        try:
-            prob['model_params:ky'] = xdict['ky']
-            # print prob['model_params:n_std_dev']
-        except:
-            # print "here here"
-            # quit()
-            prob['model_params:ky'] = xdict['ke']
-        try:
-            prob['model_params:Dw0'] = xdict['Dw0']
-            # print prob['model_params:Dw0'], xdict['Dw0']
-            # quit()
-            # print prob['model_params:n_std_dev']
-        except:
-            # print "here here"
-            # quit()
-            temp = np.zeros(3)
-        try:
-            prob['model_params:m'] = xdict['m']
-            # print prob['model_params:n_std_dev']
-        except:
-            # print "here here"
-            # quit()
-            temp = 0
-        try:
-            prob['model_params:yshift'] = xdict['yshift']
-            # print prob['model_params:n_std_dev']
-        except:
-            # print "here here"
-            # quit()
-            temp = 0
+            # raise UserWarning("shear_exp not found")
 
     elif model is 'floris':
         # set tuning variables
@@ -317,12 +292,14 @@ if __name__ == "__main__":
     # CP =0.768 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
     CT = 4.0*axialInduction*(1.0-axialInduction)
     generator_efficiency = 0.944
+    hub_height = 90.0
 
     # Define turbine characteristics
     axialInduction = np.array([axialInduction, axialInduction])
     rotorDiameter = np.array([rotorDiameter, rotorDiameter])
     generatorEfficiency = np.array([generator_efficiency, generator_efficiency])
     yaw = np.array([0., 0.])
+    hubHeight = np.array([hub_height, hub_height])
 
     # Define site measurements
     wind_direction = 270.-0.523599*180./np.pi
@@ -334,17 +311,45 @@ if __name__ == "__main__":
 
     global prob
     if model is 'gauss':
+
+        sort_turbs = True
+        wake_combination_method = 1  # can be [0:Linear freestreem superposition,
+        #  1:Linear upstream velocity superposition,
+        #  2:Sum of squares freestream superposition,
+        #  3:Sum of squares upstream velocity superposition]
+        ti_calculation_method = 2  # can be [0:No added TI calculations,
+        # 1:TI by Niayifar and Porte Agel altered by Annoni and Thomas,
+        # 2:TI by Niayifar and Porte Agel 2016,
+        # 3:no yet implemented]
+        calc_k_star = False
+        z_ref = 90.0
+        z_0 = 0.0
+        TI = 0.06
+        # k_calc = 0.022
+        k_calc = 0.3837 * TI + 0.003678
+        nRotorPoints = 16
+
         prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
                                    wake_model=gauss_wrapper, wake_model_options={'nSamples': 0}, datasize=0,
                                    params_IdepVar_func=add_gauss_params_IndepVarComps,
                                    params_IndepVar_args={}))
+
         prob.setup()
-        prob['model_params:integrate'] = False
-        prob['model_params:spread_mode'] = 'linear'
-        prob['model_params:yaw_mode'] = 'linear'
-        prob['model_params:n_std_dev'] = 4.0
-        # prob['model_params:m'] = 0.33
-        # prob['model_params:Dw0'] = 1.3
+
+        prob['model_params:wake_combination_method'] = wake_combination_method
+        prob['model_params:ti_calculation_method'] = ti_calculation_method
+        prob['model_params:calc_k_star'] = calc_k_star
+        prob['model_params:sort'] = sort_turbs
+        prob['model_params:z_ref'] = z_ref
+        prob['model_params:z_0'] = z_0
+        prob['model_params:ky'] = k_calc
+        prob['model_params:kz'] = k_calc
+        prob['model_params:I'] = TI
+
+        if nRotorPoints > 1:
+            prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
+            print "setting rotor points"
+
     elif model is 'floris':
         prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
                                    wake_model=floris_wrapper,
@@ -358,14 +363,11 @@ if __name__ == "__main__":
     optProb = Optimization('Tuning %s Model to SOWFA' % model, tuning_obj_function)
 
     if model is 'gauss':
-        optProb.addVarGroup('ke', 1, lower=0.0, upper=1.0, value=0.1, scalar=1)
-        optProb.addVarGroup('spread_angle', 1, lower=0.0, upper=30.0, value=3.0, scalar=1)
-        optProb.addVarGroup('rotation_offset_angle', 1, lower=-40.0, upper=40.0, value=1.5, scalar=1)
-        optProb.addVarGroup('ky', 1, lower=0.0, upper=20.0, value=0.1, scalar=1)
-        # optProb.addVarGroup('Dw0', 3, lower=np.array([0.0, 1.0, 0.0]), upper=np.array([2.9, 1.9, 1.5]), value=np.array([1.3, 1.3, 1.06]))
-        #                     scalar=np.ones(3)*1E-2)
-        # optProb.addVarGroup('m', 3, lower=np.array([0.0, 0.3, -2.]), upper=np.array([0.49, 0.49, 0.]), value=np.array([0.33, 0.33, -0.57]))#, scalar=1E-3)
-        optProb.addVarGroup('yshift', 1, lower=-126.4, upper=126.4, value=0.0)#, scalar=1E-3)
+        # optProb.addVarGroup('ky', 1, lower=0.01, upper=1.0, value=0.022, scalar=1E1)
+        # optProb.addVarGroup('kz', 1, lower=0.01, upper=1.0, value=0.022, scalar=1E1)
+        # optProb.addVarGroup('I', 1, lower=0.04, upper=0.5, value=0.06, scalar=1E1)
+        optProb.addVarGroup('shear_exp', 1, lower=0.01, upper=1.0, value=0.15, scalar=1)
+        # optProb.addVarGroup('yshift', 1, lower=-126.4, upper=126.4, value=0.0)#, scalar=1E-3)
     elif model is 'floris':
         # optProb.addVarGroup('pP', 1, lower=0.0, upper=5.0, value=1.5)  # , scalar=1E-1)
         optProb.addVarGroup('kd', 1, lower=0.0, upper=1.0, value=0.15)  # , scalar=1E-1)
@@ -382,13 +384,13 @@ if __name__ == "__main__":
         optProb.addVarGroup('cos_spread', 1, lower=0.0, upper=10.0, value=2.0)  # , scalar=1E-1)
 
     # add objective
-    optProb.addObj('obj', scale=1E-5)
+    optProb.addObj('obj', scale=1E0)
 
     # initialize optimizer
-    snopt = SNOPT()
+    snopt = SNOPT(options={'Print file': 'SNOPT_print_tune_all.out'})
 
     # run optimizer
-    sol = snopt(optProb, sens='FD')
+    sol = snopt(optProb, sens=None)
 
     # print solution
     print sol
