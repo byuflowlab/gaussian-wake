@@ -822,7 +822,7 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     real(dp) :: OVdYd, OVr, OVRR, OVL, OVz
     
     ! load intrinsic functions
-    intrinsic dacos, sqrt
+    intrinsic acos, sqrt
     
     ! distance between wake center and rotor center
     OVdYd = sqrt((wake_center_y-turbine_y)**2_dp + (wake_center_z - turbine_z)**2_dp)
@@ -840,7 +840,8 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     
     ! calculate the distance from the wake center to the line perpendicular to the 
     ! line between the two circle intersection points
-    if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
+    !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
+    if (OVdYd >= 0.0_dp) then ! check case to avoid division by zero
         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
     else
         OVL = 0.0_dp
@@ -849,17 +850,25 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     OVz = OVRR*OVRR-OVL*OVL
 
     ! Finish calculating the distance from the intersection line to the outer edge of the wake
-    if (OVz > 0.0_dp + tol) then
+    !if (OVz > 0.0_dp + tol) then
+    if (OVz > 0.0_dp) then
         OVz = sqrt(OVz)
     else
         OVz = 0.0_dp
     end if
+    
+    !print *, "OVRR, OVL, OVRR, OVr, OVdYd, OVz ", OVRR, OVL, OVRR, OVr, OVdYd, OVz
+    
+    
 
     if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake
         !print *, "OVL: ", OVL
-        !if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
-        if (OVdYd > 0.0_dp + tol) then
-            wake_overlap = OVRR*OVRR*dacos(OVL/OVRR) + OVr*OVr*dacos((OVdYd-OVL)/OVr) - OVdYd*OVz
+        if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
+!         if (OVdYd > 0.0_dp + tol) then
+!         if ((OVdYd > 0.0_dp) .and. (OVdYd > (OVRR - OVr))) then
+            ! print *, "acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr ", &
+!     & acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr
+            wake_overlap = OVRR*OVRR*acos(OVL/OVRR) + OVr*OVr*acos((OVdYd-OVL)/OVr) - OVdYd*OVz
         else if (OVRR > OVr) then
             wake_overlap = pi*OVr*OVr
             !print *, "wake ovl: ", wake_overlap
@@ -1019,14 +1028,60 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         
         ! Check if this is the max and use it if it is
         if (TI_tmp > TI_dst) then
-            TI_dst = TI_tmp
+           TI_dst = TI_tmp
         end if
+        
+    ! Niayifar and Porte Agel 2015, 2016 with smooth max
+     else if (TI_calculation_method == 3) then
+     
+        ! calculate axial induction based on the Ct value
+        call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
+        
+        ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
+        beta = 0.5_dp*((1.0_dp + sqrt(1.0_dp - Ct_ust))/sqrt(1.0_dp - Ct_ust))
+        epsilon = 0.2_dp*sqrt(beta)
+        
+        ! calculate wake spread for TI calcs
+        sigma = k_star_ust*x + rotor_diameter_ust*epsilon
+        wake_diameter = 4.0_dp*sigma
+        
+!         print *, "sigma, k_star_ust, x, rotor_diameter_ust, epsilon ", sigma, k_star_ust, x, rotor_diameter_ust, epsilon
+        
+        ! print *, "deltay, turbine_height, rotor_diameter_dst, wake_height, wake_diameter", &
+!                 & deltay, turbine_height, rotor_diameter_dst, &
+!                             wake_height, wake_diameter
+        
+        ! calculate wake overlap ratio
+        call overlap_area_func(deltay, turbine_height, rotor_diameter_dst, &
+                            0.0_dp, wake_height, wake_diameter, &
+                            wake_overlap)
+                            
+        ! Calculate the turbulence added to the inflow of the downstream turbine by the 
+        ! wake of the upstream turbine
+        TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
+                    ((x/rotor_diameter_ust)**(-0.32_dp))
+        
+        ! Calculate the total turbulence intensity at the downstream turbine based on 
+        ! current upstream turbine
+        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
+        TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
+        
+        !print *, "TI, TI_added, wake_overlap, rotor_area_dst: ", TI, TI_added, wake_overlap, rotor_area_dst
+        
+        ! Check if this is the max and use it if it is
+        !if (TI_tmp > TI_dst) then
+        !    TI_dst = TI_tmp
+        !end if
+!         print *, "before: ", TI_dst, TI_tmp
+        call smooth_max(TI_dst, TI_tmp, TI_dst)
+!         print *, "after:: ", TI_dst, TI_tmp
+     
     !print *, "sigma: ", sigma
     ! TODO add other TI calculation methods
         
     ! wake combination method error 
     else
-        !print *, "Invalid added TI calculation method. Must be one of [1,2,3]."
+        !print *, "Invalid added TI calculation method. Must be one of [0,1,2,3]."
         stop 1
     end if            
     
@@ -1139,3 +1194,109 @@ subroutine discontinuity_point_func(x0, rotor_diameter, ky, kz, yaw, Ct, discont
     
 end subroutine discontinuity_point_func
 
+subroutine smooth_max(x, y, g)
+
+    implicit none
+    
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    real(dp), intent(in) :: x, y
+    
+    ! out
+    real(dp), intent(out) :: g
+    
+    ! local
+    real(dp) :: s
+    
+    intrinsic log, exp
+    
+    s = 1000.0_dp
+    
+    g = (log(exp(s*x) + exp(s*y)))/s
+
+    
+end subroutine smooth_max
+    
+ !    yd, n = _checkIfFloat(yd)
+! 
+!     y1 = (1-pct_offset)*ymax
+!     y2 = (1+pct_offset)*ymax
+! 
+!     dy1 = (1-pct_offset)
+!     dy2 = (1+pct_offset)
+! 
+!     if (maxmin == 1) then
+!         f1 = y1
+!         f2 = ymax
+!         g1 = 1.0_dp
+!         g2 = 0.0_dp
+!         if (yd .ge. y2) then
+!             idx_constant = False
+!         else
+!             idx_constant = True
+!         end if
+! 
+!         df1 = dy1
+!         df2 = 1.0_dp
+! 
+! 
+!     else if (maxmin == 0) then
+!         f1 = ymax
+!         f2 = y2
+!         g1 = 0.0_dp
+!         g2 = 1.0_dp
+!         if (yd .ge. y1) then
+!             idx_constant = False
+!         else
+!             idx_constant = True
+!         end if
+! 
+!         df1 = 1.0_dp
+!         df2 = dy2
+!         
+!     end if
+! 
+!     f = CubicSplineSegment(y1, y2, f1, f2, g1, g2)
+! 
+!     # main region
+!     ya = np.copy(yd)
+!     if dyd is None:
+!         dya_dyd = np.ones_like(yd)
+!     else:
+!         dya_dyd = np.copy(dyd)
+! 
+!     dya_dymax = np.zeros_like(ya)
+! 
+!     # cubic spline region
+!     idx = np.logical_and(yd > y1, yd < y2)
+!     ya[idx] = f.eval(yd[idx])
+!     dya_dyd[idx] = f.eval_deriv(yd[idx])
+!     dya_dymax[idx] = f.eval_deriv_params(yd[idx], dy1, dy2, df1, df2, 0.0, 0.0)
+! 
+!     # constant region
+!     ya[idx_constant] = ymax
+!     dya_dyd[idx_constant] = 0.0
+!     dya_dymax[idx_constant] = 1.0
+! 
+!     if n == 1:
+!         ya = ya[0]
+!         dya_dyd = dya_dyd[0]
+!         dya_dymax = dya_dymax[0]
+! 
+! 
+!     return ya, dya_dyd, dya_dymax
+! 
+! 
+! def smooth_max(yd, ymax, pct_offset=0.01, dyd=None):
+!     """array max, uses cubic spline to smoothly transition.  derivatives with respect to array and max value.
+!     width of transition can be controlled, and chain rules for differentiation"""
+!     return _smooth_maxmin(yd, ymax, 'max', pct_offset, dyd)
+! 
+! 
+! def smooth_min(yd, ymin, pct_offset=0.01, dyd=None):
+!     """array min, uses cubic spline to smoothly transition.  derivatives with respect to array and min value.
+!     width of transition can be controlled, and chain rules for differentiation"""
+!     return _smooth_maxmin(yd, ymin, 'min', pct_offset, dyd)
+! 
