@@ -119,7 +119,7 @@ def setup_probs():
         if prob is gauss_prob:
 
             sort_turbs = True
-            wake_combination_method = 3  # can be [0:Linear freestreem superposition,
+            wake_combination_method = 1  # can be [0:Linear freestreem superposition,
             #  1:Linear upstream velocity superposition,
             #  2:Sum of squares freestream superposition,
             #  3:Sum of squares upstream velocity superposition]
@@ -127,9 +127,9 @@ def setup_probs():
             # 1:TI by Niayifar and Porte Agel altered by Annoni and Thomas,
             # 2:TI by Niayifar and Porte Agel 2016,
             # 3:no yet implemented]
-            calc_k_star = False
+            calc_k_star = True
             z_ref = 90.0
-            z_0 = 0.0
+            z_0 = 0.001
             k_calc = 0.065
 
             # tuned with 1 rotor point: error_turbine2:  380593.475508 ky:  0.0147484983033 kz:  0.0365360001244 I:  1.0 shear_exp:  0.0804912726779
@@ -141,16 +141,16 @@ def setup_probs():
             # using NPA to calculate initial spreading, but then letting BPA adjust it with TI after that. 16 rotor points
             # error_turbine2:  642639.730582 ky:  0.0307280539404 kz:  0.0307280539404 I:  0.0704979253074 shear_exp:  0.108435318499
             # tuning only shear_exp with 16 rotor points: error_turbine2:  779216.077341 ky:  0.0267 kz:  0.0267 I:  0.06 shear_exp:  0.161084449732
-            I = .06
+            I = .063 # + 0.04
             # I = .06
-            # ky = 0.3837*I + 0.003678
-            ky = 0.022
-            # kz = 0.3837*I + 0.003678
-            kz = 0.022
+            ky = 0.3837*I + 0.003678
+            # ky = 0.022
+            kz = 0.3837*I + 0.003678
+            # kz = 0.022
             # shear_exp = 0.161084449732
-            shear_exp = 0.15
+            shear_exp = 0.11
 
-            nRotorPoints = 16
+            nRotorPoints = 1
 
             prob['model_params:wake_combination_method'] = wake_combination_method
             prob['model_params:ti_calculation_method'] = ti_calculation_method

@@ -8,7 +8,7 @@ from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 import time
 import numpy as np
 import pylab as plt
-
+from openmdao.api import view_model
 import cProfile
 
 
@@ -128,6 +128,11 @@ if __name__ == "__main__":
     tic = time.time()
     prob.setup(check=False)
     toc = time.time()
+
+
+
+    # top.setup(check=False)
+    # view_model(prob, show_browser=True)
 
     # print the results
     mpi_print(prob, ('Problem setup took %.03f sec.' % (toc-tic)))

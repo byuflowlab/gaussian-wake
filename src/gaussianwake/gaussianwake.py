@@ -167,9 +167,17 @@ class GaussianWake(Component):
         if options is None:
             self.radius_multiplier = 1.0
             self.nSamples = nSamples = 0
+            self.nRotorPoints = 1
         else:
             # self.radius_multiplier = options['radius multiplier']
-            self.nSamples = nSamples = options['nSamples']
+            try:
+                self.nSamples = nSamples = options['nSamples']
+            except:
+                self.nSamples = nSamples = 0
+            try:
+                self.nRotorPoints = nRotorPoints = options['nRotorPoints']
+            except:
+                self.nRotorPoints = nRotorPoints = 1
 
         # unused but required for compatibility
 
@@ -207,12 +215,14 @@ class GaussianWake(Component):
                        desc='choose to calculate wake expansion based on TI if True')
         self.add_param('model_params:sort', val=True, pass_by_object=True,
                        desc='decide whether turbines should be sorted before solving for directional power')
-        self.add_param('model_params:RotorPointsY', val=np.array([0.0]), pass_by_object=True,
+        self.add_param('model_params:RotorPointsY', val=np.zeros(nRotorPoints), pass_by_object=True,
                        desc='rotor swept area sampling Y points centered at (y,z)=(0,0) normalized by rotor radius')
-        self.add_param('model_params:RotorPointsZ', val=np.array([0.0]), pass_by_object=True,
+        self.add_param('model_params:RotorPointsZ', val=np.zeros(nRotorPoints), pass_by_object=True,
                        desc='rotor swept area sampling Z points centered at (y,z)=(0,0) normalized by rotor radius')
         self.add_param('model_params:print_ti', val=False, pass_by_object=True,
                        desc='print TI values to a file for use in plotting etc')
+        self.add_param('model_params:wake_model_version', val=2016, pass_by_object=True,
+                       desc='choose whether to use Bastankhah 2014 or 2016')
 
         self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
                        desc='increase spread for optimization')
@@ -253,6 +263,7 @@ class GaussianWake(Component):
         z_ref = params['model_params:z_ref']
         z_0 = params['model_params:z_0']
         shear_exp = params['model_params:shear_exp']
+        wake_model_version = params['model_params:wake_model_version']
 
         opt_exp_fac = params['model_params:opt_exp_fac']
 
@@ -285,7 +296,7 @@ class GaussianWake(Component):
                                                wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
-                                               calc_k_star, opt_exp_fac, print_ti)
+                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
