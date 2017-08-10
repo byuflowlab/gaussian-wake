@@ -168,6 +168,8 @@ class GaussianWake(Component):
             self.radius_multiplier = 1.0
             self.nSamples = nSamples = 0
             self.nRotorPoints = 1
+            self.use_ct_curve = False
+            self.ct_curve = np.array([0.0, 0.0])
         else:
             # self.radius_multiplier = options['radius multiplier']
             try:
@@ -178,6 +180,12 @@ class GaussianWake(Component):
                 self.nRotorPoints = nRotorPoints = options['nRotorPoints']
             except:
                 self.nRotorPoints = nRotorPoints = 1
+            try:
+                self.use_ct_curve = options['use_ct_curve']
+                self.ct_curve = options['ct_curve']
+            except:
+                self.use_ct_curve = False
+                self.ct_curve = np.array([0.0, 0.0])
 
         # unused but required for compatibility
 
@@ -265,6 +273,11 @@ class GaussianWake(Component):
         shear_exp = params['model_params:shear_exp']
         wake_model_version = params['model_params:wake_model_version']
 
+        use_ct_curve = self.use_ct_curve
+        ct_curve = self.ct_curve
+        ct_curve_wind_speed = self.ct_curve[:, 0]
+        ct_curve_ct = self.ct_curve[:, 1]
+
         opt_exp_fac = params['model_params:opt_exp_fac']
 
         print_ti = params['model_params:print_ti']
@@ -296,7 +309,8 @@ class GaussianWake(Component):
                                                wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
-                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version)
+                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version,
+                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)

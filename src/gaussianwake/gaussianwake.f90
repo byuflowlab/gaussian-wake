@@ -5,12 +5,14 @@
 ! Brigham Young University
 
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
-subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, turbineYw, turbineZ, &
+subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
+                             sorted_x_idx, turbineYw, turbineZ, &
                              rotorDiameter, Ct, wind_speed, &
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
                              TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
-                             wake_model_version, wtVelocity)
+                             wake_model_version, &
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -23,21 +25,22 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    integer, intent(in) :: nTurbines, nRotorPoints
+    integer, intent(in) :: nTurbines, nRotorPoints, nCtPoints
     integer, intent(in) :: wake_combination_method, TI_calculation_method, wake_model_version
-    logical, intent(in) :: calc_k_star, print_ti
+    logical, intent(in) :: calc_k_star, print_ti, use_ct_curve
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
-    real(dp), dimension(nTurbines), intent(in) :: Ct
+    real(dp), dimension(nTurbines) :: Ct
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
+    real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
 
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset, k_star
     real(dp) :: x, deltav, deltaz, sigmay_dp, sigmaz_dp, deltax0_dp, deficit_sum
-    real(dp) :: ky_local, kz_local, tol, discontinuity_point
+    real(dp) :: ky_local, kz_local, tol, discontinuity_point, ti_area_ratio
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
     Integer :: u, d, turb, turbI, p
     real(dp), parameter :: pi = 3.141592653589793_dp
@@ -47,8 +50,6 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
 
     intrinsic sin, cos, atan, max, sqrt, log
     
-    
-
     ! bastankhah and porte agel 2016 define yaw to be positive clockwise, this is reversed
     yaw = - yawDeg*pi/180.0_dp
     
@@ -65,6 +66,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     ky_local = ky
     kz_local = kz
     
+    
+    
     !print *, "ky_local: ", ky_local
     !print *, "kz_local: ", kz_local
     !print *, "TIturbs init: ", TIturbs
@@ -73,6 +76,9 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     
         ! get index of downstream turbine
         turbI = sorted_x_idx(d) + 1
+        
+        ! initialize the TI_area_ratio to 0.0 for each turbine
+        ti_area_ratio = 0.0_dp
         
         do, p=1, nRotorPoints
     
@@ -197,11 +203,13 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
                     if ((x > 0.0_dp) .and. (TI_calculation_method > 0)) then
                         !print *, "turbI, turb: ", turbI, turb
                         ! calculate TI value at each turbine
+                        print *, "turb, turbI: ", turb, turbI
                         call added_ti_func(TI, Ct(turb), x, ky_local, rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
                                            & TI_calculation_method, &
-                                           & TIturbs(turbI))
+                                           & ti_area_ratio, TIturbs(turbI))
+                                           
                         !print *, "rotorDiameter after TI calcs", rotorDiameter
                     end if
                     
@@ -232,6 +240,10 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, turbineXw, sorted_x_idx, t
     
         ! final velocity calculation for turbine turbI (average equally across all points)
         wtVelocity(turbI) = wtVelocity(turbI)/nRotorPoints
+        
+        if (use_ct_curve) then
+            call hermite_interpolation(nCtPoints, ct_curve_wind_speed, ct_curve_ct, wtVelocity(turbI), Ct(turbI))
+        end if
     
     end do
     
@@ -768,8 +780,8 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
 !                            / (8.0_dp * (k*deltax/rotor_diameter_ust+epsilon_2014)**2)
         deltav = (                                                                       &
             (1.0_dp - sqrt(1.0_dp - Ct                                                   &
-                           / (8.0_dp * (k*deltax/rotor_diameter_ust+epsilon_2014)**2)))* &
-            exp((-1.0_dp/(2.0_dp*(k*deltax/rotor_diameter_ust + epsilon_2014)**2))*      & 
+                           / (8.0_dp * ((k*deltax/rotor_diameter_ust)+epsilon_2014)**2)))* &
+            exp((-1.0_dp/(2.0_dp*((k*deltax/rotor_diameter_ust) + epsilon_2014)**2))*      & 
             ((deltaz/(opt_exp_fac*rotor_diameter_ust))**2 + (deltay/(opt_exp_fac*rotor_diameter_ust))**2))           &
         )
        ! print *, "deltav 2014 = ", deltav
@@ -999,7 +1011,7 @@ end subroutine wake_combination_func
 ! combines wakes using various methods
 subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, & 
                         & deltay, wake_height, turbine_height, TI_ust, &
-                        & TI_calculation_method, TI_dst)
+                        & TI_calculation_method, ti_area_ratio, TI_dst)
                                  
     implicit none
         
@@ -1013,11 +1025,11 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
     ! local
     real(dp) :: axial_induction_ust, beta, epsilon, sigma, wake_diameter, wake_overlap
-    real(dp) :: TI_added, TI_tmp, rotor_area_dst
+    real(dp) :: TI_added, TI_tmp, rotor_area_dst, ti_area_ratio_tmp
     real(dp), parameter :: pi = 3.141592653589793_dp
     
     ! out  
-    real(dp), intent(inout) :: TI_dst
+    real(dp), intent(inout) :: TI_dst, ti_area_ratio
     
     ! intrinsic functions
     intrinsic sqrt
@@ -1085,10 +1097,9 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
         TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
-       
-        
         ! Check if this is the max and use it if it is
         if (TI_tmp > TI_dst) then
+!            print *, "TI_tmp > TI_dst"
            TI_dst = TI_tmp
         end if
         
@@ -1136,13 +1147,51 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
 !         print *, "before: ", TI_dst, TI_tmp
         call smooth_max(TI_dst, TI_tmp, TI_dst)
 !         print *, "after:: ", TI_dst, TI_tmp
+
+    ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
+    else if (TI_calculation_method == 4) then
+    
+        ! calculate axial induction based on the Ct value
+        call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
+        
+        ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
+        beta = 0.5_dp*((1.0_dp + sqrt(1.0_dp - Ct_ust))/sqrt(1.0_dp - Ct_ust))
+        epsilon = 0.2_dp*sqrt(beta)
+        
+        ! calculate wake spread for TI calcs
+        sigma = k_star_ust*x + rotor_diameter_ust*epsilon
+        wake_diameter = 4.0_dp*sigma
+        
+        ! calculate wake overlap ratio
+        call overlap_area_func(deltay, turbine_height, rotor_diameter_dst, &
+                            0.0_dp, wake_height, wake_diameter, &
+                            wake_overlap)
+                            
+        ! Calculate the turbulence added to the inflow of the downstream turbine by the 
+        ! wake of the upstream turbine
+        TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
+                    ((x/rotor_diameter_ust)**(-0.32_dp))
+        
+        ! Calculate the total turbulence intensity at the downstream turbine based on 
+        ! current upstream turbine
+        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
+        ti_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
+        TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
+        
+        ! Check if this is the max and use it if it is
+        if (ti_area_ratio_tmp > ti_area_ratio) then
+           print *, "ti_area_ratio_tmp > ti_area_ratio"
+           TI_dst = TI_tmp
+           ti_area_ratio = ti_area_ratio_tmp
+        end if
      
     !print *, "sigma: ", sigma
     ! TODO add other TI calculation methods
+    
         
     ! wake combination method error 
     else
-        !print *, "Invalid added TI calculation method. Must be one of [0,1,2,3]."
+        print *, "Invalid added TI calculation method. Must be one of [0,1,2,3,4]."
         stop 1
     end if            
     
@@ -1280,11 +1329,125 @@ subroutine smooth_max(x, y, g)
     
 end subroutine smooth_max
 
-subroutine interpolate()
+subroutine hermite_interpolation(nPoints, x, y, xval, yval)
 
-
-end subroutine interpolate
+    implicit none
     
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    integer, intent(in) :: nPoints
+    real(dp), dimension(nPoints), intent(in) :: x, y
+    real(dp), intent(in) :: xval
+    
+    ! local
+    integer :: idx
+    real(dp) :: x0, x1, y0, dy0, y1, dy1
+    
+    ! out
+    real(dp), intent(out) :: yval
+    
+!     print *, "in interpolation"
+    
+    if ((xval < x(1)) .or. (xval > x(nPoints))) then
+        print *, "interpolation point is out of bounds"
+        STOP 1
+    end if
+    
+    idx = 1
+    
+    do while ((xval > x(idx)) .and. (idx <= nPoints))
+        idx = idx + 1
+    end do
+    
+    idx = idx - 1
+    
+    x0 = x(idx)
+    x1 = x((idx + 1))
+    y0 = y(idx)
+    y1 = y((idx + 1))
+    
+    ! approximate derivative at left end of interval
+    if (idx == 1) then
+        dy0 = 0.0_dp
+    else
+        dy0 = (y(idx) - y(idx-1))/(x(idx) - x(idx-1))
+    end if
+    
+    ! approximate derivative at the right end of interval
+    if (idx >= nPoints-1) then
+        dy1 = 0.0_dp
+    else
+        dy1 = (y(idx+2) - y(idx+1))/(x(idx+2) - x(idx+1))
+    end if
+    
+    call Hermite_Spline(xval, x0, x1, y0, dy0, y1, dy1, yval)
+    
+!     print *, "yval = ", yval
+    
+end subroutine hermite_interpolation
+    
+    
+subroutine Hermite_Spline(x, x0, x1, y0, dy0, y1, dy1, y)
+    !    This function produces the y and dy values for a hermite cubic spline
+    !    interpolating between two end points with known slopes
+    !
+    !    :param x: x position of output y
+    !    :param x0: x position of upwind endpoint of spline
+    !    :param x1: x position of downwind endpoint of spline
+    !    :param y0: y position of upwind endpoint of spline
+    !    :param dy0: slope at upwind endpoint of spline
+    !    :param y1: y position of downwind endpoint of spline
+    !    :param dy1: slope at downwind endpoint of spline
+    !
+    !    :return: y: y value of spline at location x
+    
+    implicit none
+        
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+    
+    ! in
+    real(dp), intent(in) :: x, x0, x1, y0, dy0, y1, dy1
+    
+    ! out
+    real(dp), intent(out) :: y !, dy_dx
+    
+    ! local
+    real(dp) :: c3, c2, c1, c0
+
+    ! initialize coefficients for parametric cubic spline
+    c3 = (2.0_dp*(y1))/(x0**3 - 3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3) - &
+         (2.0_dp*(y0))/(x0**3 - 3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3) + &
+         (dy0)/(x0**2 - 2.0_dp*x0*x1 + x1**2) + &
+         (dy1)/(x0**2 - 2.0_dp*x0*x1 + x1**2)
+         
+    c2 = (3.0_dp*(y0)*(x0 + x1))/(x0**3 - 3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3) - &
+         ((dy1)*(2.0_dp*x0 + x1))/(x0**2 - 2.0_dp*x0*x1 + x1**2) - ((dy0)*(x0 + &
+         2.0_dp*x1))/(x0**2 - 2.0_dp*x0*x1 + x1**2) - (3.0_dp*(y1)*(x0 + x1))/(x0**3 - &
+         3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3)
+         
+    c1 = ((dy0)*(x1**2 + 2.0_dp*x0*x1))/(x0**2 - 2.0_dp*x0*x1 + x1**2) + ((dy1)*(x0**2 + &
+         2.0_dp*x1*x0))/(x0**2 - 2.0_dp*x0*x1 + x1**2) - (6.0_dp*x0*x1*(y0))/(x0**3 - &
+         3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3) + (6.0_dp*x0*x1*(y1))/(x0**3 - &
+         3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - x1**3)
+         
+    c0 = ((y0)*(- x1**3 + 3.0_dp*x0*x1**2))/(x0**3 - 3.0_dp*x0**2*x1 + 3.0_dp*x0*x1**2 - &
+         x1**3) - ((y1)*(- x0**3 + 3.0_dp*x1*x0**2))/(x0**3 - 3.0_dp*x0**2*x1 + &
+         3.0_dp*x0*x1**2 - x1**3) - (x0*x1**2*(dy0))/(x0**2 - 2.0_dp*x0*x1 + x1**2) - &
+         (x0**2*x1*(dy1))/(x0**2 - 2.0_dp*x0*x1 + x1**2)
+!    print *, 'c3 = ', c3
+!    print *, 'c2 = ', c2
+!    print *, 'c1 = ', c1
+!    print *, 'c0 = ', c0
+    ! Solve for y and dy values at the given point
+    y = c3*x**3 + c2*x**2 + c1*x + c0
+    !dy_dx = c3*3*x**2 + c2*2*x + c1
+
+end subroutine Hermite_Spline
+
+
  !    yd, n = _checkIfFloat(yd)
 ! 
 !     y1 = (1-pct_offset)*ymax

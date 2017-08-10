@@ -7,6 +7,7 @@ module1 = Extension('_porteagel_fortran', sources=['src/gaussianwake/gaussianwak
                                                    'src/gaussianwake/gaussianwake_bv.f90',
                                                    'src/gaussianwake/adStack.c',
                                                    'src/gaussianwake/adBuffer.f'],
+                                                   # 'src/gaussianwake/lib_array.f90'],
                     extra_compile_args=['-O2', '-c'])
 
 setup(
