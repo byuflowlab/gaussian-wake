@@ -62,7 +62,9 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     ! initialize TI of all turbines to free-stream value
     !print *, "start TIturbs: ", TIturbs
     TIturbs = TI
-    !print *, "initialized TIturbs: ", TIturbs
+    
+    
+    ! initialize the local wake spreading factors
     ky_local = ky
     kz_local = kz
     
@@ -77,10 +79,10 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
         ! get index of downstream turbine
         turbI = sorted_x_idx(d) + 1
         
-        ! initialize the TI_area_ratio to 0.0 for each turbine
-        ti_area_ratio = 0.0_dp
-        
         do, p=1, nRotorPoints
+        
+            ! initialize the TI_area_ratio to 0.0 for each turbine
+            ti_area_ratio = 0.0_dp
     
             ! initialize deficit summation term to zero
             deficit_sum = 0.0_dp
@@ -203,7 +205,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     if ((x > 0.0_dp) .and. (TI_calculation_method > 0)) then
                         !print *, "turbI, turb: ", turbI, turb
                         ! calculate TI value at each turbine
-                        print *, "turb, turbI: ", turb, turbI
+!                         print *, "turb, turbI: ", turb, turbI
                         call added_ti_func(TI, Ct(turb), x, ky_local, rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
@@ -1180,7 +1182,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         
         ! Check if this is the max and use it if it is
         if (ti_area_ratio_tmp > ti_area_ratio) then
-           print *, "ti_area_ratio_tmp > ti_area_ratio"
+!            print *, "ti_area_ratio_tmp > ti_area_ratio"
            TI_dst = TI_tmp
            ti_area_ratio = ti_area_ratio_tmp
         end if
