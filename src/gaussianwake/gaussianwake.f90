@@ -954,7 +954,10 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
         wake_overlap = 0.0_dp
     end if
     
-    !print *, "wake overlap in func: ", wake_overlap
+    if (wake_verlap > 1.0_dp) then
+        print *, "wake overlap in func: ", wake_overlap
+        STOP 1
+    end if
                              
 end subroutine overlap_area_func
 
@@ -1027,7 +1030,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
     ! local
     real(dp) :: axial_induction_ust, beta, epsilon, sigma, wake_diameter, wake_overlap
-    real(dp) :: TI_added, TI_tmp, rotor_area_dst, ti_area_ratio_tmp
+    real(dp) :: TI_added, TI_tmp, rotor_area_dst, ti_area_ratio_tmp, TI_dst_in
     real(dp), parameter :: pi = 3.141592653589793_dp
     
     ! out  
@@ -1147,7 +1150,8 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         !    TI_dst = TI_tmp
         !end if
 !         print *, "before: ", TI_dst, TI_tmp
-        call smooth_max(TI_dst, TI_tmp, TI_dst)
+        TI_dst_in = TI_dst
+        call smooth_max(TI_dst_in, TI_tmp, TI_dst)
 !         print *, "after:: ", TI_dst, TI_tmp
 
     ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
@@ -1250,7 +1254,7 @@ end subroutine ct_to_axial_ind_func
 
 ! adjust wind speed for wind shear
 subroutine wind_shear_func(point_z, u_ref, z_ref, z_0, shear_exp, adjusted_wind_speed)
-    
+
     implicit none
     
     ! define precision to be the standard for a double precision ! on local system
