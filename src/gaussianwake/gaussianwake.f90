@@ -11,7 +11,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
                              TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
-                             wake_model_version, &
+                             wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
@@ -26,7 +26,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 
     ! in
     integer, intent(in) :: nTurbines, nRotorPoints, nCtPoints
-    integer, intent(in) :: wake_combination_method, TI_calculation_method, wake_model_version
+    integer, intent(in) :: wake_combination_method, TI_calculation_method, & 
+                        &  wake_model_version, interp_type
     logical, intent(in) :: calc_k_star, print_ti, use_ct_curve
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
@@ -67,8 +68,9 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     ! initialize the local wake spreading factors
     ky_local = ky
     kz_local = kz
-    
-    
+
+
+    print *, 'wake model version: ', wake_model_version
     
     !print *, "ky_local: ", ky_local
     !print *, "kz_local: ", kz_local
@@ -115,6 +117,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     ! determine the onset location of far wake
                     call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, & 
                                 & TIturbs(turb), beta, x0)
+!                     call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, & 
+!                                 & TI, beta, x0)
         
                     ! downstream distance from far wake onset to downstream turbine
                     deltax0 = x - x0
@@ -186,7 +190,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 
                         ! vertical spread at far wake onset
                         call sigmaz_func(kz_local, deltax0_dp, rotorDiameter(turb), sigmaz_dp)
-                        
+
+                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+                                         & wake_model_version, kz_local, x0, &
+                                         & opt_exp_fac
+
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
@@ -246,7 +255,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
         wtVelocity(turbI) = wtVelocity(turbI)/rpts
 !         print *, wtVelocity(turbI)
         if (use_ct_curve) then
-            call hermite_interpolation(nCtPoints, ct_curve_wind_speed, ct_curve_ct, wtVelocity(turbI), Ct(turbI))
+            call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
+                              & wtVelocity(turbI), Ct(turbI))
         end if
     
     end do
@@ -277,7 +287,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, & 
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
-                             calc_k_star, opt_exp_fac, wake_model_version, &
+                             calc_k_star, opt_exp_fac, wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wsArray)
                              
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
@@ -292,7 +302,8 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
 
     ! in
     integer, intent(in) :: nTurbines, nSamples, nRotorPoints, nCtPoints
-    integer, intent(in) :: wake_combination_method, TI_calculation_method, wake_model_version
+    integer, intent(in) :: wake_combination_method, TI_calculation_method, & 
+                        &  wake_model_version, interp_type
     logical, intent(in) :: calc_k_star, use_ct_curve
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
@@ -430,7 +441,12 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                 
                         ! vertical spread at discontinuity point
                         call sigmaz_func(kz_local(turb), deltax0_dp, rotorDiameter(turb), sigmaz_dp)
-                
+
+                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+                                         & wake_model_version, kz_local, x0, &
+                                         & opt_exp_fac
+
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
@@ -477,7 +493,8 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
         wtVelocity(turbI) = wtVelocity(turbI)/nRotorPoints
         
         if (use_ct_curve) then
-            call hermite_interpolation(nCtPoints, ct_curve_wind_speed, ct_curve_ct, wtVelocity(turbI), Ct(turbI))
+            call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
+                              & wtVelocity(turbI), Ct(turbI))
         end if
        
     end do
@@ -607,7 +624,7 @@ subroutine x0_func(rotor_diameter, yaw, Ct, alpha, TI, beta, x0)
     x0 = rotor_diameter * (cos(yaw) * (1.0_dp + sqrt(1.0_dp - Ct)) / &
                                 (sqrt(2.0_dp) * (alpha * TI + beta * &
                                                 & (1.0_dp - sqrt(1.0_dp - Ct)))))
-
+    
 end subroutine x0_func
 
 
@@ -744,7 +761,8 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
     intrinsic cos, sqrt, exp
     
     !print *, "rotor_diameter in deltav entry", rotor_diameter_ust
-    
+    print *, 'wake model version in deltav: ', version
+
     if (version == 2014) then
         !print *, "in 2014 version"
         beta_2014 = 0.5_dp*(1.0_dp + sqrt(1.0_dp - Ct))/sqrt(1.0_dp - Ct)
@@ -769,7 +787,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
             exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) * exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)&
         )
     else
-        print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016"
+        print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
         stop 1
     end if 
     
@@ -806,7 +824,12 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
     ! load intrinsic functions
     intrinsic cos, sqrt, exp
-    
+
+    print *, 'wake model version in deltav near wake: ', version
+    print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
+                                 & sigmay, sigmaz, rotor_diameter_ust, x, &
+                                 & discontinuity_point, sigmay0, sigmaz0, version, k, &
+                                 & deltax0_dp, opt_exp_fac
     if (version == 2014) then
         if (yaw > 0.0_dp) then
             print *, "model version 2014 may only be used when yaw=0"
@@ -843,7 +866,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
             exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) *                                 &
             exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)
     else
-        print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016"
+        print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
         stop 1
     end if
                 
@@ -1164,6 +1187,40 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
            TI_dst = TI_tmp
            ti_area_ratio = ti_area_ratio_tmp
         end if
+    
+    ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
+    else if (TI_calculation_method == 5) then
+    
+        ! calculate axial induction based on the Ct value
+        call ct_to_axial_ind_func(Ct_ust, axial_induction_ust)
+        
+        ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
+        beta = 0.5_dp*((1.0_dp + sqrt(1.0_dp - Ct_ust))/sqrt(1.0_dp - Ct_ust))
+        epsilon = 0.2_dp*sqrt(beta)
+        
+        ! calculate wake spread for TI calcs
+        sigma = k_star_ust*x + rotor_diameter_ust*epsilon
+        wake_diameter = 4.0_dp*sigma
+        
+        ! calculate wake overlap ratio
+        call overlap_area_func(deltay, turbine_height, rotor_diameter_dst, &
+                            0.0_dp, wake_height, wake_diameter, &
+                             wake_overlap)
+                            
+        ! Calculate the turbulence added to the inflow of the downstream turbine by the 
+        ! wake of the upstream turbine
+        TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
+                    ((x/rotor_diameter_ust)**(-0.32_dp))
+        
+        ! Calculate the total turbulence intensity at the downstream turbine based on 
+        ! current upstream turbine
+        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
+        ti_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
+        TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
+        
+        ! Check if this is the max and use it if it is
+        TI_dst_in = TI_dst
+        call smooth_max(TI_dst_in, TI_tmp, TI_dst)
      
     !print *, "sigma: ", sigma
     ! TODO add other TI calculation methods
@@ -1171,7 +1228,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         
     ! wake combination method error 
     else
-        print *, "Invalid added TI calculation method. Must be one of [0,1,2,3,4]."
+        print *, "Invalid added TI calculation method. Must be one of [0,1,2,3,4,5]."
         stop 1
     end if            
     
@@ -1309,7 +1366,7 @@ subroutine smooth_max(x, y, g)
     
 end subroutine smooth_max
 
-subroutine hermite_interpolation(nPoints, x, y, xval, yval)
+subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
 
     implicit none
     
@@ -1317,7 +1374,7 @@ subroutine hermite_interpolation(nPoints, x, y, xval, yval)
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    integer, intent(in) :: nPoints
+    integer, intent(in) :: nPoints, interp_type
     real(dp), dimension(nPoints), intent(in) :: x, y
     real(dp), intent(in) :: xval
     
@@ -1332,41 +1389,59 @@ subroutine hermite_interpolation(nPoints, x, y, xval, yval)
     
     if ((xval < x(1)) .or. (xval > x(nPoints))) then
         print *, "interpolation point is out of bounds"
-        STOP 1
+!         STOP 1
     end if
     
-    idx = 1
+    if (xval < x(1)) then
+        yval = y(1)
+    else if (xval > x(nPoints)) then
+        yval = y(nPoints)
     
-    do while ((xval > x(idx)) .and. (idx <= nPoints))
-        idx = idx + 1
-    end do
-    
-    idx = idx - 1
-    
-    x0 = x(idx)
-    x1 = x((idx + 1))
-    y0 = y(idx)
-    y1 = y((idx + 1))
-    
-    ! approximate derivative at left end of interval
-    if (idx == 1) then
-        dy0 = 0.0_dp
     else
-        dy0 = (y(idx) - y(idx-1))/(x(idx) - x(idx-1))
-    end if
+        idx = 1
     
-    ! approximate derivative at the right end of interval
-    if (idx >= nPoints-1) then
-        dy1 = 0.0_dp
-    else
-        dy1 = (y(idx+2) - y(idx+1))/(x(idx+2) - x(idx+1))
-    end if
+        do while ((xval > x(idx)) .and. (idx <= nPoints))
+            idx = idx + 1
+        end do
     
-    call Hermite_Spline(xval, x0, x1, y0, dy0, y1, dy1, yval)
+        idx = idx - 1
+        
+        x0 = x(idx)
+        x1 = x((idx + 1))
+        y0 = y(idx)
+        y1 = y((idx + 1))
+    
+        ! Hermite cubic piecewise spline interpolation
+        if (interp_type == 0) then
+    
+            ! approximate derivative at left end of interval
+            if (idx == 1) then
+                dy0 = 0.0_dp
+            else
+                dy0 = (y(idx) - y(idx-1))/(x(idx) - x(idx-1))
+            end if
+    
+            ! approximate derivative at the right end of interval
+            if (idx >= nPoints-1) then
+                dy1 = 0.0_dp
+            else
+                dy1 = (y(idx+2) - y(idx+1))/(x(idx+2) - x(idx+1))
+            end if
+    
+            ! call Hermite spline routine
+            call Hermite_Spline(xval, x0, x1, y0, dy0, y1, dy1, yval)
+    
+        ! linear interpolation
+        else if (interp_type == 1) then
+        
+            yval = (xval-x0)*(y1-y0)/(x1-x0) + y0
+        
+        end if
+    end if
     
 !     print *, "yval = ", yval
     
-end subroutine hermite_interpolation
+end subroutine interpolation
     
     
 subroutine Hermite_Spline(x, x0, x1, y0, dy0, y1, dy1, y)

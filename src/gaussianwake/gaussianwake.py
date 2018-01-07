@@ -170,6 +170,7 @@ class GaussianWake(Component):
             self.nRotorPoints = 1
             self.use_ct_curve = False
             self.ct_curve = np.array([0.0, 0.0])
+            self.interp_type = 1
         else:
             # self.radius_multiplier = options['radius multiplier']
             try:
@@ -186,6 +187,10 @@ class GaussianWake(Component):
             except:
                 self.use_ct_curve = False
                 self.ct_curve = np.array([0.0, 0.0])
+            try:
+                self.interp_type = options['interp_type']
+            except:
+                self.interp_type = 1
 
         # unused but required for compatibility
 
@@ -274,6 +279,7 @@ class GaussianWake(Component):
         wake_model_version = params['model_params:wake_model_version']
 
         use_ct_curve = self.use_ct_curve
+        interp_type = self.interp_type
         ct_curve = self.ct_curve
         ct_curve_wind_speed = self.ct_curve[:, 0]
         ct_curve_ct = self.ct_curve[:, 1]
@@ -309,7 +315,7 @@ class GaussianWake(Component):
                                                wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
-                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version,
+                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
                                                use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
@@ -328,7 +334,7 @@ class GaussianWake(Component):
             ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ,
                                                    rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
                                                    alpha, beta, I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
-                                                   velX, velY, velZ, wake_combination_method,
+                                                   velX, velY, velZ, wake_combination_method, interp_type,
                                                    ti_calculation_method, calc_k_star, opt_exp_fac)
 
             unknowns['wsArray%i' % direction_id] = ws_array
