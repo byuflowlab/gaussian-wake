@@ -12,7 +12,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
                              TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
                              wake_model_version, interp_type, &
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtVelocity)
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtVelocity, &
+                             turbineX, turbineY)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -29,7 +30,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     integer, intent(in) :: wake_combination_method, TI_calculation_method, & 
                         &  wake_model_version, interp_type
     logical, intent(in) :: calc_k_star, print_ti, use_ct_curve
-    real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
+    real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ, turbineX, turbineY
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines) :: Ct
@@ -57,8 +58,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     ! set tolerance for location checks
     tol = 0.1_dp
     
-    ! initialize wind turbine velocities to 0.0
-    wtVelocity = 0.0_dp
+    ! initialize wind turbine velocities to correct wind field
+    call wind_field(nTurbines, turbineX, turbineY, wtVelocity)
     
     ! initialize TI of all turbines to free-stream value
     !print *, "start TIturbs: ", TIturbs
@@ -232,7 +233,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
             ! print *, deficit_sum
             
             ! find velocity at point p due to the wake of turbine turb
-            point_velocity = wind_speed - deficit_sum
+            point_velocity = wtVelocity(turbI) - deficit_sum
             
             !print *, "point velocity, deficit_sum, turbI, p: ", point_velocity, deficit_sum, turbI, p    
         
@@ -602,6 +603,37 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
 
 end subroutine porteagel_visualize
 
+
+! calculate distributed wind field wtVelocity
+subroutine wind_field(nPoints, x, y, u)
+
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    integer, intent(in) :: nPoints
+    real(dp), dimension(nPoints), intent(in) :: x, y
+
+    ! out
+    real(dp), dimension(nPoints), intent(out) :: u
+    
+    ! local
+    integer :: turbI
+    real(dp) :: V_min, V_max, sigma
+
+    intrinsic exp
+    
+    V_min = 7.0_dp      ! m/s
+    V_max = 11.4_dp     ! m/s
+    sigma = 4.0_dp      ! rotor diams
+    
+    do, turbI=1, nPoints
+        u(turbI) = V_min+(V_max-V_min)*exp(-0.5_dp*((x(turbI)/sigma)**2+(y(turbI)/sigma)**2))
+    end do
+
+end subroutine wind_field
 
 ! calculates the onset of far-wake conditions
 subroutine x0_func(rotor_diameter, yaw, Ct, alpha, TI, beta, x0)

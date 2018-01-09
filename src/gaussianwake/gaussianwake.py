@@ -208,6 +208,10 @@ class GaussianWake(Component):
         self.add_param('wind_speed', val=8.0, units='m/s')
         self.add_param('axialInduction', val=np.zeros(nTurbines)+1./3.)
 
+        # added for distributed wind temp
+        self.add_param('turbineX', val=np.zeros(nTurbines), units='m')
+        self.add_param('turbineY', val=np.zeros(nTurbines), units='m')
+
         # options
         # self.add_param('language', val='fortran')
 
@@ -298,6 +302,10 @@ class GaussianWake(Component):
         Ct = params['Ct']
         wind_speed = params['wind_speed']
 
+        # temp
+        turbineX = params['turbineX']
+        turbineY = params['turbineY']
+
         # run the Bastankhah and Porte Agel model
         # velocitiesTurbines = porteagel_analyze(nTurbines=nTurbines, turbineXw=turbineXw, turbineYw=turbineYw,
         #                                        turbineZ=turbineZ, rotorDiameter=rotorDiameter, Ct=Ct,
@@ -316,7 +324,7 @@ class GaussianWake(Component):
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
                                                calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, turbineX, turbineY)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
