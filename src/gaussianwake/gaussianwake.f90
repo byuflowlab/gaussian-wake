@@ -71,7 +71,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     kz_local = kz
 
 
-    print *, 'wake model version: ', wake_model_version
+!     print *, 'wake model version: ', wake_model_version
     
     !print *, "ky_local: ", ky_local
     !print *, "kz_local: ", kz_local
@@ -175,6 +175,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         !print *, x
     
                         ! velocity difference in the wake
+                        ! if (wake_model_version .eq. 0) then
+!                             print *, "wake model version before deltav is (if)", wake_model_version
+!                             STOP 1
+!                         end if
+!                         
+!                         print *, "wake model version before deltav is (out)", wake_model_version
                         call deltav_func(deltay, deltaz, Ct(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
                                         & wake_model_version, kz_local, x, &
@@ -192,10 +198,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         ! vertical spread at far wake onset
                         call sigmaz_func(kz_local, deltax0_dp, rotorDiameter(turb), sigmaz_dp)
 
-                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
-                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
-                                         & wake_model_version, kz_local, x0, &
-                                         & opt_exp_fac
+!                         print *,  "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+!                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+!                                          & wake_model_version, kz_local, x0, &
+!                                          & opt_exp_fac
+!                                          
+!                         print *, "wake model version before deltav is (else)", wake_model_version
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
@@ -271,7 +279,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
         close(2)
     end if
     !print *, "TIturbs: ", TIturbs
-    !print *, wtVelocity
+!     print *, wtVelocity
 
     !! make sure turbine inflow velocity is non-negative
 !             if (wtVelocity(turbI) .lt. 0.0_dp) then 
@@ -443,10 +451,10 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                         ! vertical spread at discontinuity point
                         call sigmaz_func(kz_local(turb), deltax0_dp, rotorDiameter(turb), sigmaz_dp)
 
-                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
-                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
-                                         & wake_model_version, kz_local, x0, &
-                                         & opt_exp_fac
+                        ! print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+!                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+!                                          & wake_model_version, kz_local, x0, &
+!                                          & opt_exp_fac
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
@@ -627,11 +635,14 @@ subroutine wind_field(nPoints, x, y, u)
     
     V_min = 7.0_dp      ! m/s
     V_max = 11.4_dp     ! m/s
-    sigma = 4.0_dp      ! rotor diams
-    
+    sigma = 126.4_dp*4.0_dp      ! rotor diams
+!     print *, sigma
+!     stop 1
     do, turbI=1, nPoints
         u(turbI) = V_min+(V_max-V_min)*exp(-0.5_dp*((x(turbI)/sigma)**2+(y(turbI)/sigma)**2))
     end do
+    
+    print *, "u", u 
 
 end subroutine wind_field
 
@@ -771,6 +782,7 @@ end subroutine wake_offset_func
 ! for use in the far wake region
 subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, & 
                       & rotor_diameter_ust, version, k, deltax, opt_exp_fac, deltav) 
+                      
                        
     implicit none
 
@@ -793,7 +805,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
     intrinsic cos, sqrt, exp
     
     !print *, "rotor_diameter in deltav entry", rotor_diameter_ust
-    print *, 'wake model version in deltav: ', version
+!     print *, 'wake model version in deltav: ', version
 
     if (version == 2014) then
         !print *, "in 2014 version"
@@ -857,11 +869,11 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
     ! load intrinsic functions
     intrinsic cos, sqrt, exp
 
-    print *, 'wake model version in deltav near wake: ', version
-    print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
-                                 & sigmay, sigmaz, rotor_diameter_ust, x, &
-                                 & discontinuity_point, sigmay0, sigmaz0, version, k, &
-                                 & deltax0_dp, opt_exp_fac
+    ! print *, 'wake model version in deltav near wake: ', version
+!     print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
+!                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
+!                                  & discontinuity_point, sigmay0, sigmaz0, version, k, &
+!                                  & deltax0_dp, opt_exp_fac
     if (version == 2014) then
         if (yaw > 0.0_dp) then
             print *, "model version 2014 may only be used when yaw=0"

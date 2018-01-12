@@ -240,7 +240,6 @@ class GaussianWake(Component):
                        desc='print TI values to a file for use in plotting etc')
         self.add_param('model_params:wake_model_version', val=2016, pass_by_object=True,
                        desc='choose whether to use Bastankhah 2014 or 2016')
-
         self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
                        desc='increase spread for optimization')
 
@@ -284,9 +283,13 @@ class GaussianWake(Component):
 
         use_ct_curve = self.use_ct_curve
         interp_type = self.interp_type
-        ct_curve = self.ct_curve
-        ct_curve_wind_speed = self.ct_curve[:, 0]
-        ct_curve_ct = self.ct_curve[:, 1]
+        if use_ct_curve:
+            ct_curve = self.ct_curve
+            ct_curve_wind_speed = self.ct_curve[:, 0]
+            ct_curve_ct = self.ct_curve[:, 1]
+        else:
+            ct_curve_wind_speed = 0.0
+            ct_curve_ct = 0.0
 
         opt_exp_fac = params['model_params:opt_exp_fac']
 
