@@ -38,11 +38,11 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
 
     ! local (General)
-    real(dp), dimension(nTurbines) :: yaw, TIturbs
+    real(dp), dimension(nTurbines) :: yaw, TIturbs, Ct_local
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset, k_star
     real(dp) :: x, deltav, deltaz, sigmay_dp, sigmaz_dp, deltax0_dp, deficit_sum
-    real(dp) :: ky_local, kz_local, tol, discontinuity_point, TI_area_ratio, 
-    real(dp) :: TI_area_ratio_temp, TI_dst_tmp, rpts
+    real(dp) :: ky_local, kz_local, tol, discontinuity_point, TI_area_ratio 
+    real(dp) :: TI_area_ratio_tmp, TI_dst_tmp, rpts
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
     Integer :: u, d, turb, turbI, p
     real(dp), parameter :: pi = 3.141592653589793_dp
@@ -66,9 +66,10 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     TIturbs = TI
     
     
-    ! initialize the local wake spreading factors
+    ! initialize the local wake factors
     ky_local = ky
     kz_local = kz
+    Ct_local = Ct
 
 
     !print *, 'wake model version: ', wake_model_version
@@ -116,7 +117,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     !print *, "rotorDiameter before x0 ", rotorDiameter
                 
                     ! determine the onset location of far wake
-                    call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, & 
+                    call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                                 & TIturbs(turb), beta, x0)
 !                     call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, & 
 !                                 & TI, beta, x0)
@@ -139,7 +140,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     !print *, "yaw ", yaw
 
                     ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+                    call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
                     !print *, "theta_c_0 ", theta_c_0
                     ! horizontal spread
                     call sigmay_func(ky_local, deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -151,7 +152,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     !print *, "rotorDiameter after sigmaz ", rotorDiameter
                     ! horizontal cross-wind wake displacement from hub
                     call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local, kz_local, Ct(turb), sigmay, sigmaz, wake_offset)
+                                         & ky_local, kz_local, Ct_local(turb), sigmay, sigmaz, wake_offset)
                                          
                                          
                     !print *, "wake_offset ", wake_offset                 
@@ -167,7 +168,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     ! far wake region
                     
                     ! find the final point where the original model is undefined
-                    call discontinuity_point_func(x0, rotorDiameter(turb), ky_local, kz_local, yaw(turb), Ct(turb), & 
+                    call discontinuity_point_func(x0, rotorDiameter(turb), ky_local, kz_local, yaw(turb), Ct_local(turb), & 
                                                  & discontinuity_point)
                     
                     if (x > discontinuity_point) then
@@ -175,7 +176,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         !print *, x
     
                         ! velocity difference in the wake
-                        call deltav_func(deltay, deltaz, Ct(turb), yaw(turb), &
+                        call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
                                         & wake_model_version, kz_local, x, &
                                         & opt_exp_fac, deltav)  
@@ -199,7 +200,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
-                                         & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
+                                         & Ct_local(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, & 
                                          & wake_model_version, kz_local, x0, & 
                                          & opt_exp_fac, deltav)
@@ -218,13 +219,13 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         
                         ! save ti_area_ratio and ti_dst to new memory locations to avoid 
                         ! aliasing during differentiation
-                        TI_area_ratio_temp = TI_area_ratio
+                        TI_area_ratio_tmp = TI_area_ratio
                         TI_dst_tmp = TIturbs(turbI)
                         
-                        call added_ti_func(TI, Ct(turb), x, ky_local, rotorDiameter(turb), & 
+                        call added_ti_func(TI, Ct_local(turb), x, ky_local, rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
-                                           & TI_calculation_method, TI_area_ratio_temp, &
+                                           & TI_calculation_method, TI_area_ratio_tmp, &
                                            & TI_dst_tmp, TI_area_ratio, TIturbs(turbI))
                                            
                         !print *, "rotorDiameter after TI calcs", rotorDiameter
@@ -263,7 +264,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 !         print *, wtVelocity(turbI)
         if (use_ct_curve) then
             call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
-                              & wtVelocity(turbI), Ct(turbI))
+                              & wtVelocity(turbI), Ct_local(turbI))
         end if
     
     end do
@@ -322,7 +323,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     real(dp), dimension(nSamples), intent(in) :: velX, velY, velZ
 
     ! local (General)
-    real(dp), dimension(nTurbines) :: yaw, TIturbs, wtVelocity
+    real(dp), dimension(nTurbines) :: yaw, TIturbs, wtVelocity, Ct_local
     real(dp) :: TI_area_ratio, TI_area_ratio_tmp, TI_dst_tmp
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset, discontinuity_point
     real(dp) :: x, deltav, deltaz, sigmay_dp, sigmaz_dp, deltax0_dp, deficit_sum, tol, k_star
@@ -351,9 +352,10 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     ! initialize TI of all turbines to free-stream values
     TIturbs = TI
     
-    ! initialize local k values to free-stream values
+    ! initialize local wake values to free-stream values
     ky_local = ky
     kz_local = kz
+    Ct_local = Ct
     
     !print *, "entering turbine calculation loops"
     
@@ -392,7 +394,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                 if (x > (0.0_dp + tol)) then
                 
                     ! determine the onset location of far wake
-                    call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, & 
+                    call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                                 & TIturbs(turb), beta, x0)
         
                     ! downstream distance from far wake onset to downstream turbine
@@ -406,7 +408,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     end if
 
                     ! determine the initial wake angle at the onset of far wake
-                    call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+                    call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
         
                     ! horizontal spread
                     call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -416,7 +418,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     
                     ! horizontal cross-wind wake displacement from hub
                     call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                         & ky_local(turb), kz_local(turb), Ct(turb), sigmay, sigmaz, wake_offset)
+                                         & ky_local(turb), kz_local(turb), Ct_local(turb), sigmay, sigmaz, wake_offset)
                               
                     ! cross wind distance from downstream point location to wake center
                     deltay = LocalRotorPointY*cos(yaw(turbI)) + turbineYw(turbI) - (turbineYw(turb) + wake_offset)
@@ -425,16 +427,17 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     deltaz = LocalRotorPointZ + turbineZ(turbI) - turbineZ(turb)
          
                     ! find the final point where the original model is undefined
-                    call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), kz_local(turb), yaw(turb), Ct(turb), & 
+                    call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), &
+                                                 & kz_local(turb), yaw(turb), Ct_local(turb), & 
                                                  & discontinuity_point)
                                                  
                     ! far wake region
                     if (x > discontinuity_point) then
     
                         ! velocity difference in the wake
-                        call deltav_func(deltay, deltaz, Ct(turb), yaw(turb), &
+                        call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
-                                        & wake_model_version, kz_local, x, &
+                                        & wake_model_version, kz_local(turb), x, &
                                         & opt_exp_fac, deltav)  
                                         
                     ! near wake region (linearized)
@@ -456,9 +459,9 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
-                                         & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
+                                         & Ct_local(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, & 
-                                         & wake_model_version, kz_local, x0, & 
+                                         & wake_model_version, kz_local(turb), x0, & 
                                          & opt_exp_fac, deltav)
                                          
               
@@ -471,14 +474,14 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     if ((x > 0.0_dp) .and. (TI_calculation_method > 0)) then
                     
                         ! save ti_area_ratio value to new memory location to avoid aliasing
-                        TI_area_ratio_temp = TI_area_ratio
+                        TI_area_ratio_tmp = TI_area_ratio
                         TI_dst_tmp = TIturbs(turbI)
                 
                         ! calculate TI value at each turbine
-                        call added_ti_func(TI, Ct(turb), x, ky_local(turb), rotorDiameter(turb), & 
+                        call added_ti_func(TI, Ct_local(turb), x, ky_local(turb), rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
-                                           & TI_calculation_method, TI_area_ratio_temp, 
+                                           & TI_calculation_method, TI_area_ratio_tmp, & 
                                            & TI_dst_tmp, TI_area_ratio, &
                                            & TIturbs(turbI))
                     end if
@@ -506,7 +509,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
         
         if (use_ct_curve) then
             call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
-                              & wtVelocity(turbI), Ct(turbI))
+                              & wtVelocity(turbI), Ct_local(turbI))
         end if
        
     end do
@@ -527,14 +530,14 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
             if (x > 0.0_dp) then
             
                 ! determine the onset location of far wake
-                call x0_func(rotorDiameter(turb), yaw(turb), Ct(turb), alpha, TIturbs(turb), &
+                call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, TIturbs(turb), &
                             & beta, x0)
                 
                 ! downstream distance from far wake onset to downstream turbine
                 deltax0 = x - x0
         
                 ! determine the initial wake angle at the onset of far wake
-                call theta_c_0_func(yaw(turb), Ct(turb), theta_c_0)
+                call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
         
                 ! horizontal spread
                 call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), yaw(turb), sigmay)
@@ -544,7 +547,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
             
                 ! horizontal cross-wind wake displacement from hub
                 call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                     & ky_local(turb), kz_local(turb), Ct(turb), sigmay, &
+                                     & ky_local(turb), kz_local(turb), Ct_local(turb), sigmay, &
                                      & sigmaz, wake_offset)
                                  
                 ! horizontal distance from downstream hub location to wake center
@@ -554,16 +557,16 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                 deltaz = velZ(loc) - turbineZ(turb)
                                 
                 ! find the final point where the original model is undefined
-                call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), kz_local(turb), yaw(turb), Ct(turb), & 
+                call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), kz_local(turb), yaw(turb), Ct_local(turb), & 
                                              & discontinuity_point)
                                              
                 ! far wake region
                 if (x > discontinuity_point) then
                 
                     ! velocity difference in the wake
-                    call deltav_func(deltay, deltaz, Ct(turb), yaw(turb),  &
+                    call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb),  &
                                     & sigmay, sigmaz, rotorDiameter(turb), & 
-                                    & wake_model_version, kz_local, x, & 
+                                    & wake_model_version, kz_local(turb), x, & 
                                     & opt_exp_fac, deltav)
                                     
                 ! near wake region (linearized)
@@ -581,7 +584,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     
                     ! velocity deficit in the nearwake (linear model)
                     call deltav_near_wake_lin_func(deltay, deltaz,        &
-                                     & Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp,           & 
+                                     & Ct_local(turb), yaw(turb), sigmay_dp, sigmaz_dp,           & 
                                      & rotorDiameter(turb), x, discontinuity_point, & 
                                      & sigmay_dp, sigmaz_dp,    & 
                                      & wake_model_version, kz_local(turb), x0, &
