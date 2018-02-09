@@ -41,7 +41,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp), dimension(nTurbines) :: yaw, TIturbs
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset, k_star
     real(dp) :: x, deltav, deltaz, sigmay_dp, sigmaz_dp, deltax0_dp, deficit_sum
-    real(dp) :: ky_local, kz_local, tol, discontinuity_point, ti_area_ratio, rpts
+    real(dp) :: ky_local, kz_local, tol, discontinuity_point, TI_area_ratio, 
+    real(dp) :: TI_area_ratio_temp, TI_dst_tmp, rpts
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
     Integer :: u, d, turb, turbI, p
     real(dp), parameter :: pi = 3.141592653589793_dp
@@ -70,7 +71,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     kz_local = kz
 
 
-    print *, 'wake model version: ', wake_model_version
+    !print *, 'wake model version: ', wake_model_version
     
     !print *, "ky_local: ", ky_local
     !print *, "kz_local: ", kz_local
@@ -84,7 +85,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
         do, p=1, nRotorPoints
         
             ! initialize the TI_area_ratio to 0.0 for each turbine
-            ti_area_ratio = 0.0_dp
+            TI_area_ratio = 0.0_dp
     
             ! initialize deficit summation term to zero
             deficit_sum = 0.0_dp
@@ -191,10 +192,10 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         ! vertical spread at far wake onset
                         call sigmaz_func(kz_local, deltax0_dp, rotorDiameter(turb), sigmaz_dp)
 
-                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
-                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
-                                         & wake_model_version, kz_local, x0, &
-                                         & opt_exp_fac
+                       !  print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+!                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+!                                          & wake_model_version, kz_local, x0, &
+!                                          & opt_exp_fac
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
@@ -214,11 +215,17 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         !print *, "turbI, turb: ", turbI, turb
                         ! calculate TI value at each turbine
 !                         print *, "turb, turbI: ", turb, turbI
+                        
+                        ! save ti_area_ratio and ti_dst to new memory locations to avoid 
+                        ! aliasing during differentiation
+                        TI_area_ratio_temp = TI_area_ratio
+                        TI_dst_tmp = TIturbs(turbI)
+                        
                         call added_ti_func(TI, Ct(turb), x, ky_local, rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
-                                           & TI_calculation_method, &
-                                           & ti_area_ratio, TIturbs(turbI))
+                                           & TI_calculation_method, TI_area_ratio_temp, &
+                                           & TI_dst_tmp, TI_area_ratio, TIturbs(turbI))
                                            
                         !print *, "rotorDiameter after TI calcs", rotorDiameter
                     end if
@@ -316,7 +323,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
 
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs, wtVelocity
-    real(dp) :: ti_area_ratio
+    real(dp) :: TI_area_ratio, TI_area_ratio_tmp, TI_dst_tmp
     real(dp) :: x0, deltax0, deltay, theta_c_0, sigmay, sigmaz, wake_offset, discontinuity_point
     real(dp) :: x, deltav, deltaz, sigmay_dp, sigmaz_dp, deltax0_dp, deficit_sum, tol, k_star
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
@@ -358,7 +365,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
         do, p=1, nRotorPoints
         
             ! initialize the TI_area_ratio to 0.0 for each turbine
-            ti_area_ratio = 0.0_dp
+            TI_area_ratio = 0.0_dp
     
             ! initialize deficit summation term to zero
             deficit_sum = 0.0_dp
@@ -442,10 +449,10 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                         ! vertical spread at discontinuity point
                         call sigmaz_func(kz_local(turb), deltax0_dp, rotorDiameter(turb), sigmaz_dp)
 
-                        print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
-                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
-                                         & wake_model_version, kz_local, x0, &
-                                         & opt_exp_fac
+                        ! print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
+!                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
+!                                          & wake_model_version, kz_local, x0, &
+!                                          & opt_exp_fac
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
@@ -462,12 +469,17 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                                                wake_combination_method, deficit_sum)
                 
                     if ((x > 0.0_dp) .and. (TI_calculation_method > 0)) then
+                    
+                        ! save ti_area_ratio value to new memory location to avoid aliasing
+                        TI_area_ratio_temp = TI_area_ratio
+                        TI_dst_tmp = TIturbs(turbI)
                 
                         ! calculate TI value at each turbine
                         call added_ti_func(TI, Ct(turb), x, ky_local(turb), rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
                                            & turbineZ(turbI), TIturbs(turb), &
-                                           & TI_calculation_method, ti_area_ratio, &
+                                           & TI_calculation_method, TI_area_ratio_temp, 
+                                           & TI_dst_tmp, TI_area_ratio, &
                                            & TIturbs(turbI))
                     end if
                 
@@ -761,7 +773,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
     intrinsic cos, sqrt, exp
     
     !print *, "rotor_diameter in deltav entry", rotor_diameter_ust
-    print *, 'wake model version in deltav: ', version
+!     print *, 'wake model version in deltav: ', version
 
     if (version == 2014) then
         !print *, "in 2014 version"
@@ -825,11 +837,11 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
     ! load intrinsic functions
     intrinsic cos, sqrt, exp
 
-    print *, 'wake model version in deltav near wake: ', version
-    print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
-                                 & sigmay, sigmaz, rotor_diameter_ust, x, &
-                                 & discontinuity_point, sigmay0, sigmaz0, version, k, &
-                                 & deltax0_dp, opt_exp_fac
+   !  print *, 'wake model version in deltav near wake: ', version
+!     print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
+!                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
+!                                  & discontinuity_point, sigmay0, sigmaz0, version, k, &
+!                                  & deltax0_dp, opt_exp_fac
     if (version == 2014) then
         if (yaw > 0.0_dp) then
             print *, "model version 2014 may only be used when yaw=0"
@@ -1013,7 +1025,7 @@ end subroutine wake_combination_func
 ! combines wakes using various methods
 subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, & 
                         & deltay, wake_height, turbine_height, TI_ust, &
-                        & TI_calculation_method, ti_area_ratio, TI_dst)
+                        & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
                                  
     implicit none
         
@@ -1023,15 +1035,16 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     ! in
     real(dp), intent(in) :: Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst
     real(dp), intent(in) :: deltay, wake_height, turbine_height, TI_ust, TI
+    real(dp), intent(in) :: TI_area_ratio_in, TI_dst_in
     integer, intent(in) :: TI_calculation_method
     
     ! local
     real(dp) :: axial_induction_ust, beta, epsilon, sigma, wake_diameter, wake_overlap
-    real(dp) :: TI_added, TI_tmp, rotor_area_dst, ti_area_ratio_tmp, TI_dst_in
+    real(dp) :: TI_added, TI_tmp, rotor_area_dst, TI_area_ratio_tmp
     real(dp), parameter :: pi = 3.141592653589793_dp
     
     ! out  
-    real(dp), intent(inout) :: TI_dst, ti_area_ratio
+    real(dp), intent(out) :: TI_dst, TI_area_ratio
     
     ! intrinsic functions
     intrinsic sqrt
@@ -1067,7 +1080,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         ! print *, "sum of squares = ", sum_of_squares
 !         TI_dst = sqrt(sum_of_squares)
 !         !print *, "TI_dst = ", TI_dst
-        TI_dst = sqrt(TI_dst**2.0_dp + (TI_added*wake_overlap/rotor_area_dst)**2.0_dp)
+        TI_dst = sqrt(TI_dst_in**2.0_dp + (TI_added*wake_overlap/rotor_area_dst)**2.0_dp)
         
     
     ! Niayifar and Porte Agel 2015, 2016
@@ -1100,7 +1113,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
         ! Check if this is the max and use it if it is
-        if (TI_tmp > TI_dst) then
+        if (TI_tmp > TI_dst_in) then
 !            print *, "TI_tmp > TI_dst"
            TI_dst = TI_tmp
         end if
@@ -1147,7 +1160,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         !    TI_dst = TI_tmp
         !end if
 !         print *, "before: ", TI_dst, TI_tmp
-        TI_dst_in = TI_dst
+!         TI_dst_in = TI_dst
         call smooth_max(TI_dst_in, TI_tmp, TI_dst)
 !         print *, "after:: ", TI_dst, TI_tmp
 
@@ -1178,14 +1191,14 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         ! Calculate the total turbulence intensity at the downstream turbine based on 
         ! current upstream turbine
         rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
-        ti_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
+        TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
         TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
         ! Check if this is the max and use it if it is
-        if (ti_area_ratio_tmp > ti_area_ratio) then
+        if (TI_area_ratio_tmp > TI_area_ratio_in) then
 !            print *, "ti_area_ratio_tmp > ti_area_ratio"
            TI_dst = TI_tmp
-           ti_area_ratio = ti_area_ratio_tmp
+           TI_area_ratio = TI_area_ratio_tmp
         end if
     
     ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
@@ -1215,11 +1228,11 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         ! Calculate the total turbulence intensity at the downstream turbine based on 
         ! current upstream turbine
         rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
-        ti_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
+        TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
         TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
         ! Check if this is the max and use it if it is
-        TI_dst_in = TI_dst
+!         TI_dst_in = TI_dst
         call smooth_max(TI_dst_in, TI_tmp, TI_dst)
      
     !print *, "sigma: ", sigma
@@ -1362,7 +1375,10 @@ subroutine smooth_max(x, y, g)
     s = 1000.0_dp
     
     g = (log(exp(s*x) + exp(s*y)))/s
-
+    !print *, "g1 = ", g
+    
+    !g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
+    !print *, "g2 = ", g
     
 end subroutine smooth_max
 
