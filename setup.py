@@ -5,6 +5,7 @@ from numpy.distutils.core import setup, Extension
 
 module1 = Extension('_porteagel_fortran', sources=['src/gaussianwake/gaussianwake.f90',
                                                    'src/gaussianwake/gaussianwake_bv.f90',
+                                                   'src/gaussianwake/gaussianwake_dv.f90',
                                                    'src/gaussianwake/adStack.c',
                                                    'src/gaussianwake/adBuffer.f'],
                                                    # 'src/gaussianwake/lib_array.f90'],

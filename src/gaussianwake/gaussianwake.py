@@ -8,7 +8,7 @@ from openmdao.api import Component, Problem, Group
 
 from _porteagel_fortran import porteagel_analyze as porteagel_analyze_fortran
 from _porteagel_fortran import porteagel_visualize as porteagel_visualize_fortran
-from _porteagel_fortran import porteagel_analyze_bv
+from _porteagel_fortran import porteagel_analyze_bv, porteagel_analyze_dv
 from _porteagel_fortran import theta_c_0_func, x0_func, sigmay_func, sigmaz_func, wake_offset_func
 
 # def porteagel_analyze_fortran(turbineXw, turbineYw, turbineZ, rotorDiameter,
@@ -278,12 +278,6 @@ class GaussianWake(Component):
         shear_exp = params['model_params:shear_exp']
         wake_model_version = params['model_params:wake_model_version']
 
-        use_ct_curve = self.use_ct_curve
-        interp_type = self.interp_type
-        ct_curve = self.ct_curve
-        ct_curve_wind_speed = self.ct_curve[:, 0]
-        ct_curve_ct = self.ct_curve[:, 1]
-
         opt_exp_fac = params['model_params:opt_exp_fac']
 
         print_ti = params['model_params:print_ti']
@@ -297,6 +291,17 @@ class GaussianWake(Component):
         rotorDiameter = params['rotorDiameter']
         Ct = params['Ct']
         wind_speed = params['wind_speed']
+
+        use_ct_curve = self.use_ct_curve
+        interp_type = self.interp_type
+
+        if use_ct_curve:
+            ct_curve = self.ct_curve
+            ct_curve_wind_speed = self.ct_curve[:, 0]
+            ct_curve_ct = self.ct_curve[:, 1]
+        else:
+            ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
+            ct_curve_ct = Ct
 
         # run the Bastankhah and Porte Agel model
         # velocitiesTurbines = porteagel_analyze(nTurbines=nTurbines, turbineXw=turbineXw, turbineYw=turbineYw,
@@ -379,6 +384,19 @@ class GaussianWake(Component):
 
         opt_exp_fac = params['model_params:opt_exp_fac']
 
+        wake_model_version = params['model_params:wake_model_version']
+
+        use_ct_curve = self.use_ct_curve
+        interp_type = self.interp_type
+
+        if use_ct_curve:
+            ct_curve = self.ct_curve
+            ct_curve_wind_speed = self.ct_curve[:, 0]
+            ct_curve_ct = self.ct_curve[:, 1]
+        else:
+            ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
+            ct_curve_ct = Ct
+
         print_ti = False
 
         sorted_x_idx = self.sorted_x_idx
@@ -390,19 +408,47 @@ class GaussianWake(Component):
         # define input array to direct differentiation
         wtVelocityb = np.eye(nDirs, nTurbines)
 
+
         # call to fortran code to obtain output values
         turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
             porteagel_analyze_bv(turbineXw, sorted_x_idx, turbineYw, turbineZ,
                                  rotorDiameter, Ct, wind_speed, yawDeg,
                                  ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,z_ref, z_0,
                                  shear_exp, wake_combination_method, ti_calculation_method, calc_k_star,
-                                 opt_exp_fac, print_ti, wtVelocityb)
+                                 opt_exp_fac, print_ti, wake_model_version, interp_type, use_ct_curve, ct_curve_wind_speed, \
+                                 ct_curve_ct, wtVelocityb)
 
+        # turbineXwd = np.eye(nDirs, nTurbines)
+        # turbineYwd = np.eye(nDirs, nTurbines)
+        # turbineZd = np.eye(nDirs, nTurbines)*0
+        # rotorDiameterd = np.eye(nDirs, nTurbines)*0
+        # Ctd = np.eye(nDirs, nTurbines)*0
+        # yawDegd = np.eye(nDirs, nTurbines)*0
+        #
+        # wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ, turbineZd,
+        #                      rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
+        #                      I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
+        #                      ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
+        #                      use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        # print(wtVelocityb.shape)
+
+        # print(wtVelocityb)
+
+        # quit()
 
         # initialize Jacobian dict
         J = {}
 
-        # collect values of the Jacobian
+        # # collect values of the Jacobian
+        # J['wtVelocity%i' % direction_id, 'turbineXw'] = wtVelocityb[0, :]
+        # J['wtVelocity%i' % direction_id, 'turbineYw'] = wtVelocityb[1, :]
+        # J['wtVelocity%i' % direction_id, 'hubHeight'] = wtVelocityb[2, :]
+        # J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = wtVelocityb[3, :]
+        # J['wtVelocity%i' % direction_id, 'rotorDiameter'] = wtVelocityb[4, :]
+        # J['wtVelocity%i' % direction_id, 'Ct'] = wtVelocityb[5, :]
+        # print J
+
         J['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwb
         J['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
         J['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZb
@@ -410,6 +456,7 @@ class GaussianWake(Component):
         J['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterb
         J['wtVelocity%i' % direction_id, 'Ct'] = Ctb
         # print J
+
         return J
 
 
