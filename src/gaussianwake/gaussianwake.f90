@@ -915,9 +915,9 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     ! load intrinsic functions
     intrinsic acos, sqrt
     
-    print *, turbine_y, turbine_z, rotor_diameter, &
-                            wake_center_y, wake_center_z, wake_diameter, &
-                            wake_overlap
+!     print *, turbine_y, turbine_z, rotor_diameter, &
+!                             wake_center_y, wake_center_z, wake_diameter, &
+!                             wake_overlap
     
    ! distance between wake center and rotor center
     if ((wake_center_z > (turbine_z + tol)) .or. (wake_center_z < (turbine_z - tol))) then
@@ -987,11 +987,11 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
     
-    if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
-        print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
-        print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
-        STOP 1
-    end if
+    ! if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
+!         print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
+!         print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
+!         STOP 1
+!     end if
                              
 end subroutine overlap_area_func
 

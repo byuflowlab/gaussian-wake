@@ -1582,8 +1582,8 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   REAL(dp), DIMENSION(nbdirs) :: result2d
   INTEGER :: nd
   INTEGER :: nbdirs
-  PRINT*, turbine_y, turbine_z, rotor_diameter, wake_center_y, &
-& wake_center_z, wake_diameter, wake_overlap
+!   PRINT*, turbine_y, turbine_z, rotor_diameter, wake_center_y, &
+! & wake_center_z, wake_diameter, wake_overlap
 ! distance between wake center and rotor center
   IF (wake_center_z .GT. turbine_z + tol .OR. wake_center_z .LT. &
 &     turbine_z - tol) THEN
@@ -1723,9 +1723,9 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
   IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp + tol .OR. wake_overlap/(pi*&
 &     ovrr**2) .GT. 1.0_dp + tol) THEN
-    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovr**2)
-    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovrr**2)
-    STOP
+!     PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovr**2)
+!     PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovrr**2)
+!     STOP
   END IF
 END SUBROUTINE OVERLAP_AREA_FUNC_DV
 

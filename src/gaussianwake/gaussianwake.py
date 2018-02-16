@@ -419,12 +419,12 @@ class GaussianWake(Component):
         #                          ct_curve_ct, wtVelocityb)
 
 
-        turbineXwd = np.eye(nTurbines, nDirs)
-        turbineYwd = np.zeros(nTurbines, nDirs)
-        turbineZd = np.zeros(nTurbines, nDirs)
-        rotorDiameterd = np.zeros(nTurbines, nDirs)
-        Ctd = np.zeros(nTurbines, nDirs)
-        yawDegd = np.zeros(nTurbines, nDirs)
+        turbineXwd = np.eye(nDirs, nTurbines)
+        turbineYwd = np.zeros([nDirs, nTurbines])
+        turbineZd = np.zeros([nDirs, nTurbines])
+        rotorDiameterd = np.zeros([nDirs, nTurbines])
+        Ctd = np.zeros([nDirs, nTurbines])
+        yawDegd = np.zeros([nDirs, nTurbines])
 
         wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ, turbineZd,
                              rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
@@ -432,11 +432,113 @@ class GaussianWake(Component):
                              ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
 
-        print(wtVelocityb)
+        wtVelocityb_dxwd = wtVelocityb
+
+        turbineXwd = np.zeros([nDirs, nTurbines])
+        turbineYwd = np.eye(nDirs, nTurbines)
+        turbineZd = np.zeros([nDirs, nTurbines])
+        rotorDiameterd = np.zeros([nDirs, nTurbines])
+        Ctd = np.zeros([nDirs, nTurbines])
+        yawDegd = np.zeros([nDirs, nTurbines])
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ,
+                                           turbineZd,
+                                           rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz,
+                                           alpha, beta,
+                                           I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+                                           wake_combination_method,
+                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           wake_model_version, interp_type,
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        wtVelocityb_dywd = wtVelocityb
+
+        turbineXwd = np.zeros([nDirs, nTurbines])
+        turbineYwd = np.zeros([nDirs, nTurbines])
+        turbineZd = np.eye(nDirs, nTurbines)
+        rotorDiameterd = np.zeros([nDirs, nTurbines])
+        Ctd = np.zeros([nDirs, nTurbines])
+        yawDegd = np.zeros([nDirs, nTurbines])
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ,
+                                           turbineZd,
+                                           rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz,
+                                           alpha, beta,
+                                           I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+                                           wake_combination_method,
+                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           wake_model_version, interp_type,
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        wtVelocityb_dzd = wtVelocityb
+
+        turbineXwd = np.zeros([nDirs, nTurbines])
+        turbineYwd = np.zeros([nDirs, nTurbines])
+        turbineZd = np.zeros([nDirs, nTurbines])
+        rotorDiameterd = np.eye(nDirs, nTurbines)
+        Ctd = np.zeros([nDirs, nTurbines])
+        yawDegd = np.zeros([nDirs, nTurbines])
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ,
+                                           turbineZd,
+                                           rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz,
+                                           alpha, beta,
+                                           I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+                                           wake_combination_method,
+                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           wake_model_version, interp_type,
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        wtVelocityb_drd = wtVelocityb
+
+        turbineXwd = np.zeros([nDirs, nTurbines])
+        turbineYwd = np.zeros([nDirs, nTurbines])
+        turbineZd = np.zeros([nDirs, nTurbines])
+        rotorDiameterd = np.zeros([nDirs, nTurbines])
+        Ctd = np.eye(nDirs, nTurbines)
+        yawDegd = np.zeros([nDirs, nTurbines])
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ,
+                                           turbineZd,
+                                           rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz,
+                                           alpha, beta,
+                                           I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+                                           wake_combination_method,
+                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           wake_model_version, interp_type,
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        wtVelocityb_dctd = wtVelocityb
+
+        turbineXwd = np.zeros([nDirs, nTurbines])
+        turbineYwd = np.zeros([nDirs, nTurbines])
+        turbineZd = np.zeros([nDirs, nTurbines])
+        rotorDiameterd = np.zeros([nDirs, nTurbines])
+        Ctd = np.zeros([nDirs, nTurbines])
+        yawDegd = np.eye(nDirs, nTurbines)
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ,
+                                           turbineZd,
+                                           rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz,
+                                           alpha, beta,
+                                           I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+                                           wake_combination_method,
+                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           wake_model_version, interp_type,
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        wtVelocityb_dyawd = wtVelocityb
+
+        # print(wtVelocityb_dxwd, wtVelocityb[1])
+        # print(wtVelocityb_dxwd.shape, wtVelocityb.shape)
+        # for i in np.arange(0, nDirs):
+        #     print(wtVelocityb_dxwd, wtVelocityb)
+        #     print(wtVelocityb_dxwd.shape, wtVelocityb.shape)
+        #     wtVelocityb_dxwd[:, i] = wtVelocityb[i]
 
         print("after calling gradients")
 
-        quit()
+        # quit()
         # print(wtVelocityb.shape)
 
         # print(wtVelocityb)
@@ -455,12 +557,16 @@ class GaussianWake(Component):
         # J['wtVelocity%i' % direction_id, 'Ct'] = wtVelocityb[5, :]
         # print J
 
-        J['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwd
-        J['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwd
-        J['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZd
-        J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegd
-        J['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterd
-        J['wtVelocity%i' % direction_id, 'Ct'] = Ctd
+        # print("shapes")
+        # print(wtVelocityb)
+        # print(wtVelocityb_dxwd)
+
+        J['wtVelocity%i' % direction_id, 'turbineXw'] = np.transpose(wtVelocityb_dxwd[1])
+        J['wtVelocity%i' % direction_id, 'turbineYw'] = np.transpose(wtVelocityb_dywd[1])
+        J['wtVelocity%i' % direction_id, 'hubHeight'] = np.transpose(wtVelocityb_dzd[1])
+        J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = np.transpose(wtVelocityb_dyawd[1])
+        J['wtVelocity%i' % direction_id, 'rotorDiameter'] = np.transpose(wtVelocityb_drd[1])
+        J['wtVelocity%i' % direction_id, 'Ct'] = np.transpose(wtVelocityb_dctd[1])
         # print J
 
         return J
