@@ -20,11 +20,19 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
 & , yawdegb, ky, kz, alpha, beta, ti, rotorpointsy, rotorpointsz, z_ref&
 & , z_0, shear_exp, wake_combination_method, ti_calculation_method, &
 & calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type, &
-& use_ct_curve, ct_curve_wind_speed, ct_curve_ct, &
+& use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtvelocity, &
 & wtvelocityb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
+!!  print TIturbs values to a file
+!     if (print_ti) then
+!         open(unit=2, file="TIturbs_tmp.txt")
+!         do, turb=1, nTurbines 
+!             write(2,*) TIturbs(turb)
+!         end do
+!         close(2)
+!     end if 
 !print *, "TIturbs: ", TIturbs
 !print *, wtVelocity
 !! make sure turbine inflow velocity is non-negative
@@ -42,13 +50,13 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
   LOGICAL, INTENT(IN) :: calc_k_star, print_ti, use_ct_curve
   REAL(dp), DIMENSION(nturbines), INTENT(IN) :: turbinexw, turbineyw, &
 & turbinez
-  REAL(dp), DIMENSION(nbdirs, nturbines), intent(out) :: turbinexwb, turbineywb, &
+  REAL(dp), DIMENSION(nbdirs, nturbines) :: turbinexwb, turbineywb, &
 & turbinezb
   INTEGER, DIMENSION(nturbines), INTENT(IN) :: sorted_x_idx
   REAL(dp), DIMENSION(nturbines), INTENT(IN) :: rotordiameter, yawdeg
-  REAL(dp), DIMENSION(nbdirs, nturbines), intent(out) :: rotordiameterb, yawdegb
+  REAL(dp), DIMENSION(nbdirs, nturbines) :: rotordiameterb, yawdegb
   REAL(dp), DIMENSION(nturbines) :: ct
-  REAL(dp), DIMENSION(nbdirs, nturbines), intent(out) :: ctb
+  REAL(dp), DIMENSION(nbdirs, nturbines) :: ctb
   REAL(dp), INTENT(IN) :: ky, kz, alpha, beta, ti, wind_speed, z_ref, &
 & z_0, shear_exp, opt_exp_fac
   REAL(dp), DIMENSION(nrotorpoints), INTENT(IN) :: rotorpointsy, &
@@ -304,16 +312,6 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
       CALL PUSHCONTROL1B(0)
     END IF
   END DO
-! print TIturbs values to a file
-  IF (print_ti) THEN
-    OPEN(unit=2, file='TIturbs_tmp.txt') 
-    CALL PUSHINTEGER4(turb)
-    DO turb=1,nturbines
-      WRITE(2, *) titurbs(turb)
-    END DO
-    CLOSE(2) 
-    CALL POPINTEGER4(turb)
-  END IF
   DO nd=1,nbdirs
     rotordiameterb(nd, :) = 0.0_8
     turbinezb(nd, :) = 0.0_8
@@ -1765,7 +1763,7 @@ SUBROUTINE ADDED_TI_FUNC_BV(ti, ct_ust, ct_ustb, x, xb, k_star_ust, &
       ti_dst_inb(nd) = 0.0_8
     END DO
   ELSE IF (ti_calculation_method .EQ. 5) THEN
-! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
+! Niayifar and Porte Agel 2015, 2016 using smooth max on area TI ratio
 ! calculate axial induction based on the Ct value
     CALL CT_TO_AXIAL_IND_FUNC(ct_ust, axial_induction_ust)
 ! calculate BPA spread parameters Bastankhah and Porte Agel 2014
@@ -1845,6 +1843,7 @@ SUBROUTINE ADDED_TI_FUNC_BV(ti, ct_ust, ct_ustb, x, xb, k_star_ust, &
       ti_dstb(nd) = 0.0_8
     END DO
   ELSE
+    print *, "random stop"
     STOP
   END IF
   DO nd=1,nbdirs
@@ -1894,8 +1893,22 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
   INTEGER :: branch
   INTEGER :: nbdirs
 ! distance between wake center and rotor center
-  ovdyd = SQRT((wake_center_y-turbine_y)**2_dp + (wake_center_z-&
-&   turbine_z)**2_dp)
+  IF (wake_center_z .GT. turbine_z + tol .OR. wake_center_z .LT. &
+&     turbine_z - tol) THEN
+    ovdyd = SQRT((wake_center_y-turbine_y)**2_dp + (wake_center_z-&
+&     turbine_z)**2_dp)
+    CALL PUSHCONTROL2B(0)
+  ELSE IF (wake_center_y .GT. turbine_y) THEN
+! potential source of gradient issues, abs() did not cause a problem in FLORIS
+    ovdyd = wake_center_y - turbine_y
+    CALL PUSHCONTROL2B(1)
+  ELSE IF (turbine_y .GT. wake_center_y) THEN
+    ovdyd = turbine_y - wake_center_y
+    CALL PUSHCONTROL2B(2)
+  ELSE
+    ovdyd = 0.0_dp
+    CALL PUSHCONTROL2B(3)
+  END IF
 !print *, "OVdYd: ", OVdYd
 ! find rotor radius
   ovr = rotor_diameter/2.0_dp
@@ -1908,7 +1921,7 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
 ! calculate the distance from the wake center to the line perpendicular to the 
 ! line between the two circle intersection points
 !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
-  IF (ovdyd .GE. 0.0_dp) THEN
+  IF (ovdyd .GT. 0.0_dp + tol) THEN
 ! check case to avoid division by zero
     ovl = (-(ovr*ovr)+ovrr*ovrr+ovdyd*ovdyd)/(2.0_dp*ovdyd)
     CALL PUSHCONTROL1B(0)
@@ -1919,7 +1932,7 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
   ovz = ovrr*ovrr - ovl*ovl
 ! Finish calculating the distance from the intersection line to the outer edge of the wake
 !if (OVz > 0.0_dp + tol) then
-  IF (ovz .GT. 0.0_dp) THEN
+  IF (ovz .GT. 0.0_dp + tol) THEN
     CALL PUSHREAL8(ovz)
     ovz = SQRT(ovz)
     CALL PUSHCONTROL1B(0)
@@ -1951,8 +1964,8 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
     wake_overlap = 0.0_dp
     CALL PUSHCONTROL2B(3)
   END IF
-  IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp .OR. wake_overlap/(pi*ovrr**2&
-&     ) .GT. 1.0_dp) THEN
+  IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp + tol .OR. wake_overlap/(pi*&
+&     ovrr**2) .GT. 1.0_dp + tol) THEN
     STOP
   ELSE
     CALL POPCONTROL2B(branch)
@@ -2042,18 +2055,37 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
     DO nd=1,nbdirs
       wake_diameterb(nd) = ovrrb(nd)/2.0_dp
       rotor_diameterb(nd) = rotor_diameterb(nd) + ovrb(nd)/2.0_dp
-      IF ((wake_center_y-turbine_y)**2_dp + (wake_center_z-turbine_z)**&
-&         2_dp .EQ. 0.0) THEN
-        tempb(nd) = 0.0
-      ELSE
-        tempb(nd) = ovdydb(nd)/(2.0*SQRT((wake_center_y-turbine_y)**2_dp&
-&         +(wake_center_z-turbine_z)**2_dp))
-      END IF
-      tempb0(nd) = 2_dp*(wake_center_z-turbine_z)*tempb(nd)
-      turbine_yb(nd) = -(2_dp*(wake_center_y-turbine_y)*tempb(nd))
-      wake_center_zb(nd) = wake_center_zb(nd) + tempb0(nd)
-      turbine_zb(nd) = turbine_zb(nd) - tempb0(nd)
     END DO
+    CALL POPCONTROL2B(branch)
+    IF (branch .LT. 2) THEN
+      IF (branch .EQ. 0) THEN
+        DO nd=1,nbdirs
+          IF ((wake_center_y-turbine_y)**2_dp + (wake_center_z-turbine_z&
+&             )**2_dp .EQ. 0.0) THEN
+            tempb(nd) = 0.0
+          ELSE
+            tempb(nd) = ovdydb(nd)/(2.0*SQRT((wake_center_y-turbine_y)**&
+&             2_dp+(wake_center_z-turbine_z)**2_dp))
+          END IF
+          tempb0(nd) = 2_dp*(wake_center_z-turbine_z)*tempb(nd)
+          turbine_yb(nd) = -(2_dp*(wake_center_y-turbine_y)*tempb(nd))
+          wake_center_zb(nd) = wake_center_zb(nd) + tempb0(nd)
+          turbine_zb(nd) = turbine_zb(nd) - tempb0(nd)
+        END DO
+      ELSE
+        DO nd=1,nbdirs
+          turbine_yb(nd) = -ovdydb(nd)
+        END DO
+      END IF
+    ELSE IF (branch .EQ. 2) THEN
+      DO nd=1,nbdirs
+        turbine_yb(nd) = ovdydb(nd)
+      END DO
+    ELSE
+      DO nd=1,nbdirs
+        turbine_yb(nd) = 0.0_8
+      END DO
+    END IF
   END IF
 END SUBROUTINE OVERLAP_AREA_FUNC_BV
 
@@ -2239,9 +2271,8 @@ SUBROUTINE SMOOTH_MAX_BV(x, xb, y, yb, g, gb, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
-!print *, "g1 = ", g
-!g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
-!print *, "g2 = ", g
+!     print *, "g2 = ", g
+!     print *, "g is ", g
   INTRINSIC KIND
 ! define precision to be the standard for a double precision ! on local system
   INTEGER, PARAMETER :: dp=KIND(0.d0)
@@ -2254,14 +2285,24 @@ SUBROUTINE SMOOTH_MAX_BV(x, xb, y, yb, g, gb, nbdirs)
 ! local
   REAL(dp) :: s
   INTRINSIC LOG, EXP
+  REAL(dp) :: temp
+  REAL(dp) :: temp0
+  REAL(dp) :: temp1
   INTEGER :: nd
   REAL(dp), DIMENSION(nbdirs) :: tempb
+  REAL(dp), DIMENSION(nbdirs) :: tempb0
   INTEGER :: nbdirs
-  s = 1000.0_dp
+  s = 100.0_dp
+!     g = (log(exp(s*x) + exp(s*y)))/s
+!     print *, "g1 = ", g
+  temp = EXP(s*x) + EXP(s*y)
+  temp1 = EXP(s*x)
+  temp0 = EXP(s*y)
   DO nd=1,nbdirs
-    tempb(nd) = gb(nd)/(s*(EXP(s*x)+EXP(s*y)))
-    xb(nd) = EXP(s*x)*s*tempb(nd)
-    yb(nd) = EXP(s*y)*s*tempb(nd)
+    tempb(nd) = gb(nd)/temp
+    tempb0(nd) = -((x*temp1+y*temp0)*tempb(nd)/temp)
+    xb(nd) = EXP(s*x)*s*tempb0(nd) + (EXP(s*x)*x*s+temp1)*tempb(nd)
+    yb(nd) = EXP(s*y)*s*tempb0(nd) + (EXP(s*y)*y*s+temp0)*tempb(nd)
   END DO
 END SUBROUTINE SMOOTH_MAX_BV
 

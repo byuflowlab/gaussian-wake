@@ -18,6 +18,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 
     ! dependent variables: wtVelocity
 
+
     implicit none
 
     ! define precision to be the standard for a double precision ! on local system
@@ -270,14 +271,14 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     
     end do
          
-    ! print TIturbs values to a file
-    if (print_ti) then
-        open(unit=2, file="TIturbs_tmp.txt")
-        do, turb=1, nTurbines 
-            write(2,*) TIturbs(turb)
-        end do
-        close(2)
-    end if 
+   !!  print TIturbs values to a file
+!     if (print_ti) then
+!         open(unit=2, file="TIturbs_tmp.txt")
+!         do, turb=1, nTurbines 
+!             write(2,*) TIturbs(turb)
+!         end do
+!         close(2)
+!     end if 
     
     !print *, "TIturbs: ", TIturbs
     !print *, wtVelocity
@@ -914,8 +915,21 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     ! load intrinsic functions
     intrinsic acos, sqrt
     
-    ! distance between wake center and rotor center
-    OVdYd = sqrt((wake_center_y-turbine_y)**2_dp + (wake_center_z - turbine_z)**2_dp)
+    print *, turbine_y, turbine_z, rotor_diameter, &
+                            wake_center_y, wake_center_z, wake_diameter, &
+                            wake_overlap
+    
+   ! distance between wake center and rotor center
+    if ((wake_center_z > (turbine_z + tol)) .or. (wake_center_z < (turbine_z - tol))) then
+        OVdYd = sqrt((wake_center_y-turbine_y)**2_dp + (wake_center_z - turbine_z)**2_dp)
+    else if (wake_center_y > turbine_y) then! potential source of gradient issues, abs() did not cause a problem in FLORIS
+        OVdYd = wake_center_y - turbine_y
+    else if (turbine_y > wake_center_y) then
+        OVdYd = turbine_y - wake_center_y
+    else
+        OVdYd = 0.0_dp
+    end if
+    
     !print *, "OVdYd: ", OVdYd
     ! find rotor radius
     OVr = rotor_diameter/2.0_dp
@@ -931,7 +945,8 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     ! calculate the distance from the wake center to the line perpendicular to the 
     ! line between the two circle intersection points
     !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
-    if (OVdYd >= 0.0_dp) then ! check case to avoid division by zero
+!     print *, "OVdYd ", OVdYd
+    if (OVdYd > 0.0_dp + tol) then ! check case to avoid division by zero
         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
     else
         OVL = 0.0_dp
@@ -941,7 +956,7 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
 
     ! Finish calculating the distance from the intersection line to the outer edge of the wake
     !if (OVz > 0.0_dp + tol) then
-    if (OVz > 0.0_dp) then
+    if (OVz > 0.0_dp + tol) then
         OVz = sqrt(OVz)
     else
         OVz = 0.0_dp
@@ -969,8 +984,12 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
         wake_overlap = 0.0_dp
     end if
     
-    if ((wake_overlap/(pi*OVr**2) > 1.0_dp) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp)) then
-        print *, "wake overlap in func: ", wake_overlap
+!     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
+!     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
+    
+    if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
         STOP 1
     end if
                              
@@ -1058,6 +1077,9 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     ! initialize output variables
     TI_area_ratio = TI_area_ratio_in
     TI_dst = TI_dst_in
+    
+    ! initialize wake overlap to zero
+    wake_overlap = 0.0_dp
     
     !print *, "TI_dst in: ", TI_dst
     ! Niayifar and Porte Agel 2015, 2016 (adjusted by Annoni and Thomas for SOWFA match 
@@ -1212,7 +1234,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
            TI_area_ratio = TI_area_ratio_tmp
         end if
     
-    ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
+    ! Niayifar and Porte Agel 2015, 2016 using smooth max on area TI ratio
     else if (TI_calculation_method == 5) then
     
         ! calculate axial induction based on the Ct value
@@ -1383,14 +1405,15 @@ subroutine smooth_max(x, y, g)
     
     intrinsic log, exp
     
-    s = 1000.0_dp
+    s = 100.0_dp
     
-    g = (log(exp(s*x) + exp(s*y)))/s
-    !print *, "g1 = ", g
+!     g = (log(exp(s*x) + exp(s*y)))/s
+!     print *, "g1 = ", g
     
-    !g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
-    !print *, "g2 = ", g
+    g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
+!     print *, "g2 = ", g
     
+!     print *, "g is ", g
 end subroutine smooth_max
 
 subroutine interpolation(nPoints, interp_type, x, y, xval, yval)

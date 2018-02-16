@@ -13,17 +13,25 @@
 ! FLight Optimization and Wind Laboratory (FLOW Lab)
 ! Brigham Young University
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for analysis
-SUBROUTINE PORTEAGEL_ANALYZE_DV(nbdirs, nturbines, nrotorpoints, nctpoints, &
+SUBROUTINE PORTEAGEL_ANALYZE_DV(nturbines, nrotorpoints, nctpoints, &
 & turbinexw, turbinexwd, sorted_x_idx, turbineyw, turbineywd, turbinez, &
 & turbinezd, rotordiameter, rotordiameterd, ct, ctd, wind_speed, yawdeg&
 & , yawdegd, ky, kz, alpha, beta, ti, rotorpointsy, rotorpointsz, z_ref&
 & , z_0, shear_exp, wake_combination_method, ti_calculation_method, &
 & calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type, &
 & use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtvelocity, &
-& wtvelocityd)
+& wtvelocityd, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
+!!  print TIturbs values to a file
+!     if (print_ti) then
+!         open(unit=2, file="TIturbs_tmp.txt")
+!         do, turb=1, nTurbines 
+!             write(2,*) TIturbs(turb)
+!         end do
+!         close(2)
+!     end if 
 !print *, "TIturbs: ", TIturbs
 !print *, wtVelocity
 !! make sure turbine inflow velocity is non-negative
@@ -35,7 +43,7 @@ SUBROUTINE PORTEAGEL_ANALYZE_DV(nbdirs, nturbines, nrotorpoints, nctpoints, &
 ! define precision to be the standard for a double precision ! on local system
   INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
-  INTEGER, INTENT(IN) :: nbdirs, nturbines, nrotorpoints, nctpoints
+  INTEGER, INTENT(IN) :: nturbines, nrotorpoints, nctpoints
   INTEGER, INTENT(IN) :: wake_combination_method, ti_calculation_method&
 & , wake_model_version, interp_type
   LOGICAL, INTENT(IN) :: calc_k_star, print_ti, use_ct_curve
@@ -84,7 +92,7 @@ SUBROUTINE PORTEAGEL_ANALYZE_DV(nbdirs, nturbines, nrotorpoints, nctpoints, &
   INTRINSIC SIN, COS, ATAN, MAX, SQRT, LOG
   INTRINSIC REAL
   INTEGER :: nd
-!   INTEGER :: nbdirs
+  INTEGER :: nbdirs
   DO nd=1,nbdirs
 ! bastankhah and porte agel 2016 define yaw to be positive clockwise, this is reversed
     yawd(nd, :) = -(pi*yawdegd(nd, :)/180.0_dp)
@@ -362,14 +370,6 @@ SUBROUTINE PORTEAGEL_ANALYZE_DV(nbdirs, nturbines, nrotorpoints, nctpoints, &
 &                                     turbi), ct_local(turbi), ct_locald&
 &                                     (:, turbi), nbdirs)
   END DO
-! print TIturbs values to a file
-  IF (print_ti) THEN
-    OPEN(unit=2, file='TIturbs_tmp.txt') 
-    DO turb=1,nturbines
-      WRITE(2, *) titurbs(turb)
-    END DO
-    CLOSE(2) 
-  END IF
 END SUBROUTINE PORTEAGEL_ANALYZE_DV
 
 !  Differentiation of x0_func in forward (tangent) mode:
@@ -1117,6 +1117,8 @@ SUBROUTINE ADDED_TI_FUNC_DV(ti, ct_ust, ct_ustd, x, xd, k_star_ust, &
     ti_dstd(nd) = ti_dst_ind(nd)
   END DO
   ti_dst = ti_dst_in
+! initialize wake overlap to zero
+  wake_overlap = 0.0_dp
 !print *, "TI_dst in: ", TI_dst
 ! Niayifar and Porte Agel 2015, 2016 (adjusted by Annoni and Thomas for SOWFA match 
 ! and optimization)
@@ -1452,7 +1454,7 @@ SUBROUTINE ADDED_TI_FUNC_DV(ti, ct_ust, ct_ustd, x, xd, k_star_ust, &
       ti_area_ratio = ti_area_ratio_tmp
     END IF
   ELSE IF (ti_calculation_method .EQ. 5) THEN
-! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
+! Niayifar and Porte Agel 2015, 2016 using smooth max on area TI ratio
 ! calculate axial induction based on the Ct value
     CALL CT_TO_AXIAL_IND_FUNC_DV(ct_ust, ct_ustd, axial_induction_ust, &
 &                          axial_induction_ustd, nbdirs)
@@ -1580,17 +1582,41 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   REAL(dp), DIMENSION(nbdirs) :: result2d
   INTEGER :: nd
   INTEGER :: nbdirs
-  arg1 = (wake_center_y-turbine_y)**2_dp + (wake_center_z-turbine_z)**&
-&   2_dp
-  DO nd=1,nbdirs
+  PRINT*, turbine_y, turbine_z, rotor_diameter, wake_center_y, &
+& wake_center_z, wake_diameter, wake_overlap
 ! distance between wake center and rotor center
-    arg1d(nd) = 2_dp*(wake_center_z-turbine_z)*(wake_center_zd(nd)-&
-&     turbine_zd(nd)) - 2_dp*(wake_center_y-turbine_y)*turbine_yd(nd)
-    IF (arg1 .EQ. 0.0) THEN
+  IF (wake_center_z .GT. turbine_z + tol .OR. wake_center_z .LT. &
+&     turbine_z - tol) THEN
+    arg1 = (wake_center_y-turbine_y)**2_dp + (wake_center_z-turbine_z)**&
+&     2_dp
+    DO nd=1,nbdirs
+      arg1d(nd) = 2_dp*(wake_center_z-turbine_z)*(wake_center_zd(nd)-&
+&       turbine_zd(nd)) - 2_dp*(wake_center_y-turbine_y)*turbine_yd(nd)
+      IF (arg1 .EQ. 0.0) THEN
+        ovdydd(nd) = 0.0_8
+      ELSE
+        ovdydd(nd) = arg1d(nd)/(2.0*SQRT(arg1))
+      END IF
+    END DO
+    ovdyd = SQRT(arg1)
+  ELSE IF (wake_center_y .GT. turbine_y) THEN
+    DO nd=1,nbdirs
+! potential source of gradient issues, abs() did not cause a problem in FLORIS
+      ovdydd(nd) = -turbine_yd(nd)
+    END DO
+    ovdyd = wake_center_y - turbine_y
+  ELSE IF (turbine_y .GT. wake_center_y) THEN
+    DO nd=1,nbdirs
+      ovdydd(nd) = turbine_yd(nd)
+    END DO
+    ovdyd = turbine_y - wake_center_y
+  ELSE
+    ovdyd = 0.0_dp
+    DO nd=1,nbdirs
       ovdydd(nd) = 0.0_8
-    ELSE
-      ovdydd(nd) = arg1d(nd)/(2.0*SQRT(arg1))
-    END IF
+    END DO
+  END IF
+  DO nd=1,nbdirs
 !print *, "OVdYd: ", OVdYd
 ! find rotor radius
     ovrd(nd) = rotor_diameterd(nd)/2.0_dp
@@ -1598,7 +1624,6 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
 ! find wake radius
     ovrrd(nd) = wake_diameterd(nd)/2.0_dp
   END DO
-  ovdyd = SQRT(arg1)
   ovr = rotor_diameter/2.0_dp
   ovrr = wake_diameter/2.0_dp
 !print *, "OVRR: ", OVRR
@@ -1607,7 +1632,8 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
 ! calculate the distance from the wake center to the line perpendicular to the 
 ! line between the two circle intersection points
 !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
-  IF (ovdyd .GE. 0.0_dp) THEN
+!     print *, "OVdYd ", OVdYd
+  IF (ovdyd .GT. 0.0_dp + tol) THEN
     DO nd=1,nbdirs
 ! check case to avoid division by zero
       ovld(nd) = ((ovrrd(nd)*ovrr-ovr*ovrd(nd)-ovrd(nd)*ovr+ovrr*ovrrd(&
@@ -1628,7 +1654,7 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   ovz = ovrr*ovrr - ovl*ovl
 ! Finish calculating the distance from the intersection line to the outer edge of the wake
 !if (OVz > 0.0_dp + tol) then
-  IF (ovz .GT. 0.0_dp) THEN
+  IF (ovz .GT. 0.0_dp + tol) THEN
     DO nd=1,nbdirs
       IF (ovz .EQ. 0.0) THEN
         ovzd(nd) = 0.0_8
@@ -1693,9 +1719,12 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
       wake_overlapd(nd) = 0.0_8
     END DO
   END IF
-  IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp .OR. wake_overlap/(pi*ovrr**2&
-&     ) .GT. 1.0_dp) THEN
-    PRINT*, 'wake overlap in func: ', wake_overlap
+!     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
+!     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
+  IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp + tol .OR. wake_overlap/(pi*&
+&     ovrr**2) .GT. 1.0_dp + tol) THEN
+    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovr**2)
+    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovrr**2)
     STOP
   END IF
 END SUBROUTINE OVERLAP_AREA_FUNC_DV
@@ -1898,9 +1927,8 @@ SUBROUTINE SMOOTH_MAX_DV(x, xd, y, yd, g, gd, nbdirs)
   !USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
-!print *, "g1 = ", g
-!g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
-!print *, "g2 = ", g
+!     print *, "g2 = ", g
+!     print *, "g is ", g
   INTRINSIC KIND
 ! define precision to be the standard for a double precision ! on local system
   INTEGER, PARAMETER :: dp=KIND(0.d0)
@@ -1919,19 +1947,28 @@ SUBROUTINE SMOOTH_MAX_DV(x, xd, y, yd, g, gd, nbdirs)
   REAL(dp), DIMENSION(nbdirs) :: arg2d
   REAL(dp) :: arg3
   REAL(dp), DIMENSION(nbdirs) :: arg3d
+  REAL(dp) :: arg4
+  REAL(dp), DIMENSION(nbdirs) :: arg4d
   INTEGER :: nd
   INTEGER :: nbdirs
-  s = 1000.0_dp
+  s = 100.0_dp
   arg1 = s*x
   arg2 = s*y
-  arg3 = EXP(arg1) + EXP(arg2)
+  arg3 = s*x
+  arg4 = s*y
   DO nd=1,nbdirs
+!     g = (log(exp(s*x) + exp(s*y)))/s
+!     print *, "g1 = ", g
     arg1d(nd) = s*xd(nd)
     arg2d(nd) = s*yd(nd)
-    arg3d(nd) = arg1d(nd)*EXP(arg1) + arg2d(nd)*EXP(arg2)
-    gd(nd) = arg3d(nd)/arg3/s
+    arg3d(nd) = s*xd(nd)
+    arg4d(nd) = s*yd(nd)
+    gd(nd) = ((xd(nd)*EXP(arg1)+x*arg1d(nd)*EXP(arg1)+yd(nd)*EXP(arg2)+y&
+&     *arg2d(nd)*EXP(arg2))*(EXP(arg3)+EXP(arg4))-(x*EXP(arg1)+y*EXP(&
+&     arg2))*(arg3d(nd)*EXP(arg3)+arg4d(nd)*EXP(arg4)))/(EXP(arg3)+EXP(&
+&     arg4))**2
   END DO
-  g = LOG(arg3)/s
+  g = (x*EXP(arg1)+y*EXP(arg2))/(EXP(arg3)+EXP(arg4))
 END SUBROUTINE SMOOTH_MAX_DV
 
 !  Differentiation of interpolation in forward (tangent) mode:

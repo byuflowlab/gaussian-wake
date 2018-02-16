@@ -408,29 +408,35 @@ class GaussianWake(Component):
         # define input array to direct differentiation
         wtVelocityb = np.eye(nDirs, nTurbines)
 
-
+        print("before calling gradients")
         # call to fortran code to obtain output values
-        turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
-            porteagel_analyze_bv(turbineXw, sorted_x_idx, turbineYw, turbineZ,
-                                 rotorDiameter, Ct, wind_speed, yawDeg,
-                                 ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,z_ref, z_0,
-                                 shear_exp, wake_combination_method, ti_calculation_method, calc_k_star,
-                                 opt_exp_fac, print_ti, wake_model_version, interp_type, use_ct_curve, ct_curve_wind_speed, \
-                                 ct_curve_ct, wtVelocityb)
+        # turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
+        #     porteagel_analyze_bv(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+        #                          rotorDiameter, Ct, wind_speed, yawDeg,
+        #                          ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,z_ref, z_0,
+        #                          shear_exp, wake_combination_method, ti_calculation_method, calc_k_star,
+        #                          opt_exp_fac, print_ti, wake_model_version, interp_type, use_ct_curve, ct_curve_wind_speed,
+        #                          ct_curve_ct, wtVelocityb)
 
-        # turbineXwd = np.eye(nDirs, nTurbines)
-        # turbineYwd = np.eye(nDirs, nTurbines)
-        # turbineZd = np.eye(nDirs, nTurbines)*0
-        # rotorDiameterd = np.eye(nDirs, nTurbines)*0
-        # Ctd = np.eye(nDirs, nTurbines)*0
-        # yawDegd = np.eye(nDirs, nTurbines)*0
-        #
-        # wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ, turbineZd,
-        #                      rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
-        #                      I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
-        #                      ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-        #                      use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
 
+        turbineXwd = np.eye(nTurbines, nDirs)
+        turbineYwd = np.zeros(nTurbines, nDirs)
+        turbineZd = np.zeros(nTurbines, nDirs)
+        rotorDiameterd = np.zeros(nTurbines, nDirs)
+        Ctd = np.zeros(nTurbines, nDirs)
+        yawDegd = np.zeros(nTurbines, nDirs)
+
+        wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ, turbineZd,
+                             rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
+                             I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
+                             ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+
+        print(wtVelocityb)
+
+        print("after calling gradients")
+
+        quit()
         # print(wtVelocityb.shape)
 
         # print(wtVelocityb)
@@ -449,12 +455,12 @@ class GaussianWake(Component):
         # J['wtVelocity%i' % direction_id, 'Ct'] = wtVelocityb[5, :]
         # print J
 
-        J['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwb
-        J['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
-        J['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZb
-        J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegb
-        J['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterb
-        J['wtVelocity%i' % direction_id, 'Ct'] = Ctb
+        J['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwd
+        J['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwd
+        J['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZd
+        J['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegd
+        J['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterd
+        J['wtVelocity%i' % direction_id, 'Ct'] = Ctd
         # print J
 
         return J
