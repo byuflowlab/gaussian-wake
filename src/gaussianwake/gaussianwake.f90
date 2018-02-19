@@ -922,9 +922,9 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
    ! distance between wake center and rotor center
     if ((wake_center_z > (turbine_z + tol)) .or. (wake_center_z < (turbine_z - tol))) then
         OVdYd = sqrt((wake_center_y-turbine_y)**2_dp + (wake_center_z - turbine_z)**2_dp)
-    else if (wake_center_y > turbine_y) then! potential source of gradient issues, abs() did not cause a problem in FLORIS
+    else if (wake_center_y > (turbine_y + tol)) then! potential source of gradient issues, abs() did not cause a problem in FLORIS
         OVdYd = wake_center_y - turbine_y
-    else if (turbine_y > wake_center_y) then
+    else if (turbine_y > (wake_center_y + tol)) then
         OVdYd = turbine_y - wake_center_y
     else
         OVdYd = 0.0_dp
@@ -946,7 +946,7 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     ! line between the two circle intersection points
     !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
 !     print *, "OVdYd ", OVdYd
-    if (OVdYd > 0.0_dp + tol) then ! check case to avoid division by zero
+    if (OVdYd > (0.0_dp + tol)) then ! check case to avoid division by zero
         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
     else
         OVL = 0.0_dp
@@ -987,11 +987,11 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
     
-    ! if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
-!         print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
-!         print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
-!         STOP 1
-!     end if
+    if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
+        STOP 1
+    end if
                              
 end subroutine overlap_area_func
 
