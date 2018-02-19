@@ -1568,8 +1568,9 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   REAL(dp), DIMENSION(nbdirs), INTENT(OUT) :: wake_overlapd
 ! local
   REAL(dp), PARAMETER :: pi=3.141592653589793_dp, tol=0.000001_dp
-  REAL(dp) :: ovdyd, ovr, ovrr, ovl, ovz
-  REAL(dp), DIMENSION(nbdirs) :: ovdydd, ovrd, ovrrd, ovld, ovzd
+  REAL(dp) :: ovdyd, ovr, ovrr, ovl, ovz, ovz2
+  REAL(dp), DIMENSION(nbdirs) :: ovdydd, ovrd, ovrrd, ovld, ovzd, &
+& ovz2d
 ! load intrinsic functions
   INTRINSIC ACOS, SQRT
   REAL(dp) :: arg1
@@ -1582,8 +1583,9 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   REAL(dp), DIMENSION(nbdirs) :: result2d
   INTEGER :: nd
   INTEGER :: nbdirs
-!   PRINT*, turbine_y, turbine_z, rotor_diameter, wake_center_y, &
-! & wake_center_z, wake_diameter, wake_overlap
+!     print *, turbine_y, turbine_z, rotor_diameter, &
+!                             wake_center_y, wake_center_z, wake_diameter, &
+!                             wake_overlap
 ! distance between wake center and rotor center
   IF (wake_center_z .GT. turbine_z + tol .OR. wake_center_z .LT. &
 &     turbine_z - tol) THEN
@@ -1599,13 +1601,13 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
       END IF
     END DO
     ovdyd = SQRT(arg1)
-  ELSE IF (wake_center_y .GT. turbine_y) THEN
+  ELSE IF (wake_center_y .GT. turbine_y + tol) THEN
     DO nd=1,nbdirs
 ! potential source of gradient issues, abs() did not cause a problem in FLORIS
       ovdydd(nd) = -turbine_yd(nd)
     END DO
     ovdyd = wake_center_y - turbine_y
-  ELSE IF (turbine_y .GT. wake_center_y) THEN
+  ELSE IF (turbine_y .GT. wake_center_y + tol) THEN
     DO nd=1,nbdirs
       ovdydd(nd) = turbine_yd(nd)
     END DO
@@ -1633,87 +1635,134 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
 ! line between the two circle intersection points
 !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
 !     print *, "OVdYd ", OVdYd
-  IF (ovdyd .GT. 0.0_dp + tol) THEN
-    DO nd=1,nbdirs
-! check case to avoid division by zero
-      ovld(nd) = ((ovrrd(nd)*ovrr-ovr*ovrd(nd)-ovrd(nd)*ovr+ovrr*ovrrd(&
-&       nd)+ovdydd(nd)*ovdyd+ovdyd*ovdydd(nd))*2.0_dp*ovdyd-(-(ovr*ovr)+&
-&       ovrr*ovrr+ovdyd*ovdyd)*2.0_dp*ovdydd(nd))/(2.0_dp*ovdyd)**2
-    END DO
-    ovl = (-(ovr*ovr)+ovrr*ovrr+ovdyd*ovdyd)/(2.0_dp*ovdyd)
-  ELSE
-    ovl = 0.0_dp
-    DO nd=1,nbdirs
-      ovld(nd) = 0.0_8
-    END DO
-  END IF
-  DO nd=1,nbdirs
-    ovzd(nd) = ovrrd(nd)*ovrr + ovrr*ovrrd(nd) - ovld(nd)*ovl - ovl*ovld&
-&     (nd)
-  END DO
-  ovz = ovrr*ovrr - ovl*ovl
-! Finish calculating the distance from the intersection line to the outer edge of the wake
-!if (OVz > 0.0_dp + tol) then
-  IF (ovz .GT. 0.0_dp + tol) THEN
-    DO nd=1,nbdirs
-      IF (ovz .EQ. 0.0) THEN
-        ovzd(nd) = 0.0_8
-      ELSE
-        ovzd(nd) = ovzd(nd)/(2.0*SQRT(ovz))
-      END IF
-    END DO
-    ovz = SQRT(ovz)
-  ELSE
-    ovz = 0.0_dp
-    DO nd=1,nbdirs
-      ovzd(nd) = 0.0_8
-    END DO
-  END IF
+! if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
+!         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
+! !         print *, "OVdYd, OVL: ", OVdYd, OVL
+!     else
+!         OVL = 0.0_dp
+!     end if
+! 
+!     OVz = OVRR*OVRR-OVL*OVL
+! 
+!     ! Finish calculating the distance from the intersection line to the outer edge of the wake
+!     !if (OVz > 0.0_dp + tol) then
+!     if (OVz > 0.0_dp + tol) then
+!         OVz = sqrt(OVz)
+!     else
+!         OVz = 0.0_dp
+!     end if
 !print *, "OVRR, OVL, OVRR, OVr, OVdYd, OVz ", OVRR, OVL, OVRR, OVr, OVdYd, OVz
+! if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake
+!         !print *, "OVL: ", OVL
+!         if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
+! !         if (OVdYd > 0.0_dp + tol) then
+! !         if ((OVdYd > 0.0_dp) .and. (OVdYd > (OVRR - OVr))) then
+!             ! print *, "acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr ", &
+! !     & acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr
+!             wake_overlap = OVRR*OVRR*acos(OVL/OVRR) + OVr*OVr*acos((OVdYd-OVL)/OVr) - OVdYd*OVz
+!         else if (OVRR > OVr) then
+!             wake_overlap = pi*OVr*OVr
+!             !print *, "wake ovl: ", wake_overlap
+!         else
+!             wake_overlap = pi*OVRR*OVRR
+!         end if
+!     else
+!         wake_overlap = 0.0_dp
+!     end if
+! determine if there is overlap
   IF (ovdyd .LT. ovr + ovrr) THEN
-! if the rotor overlaps the wake
-!print *, "OVL: ", OVL
-    IF (ovl .LT. ovrr .AND. ovdyd - ovl .LT. ovr) THEN
-      arg1 = ovl/ovrr
-      result1 = ACOS(arg1)
-      arg2 = (ovdyd-ovl)/ovr
-      result2 = ACOS(arg2)
-      DO nd=1,nbdirs
-!         if (OVdYd > 0.0_dp + tol) then
-!         if ((OVdYd > 0.0_dp) .and. (OVdYd > (OVRR - OVr))) then
-! print *, "acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr ", &
-!     & acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr
-        arg1d(nd) = (ovld(nd)*ovrr-ovl*ovrrd(nd))/ovrr**2
-        IF (arg1 .EQ. 1.0 .OR. arg1 .EQ. (-1.0)) THEN
-          result1d(nd) = 0.0_8
-        ELSE
-          result1d(nd) = -(arg1d(nd)/SQRT(1.0-arg1**2))
-        END IF
-        arg2d(nd) = ((ovdydd(nd)-ovld(nd))*ovr-(ovdyd-ovl)*ovrd(nd))/ovr&
-&         **2
-        IF (arg2 .EQ. 1.0 .OR. arg2 .EQ. (-1.0)) THEN
-          result2d(nd) = 0.0_8
-        ELSE
-          result2d(nd) = -(arg2d(nd)/SQRT(1.0-arg2**2))
-        END IF
-        wake_overlapd(nd) = (ovrrd(nd)*ovrr+ovrr*ovrrd(nd))*result1 + &
-&         ovrr**2*result1d(nd) + (ovrd(nd)*ovr+ovr*ovrd(nd))*result2 + &
-&         ovr**2*result2d(nd) - ovdydd(nd)*ovz - ovdyd*ovzd(nd)
-      END DO
-      wake_overlap = ovrr*ovrr*result1 + ovr*ovr*result2 - ovdyd*ovz
+! if the rotor overlaps the wake zone
+! check that turbine and wake centers are not perfectly aligned
+    IF (ovdyd .GT. 0.0_dp + tol) THEN
+! check if the rotor is wholly contained in the wake
+      IF (ovdyd + ovr .LT. ovrr + tol) THEN
+        DO nd=1,nbdirs
+          wake_overlapd(nd) = pi*(ovrd(nd)*ovr+ovr*ovrd(nd))
+        END DO
+        wake_overlap = pi*ovr*ovr
+!                 print *, "1"
+! check if the wake is wholly contained in the rotor swept area
+      ELSE IF (ovdyd + ovrr .LT. ovr + tol) THEN
+        DO nd=1,nbdirs
+          wake_overlapd(nd) = pi*(ovrrd(nd)*ovrr+ovrr*ovrrd(nd))
+        END DO
+        wake_overlap = pi*ovrr*ovrr
+!                 print *, "2"
+      ELSE
+        ovl = (-(ovr*ovr)+ovrr*ovrr+ovdyd*ovdyd)/(2.0_dp*ovdyd)
+        arg1 = ovrr*ovrr - ovl*ovl
+        arg2 = (ovdyd-ovl)/ovr
+        DO nd=1,nbdirs
+! calculate the distance from the wake center to the chord connecting the lens
+! cusps
+          ovld(nd) = ((ovrrd(nd)*ovrr-ovr*ovrd(nd)-ovrd(nd)*ovr+ovrr*&
+&           ovrrd(nd)+ovdydd(nd)*ovdyd+ovdyd*ovdydd(nd))*2.0_dp*ovdyd-(-&
+&           (ovr*ovr)+ovrr*ovrr+ovdyd*ovdyd)*2.0_dp*ovdydd(nd))/(2.0_dp*&
+&           ovdyd)**2
+          arg1d(nd) = ovrrd(nd)*ovrr + ovrr*ovrrd(nd) - ovld(nd)*ovl - &
+&           ovl*ovld(nd)
+          IF (arg1 .EQ. 0.0) THEN
+            ovzd(nd) = 0.0_8
+          ELSE
+            ovzd(nd) = arg1d(nd)/(2.0*SQRT(arg1))
+          END IF
+          arg1d(nd) = ovrd(nd)*ovr + ovr*ovrd(nd) - (ovdydd(nd)-ovld(nd)&
+&           )*(ovdyd-ovl) - (ovdyd-ovl)*(ovdydd(nd)-ovld(nd))
+          arg2d(nd) = ((ovdydd(nd)-ovld(nd))*ovr-(ovdyd-ovl)*ovrd(nd))/&
+&           ovr**2
+          IF (arg2 .EQ. 1.0 .OR. arg2 .EQ. (-1.0)) THEN
+            result2d(nd) = 0.0_8
+          ELSE
+            result2d(nd) = -(arg2d(nd)/SQRT(1.0-arg2**2))
+          END IF
+        END DO
+        ovz = SQRT(arg1)
+        arg1 = ovr*ovr - (ovdyd-ovl)*(ovdyd-ovl)
+        DO nd=1,nbdirs
+          IF (arg1 .EQ. 0.0) THEN
+            ovz2d(nd) = 0.0_8
+          ELSE
+            ovz2d(nd) = arg1d(nd)/(2.0*SQRT(arg1))
+          END IF
+          arg1d(nd) = (ovld(nd)*ovrr-ovl*ovrrd(nd))/ovrr**2
+        END DO
+        ovz2 = SQRT(arg1)
+        arg1 = ovl/ovrr
+        result1 = ACOS(arg1)
+        result2 = ACOS(arg2)
+        DO nd=1,nbdirs
+          IF (arg1 .EQ. 1.0 .OR. arg1 .EQ. (-1.0)) THEN
+            result1d(nd) = 0.0_8
+          ELSE
+            result1d(nd) = -(arg1d(nd)/SQRT(1.0-arg1**2))
+          END IF
+          wake_overlapd(nd) = (ovrrd(nd)*ovrr+ovrr*ovrrd(nd))*result1 + &
+&           ovrr**2*result1d(nd) + (ovrd(nd)*ovr+ovr*ovrd(nd))*result2 +&
+&           ovr**2*result2d(nd) - ovld(nd)*ovz - ovl*ovzd(nd) - (ovdydd(&
+&           nd)-ovld(nd))*ovz2 - (ovdyd-ovl)*ovz2d(nd)
+        END DO
+        wake_overlap = ovrr*ovrr*result1 + ovr*ovr*result2 - ovl*ovz - (&
+&         ovdyd-ovl)*ovz2
+!                 print *, OVRR, OVr, OVdYd, OVL, OVz, OVz2
+!                 print *, "3"
+      END IF
     ELSE IF (ovrr .GT. ovr) THEN
+! perfect overlap case where the wake is larger than the rotor
       DO nd=1,nbdirs
         wake_overlapd(nd) = pi*(ovrd(nd)*ovr+ovr*ovrd(nd))
       END DO
       wake_overlap = pi*ovr*ovr
-!print *, "wake ovl: ", wake_overlap
+!             print *, "4"
+! perfect overlap case where the rotor is larger than the wake
     ELSE
       DO nd=1,nbdirs
         wake_overlapd(nd) = pi*(ovrrd(nd)*ovrr+ovrr*ovrrd(nd))
       END DO
       wake_overlap = pi*ovrr*ovrr
+!             print *, "5"
     END IF
   ELSE
+! case with no overlap
     wake_overlap = 0.0_dp
     DO nd=1,nbdirs
       wake_overlapd(nd) = 0.0_8
@@ -1721,11 +1770,11 @@ SUBROUTINE OVERLAP_AREA_FUNC_DV(turbine_y, turbine_yd, turbine_z, &
   END IF
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
-  IF (wake_overlap/(pi*ovr**2) .GT. 1.0_dp + tol .OR. wake_overlap/(pi*&
-&     ovrr**2) .GT. 1.0_dp + tol) THEN
-!     PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovr**2)
-!     PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovrr**2)
-!     STOP
+  IF (wake_overlap/(pi*ovr*ovr) .GT. 1.0_dp + tol .OR. wake_overlap/(pi*&
+&     ovrr*ovrr) .GT. 1.0_dp + tol) THEN
+    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovr*ovr)
+    PRINT*, 'wake overlap in func: ', wake_overlap/(pi*ovrr*ovrr)
+    STOP
   END IF
 END SUBROUTINE OVERLAP_AREA_FUNC_DV
 
