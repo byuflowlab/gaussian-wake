@@ -910,7 +910,7 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     
     ! local
     real(dp), parameter :: pi = 3.141592653589793_dp, tol = 0.000001_dp
-    real(dp) :: OVdYd, OVr, OVRR, OVL, OVz
+    real(dp) :: OVdYd, OVr, OVRR, OVL, OVz, OVz2
     
     ! load intrinsic functions
     intrinsic acos, sqrt
@@ -946,40 +946,86 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
     ! line between the two circle intersection points
     !if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
 !     print *, "OVdYd ", OVdYd
-    if (OVdYd > (0.0_dp + tol)) then ! check case to avoid division by zero
-        OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
-    else
-        OVL = 0.0_dp
-    end if
-
-    OVz = OVRR*OVRR-OVL*OVL
-
-    ! Finish calculating the distance from the intersection line to the outer edge of the wake
-    !if (OVz > 0.0_dp + tol) then
-    if (OVz > 0.0_dp + tol) then
-        OVz = sqrt(OVz)
-    else
-        OVz = 0.0_dp
-    end if
+    ! if (OVdYd >= 0.0_dp + tol) then ! check case to avoid division by zero
+!         OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
+! !         print *, "OVdYd, OVL: ", OVdYd, OVL
+!     else
+!         OVL = 0.0_dp
+!     end if
+! 
+!     OVz = OVRR*OVRR-OVL*OVL
+! 
+!     ! Finish calculating the distance from the intersection line to the outer edge of the wake
+!     !if (OVz > 0.0_dp + tol) then
+!     if (OVz > 0.0_dp + tol) then
+!         OVz = sqrt(OVz)
+!     else
+!         OVz = 0.0_dp
+!     end if
     
     !print *, "OVRR, OVL, OVRR, OVr, OVdYd, OVz ", OVRR, OVL, OVRR, OVr, OVdYd, OVz
     
     
 
-    if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake
-        !print *, "OVL: ", OVL
-        if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
-!         if (OVdYd > 0.0_dp + tol) then
-!         if ((OVdYd > 0.0_dp) .and. (OVdYd > (OVRR - OVr))) then
-            ! print *, "acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr ", &
-!     & acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr
-            wake_overlap = OVRR*OVRR*acos(OVL/OVRR) + OVr*OVr*acos((OVdYd-OVL)/OVr) - OVdYd*OVz
+    ! if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake
+!         !print *, "OVL: ", OVL
+!         if (OVL < OVRR .and. (OVdYd-OVL) < OVr) then
+! !         if (OVdYd > 0.0_dp + tol) then
+! !         if ((OVdYd > 0.0_dp) .and. (OVdYd > (OVRR - OVr))) then
+!             ! print *, "acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr ", &
+! !     & acos(OVL/OVRR), acos((OVdYd-OVL)/OVr), OVRR, OVL, OVr, OVdYd, OVL/OVRR, (OVdYd-OVL)/OVr
+!             wake_overlap = OVRR*OVRR*acos(OVL/OVRR) + OVr*OVr*acos((OVdYd-OVL)/OVr) - OVdYd*OVz
+!         else if (OVRR > OVr) then
+!             wake_overlap = pi*OVr*OVr
+!             !print *, "wake ovl: ", wake_overlap
+!         else
+!             wake_overlap = pi*OVRR*OVRR
+!         end if
+!     else
+!         wake_overlap = 0.0_dp
+!     end if
+
+    ! determine if there is overlap
+    if (OVdYd < (OVr+OVRR)) then ! if the rotor overlaps the wake zone
+
+        ! check that turbine and wake centers are not perfectly aligned
+        if (OVdYd > (0.0_dp + tol)) then
+        
+            ! check if the rotor is wholly contained in the wake
+            if ((OVdYd + OVr) < OVRR + tol) then 
+                wake_overlap = pi*OVr*OVr
+!                 print *, "1"
+            ! check if the wake is wholly contained in the rotor swept area
+            else if ((OVdYd + OVRR) < OVr + tol) then
+                wake_overlap = pi*OVRR*OVRR
+!                 print *, "2"
+            else
+            
+                ! calculate the distance from the wake center to the chord connecting the lens
+                ! cusps
+                OVL = (-OVr*OVr+OVRR*OVRR+OVdYd*OVdYd)/(2.0_dp*OVdYd)
+
+                OVz = sqrt(OVRR*OVRR-OVL*OVL)
+                OVz2 = sqrt(OVr*OVr-(OVdYd-OVL)*(OVdYd-OVL))
+            
+                wake_overlap = OVRR*OVRR*acos(OVL/OVRR) + OVr*OVr*acos((OVdYd-OVL)/OVr) - &
+                               & OVL*OVz - (OVdYd-OVL)*OVz2
+!                 print *, OVRR, OVr, OVdYd, OVL, OVz, OVz2
+!                 print *, "3"
+            end if
+        
+        ! perfect overlap case where the wake is larger than the rotor
         else if (OVRR > OVr) then
             wake_overlap = pi*OVr*OVr
-            !print *, "wake ovl: ", wake_overlap
+!             print *, "4"
+            
+        ! perfect overlap case where the rotor is larger than the wake
         else
             wake_overlap = pi*OVRR*OVRR
+!             print *, "5"
         end if
+        
+    ! case with no overlap
     else
         wake_overlap = 0.0_dp
     end if
@@ -987,9 +1033,9 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
 !     print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
     
-    if ((wake_overlap/(pi*OVr**2) > 1.0_dp + tol) .or. (wake_overlap/(pi*OVRR**2) > 1.0_dp + tol)) then
-        print *, "wake overlap in func: ", wake_overlap/(pi*OVr**2)
-        print *, "wake overlap in func: ", wake_overlap/(pi*OVRR**2)
+    if ((wake_overlap/(pi*OVr*OVr) > (1.0_dp + tol)) .or. (wake_overlap/(pi*OVRR*OVRR) > (1.0_dp + tol))) then
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVr*OVr)
+        print *, "wake overlap in func: ", wake_overlap/(pi*OVRR*OVRR)
         STOP 1
     end if
                              
