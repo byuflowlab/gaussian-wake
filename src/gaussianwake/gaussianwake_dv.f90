@@ -2046,9 +2046,9 @@ SUBROUTINE INTERPOLATION_DV(npoints, interp_type, x, y, xval, xvald, &
   INTEGER :: nd
   INTEGER :: nbdirs
 !     print *, "in interpolation"
-  IF (xval .LT. x(1) .OR. xval .GT. x(npoints)) PRINT*, &
-&                                 'interpolation point is out of bounds'
-!         STOP 1
+  ! IF (xval .LT. x(1) .OR. xval .GT. x(npoints)) PRINT*, &
+! &                                 'interpolation point is out of bounds'
+! !         STOP 1
   IF (xval .LT. x(1)) THEN
     yval = y(1)
     DO nd=1,nbdirs

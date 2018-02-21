@@ -1483,10 +1483,10 @@ subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
     
 !     print *, "in interpolation"
     
-    if ((xval < x(1)) .or. (xval > x(nPoints))) then
-        print *, "interpolation point is out of bounds"
-!         STOP 1
-    end if
+    ! if ((xval < x(1)) .or. (xval > x(nPoints))) then
+!         print *, "interpolation point is out of bounds"
+! !         STOP 1
+!     end if
     
     if (xval < x(1)) then
         yval = y(1)

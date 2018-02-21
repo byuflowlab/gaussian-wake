@@ -408,7 +408,7 @@ class GaussianWake(Component):
         # define input array to direct differentiation
         wtVelocityb = np.eye(nDirs, nTurbines)
 
-        print("before calling gradients")
+        # print("before calling gradients")
         # call to fortran code to obtain output values
         # turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = \
         #     porteagel_analyze_bv(turbineXw, sorted_x_idx, turbineYw, turbineZ,
@@ -536,7 +536,7 @@ class GaussianWake(Component):
         #     print(wtVelocityb_dxwd.shape, wtVelocityb.shape)
         #     wtVelocityb_dxwd[:, i] = wtVelocityb[i]
 
-        print("after calling gradients")
+        # print("after calling gradients")
 
         # quit()
         # print(wtVelocityb.shape)
