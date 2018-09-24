@@ -1298,18 +1298,34 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         call overlap_area_func(deltay, turbine_height, rotor_diameter_dst, &
                             0.0_dp, wake_height, wake_diameter, &
                              wake_overlap)
-                            
+        ! only include turbines with area overlap in the softmax
+        if (wake_overlap > 0.0_dp) then
+            ! Calculate the turbulence added to the inflow of the downstream turbine by the 
+            ! wake of the upstream turbine
+            TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
+                        ((x/rotor_diameter_ust)**(-0.32_dp))
+        
+            ! Calculate the total turbulence intensity at the downstream turbine based on 
+            ! current upstream turbine
+            rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
+            TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
+            TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
+        
+            ! Check if this is the max and use it if it is
+    !         TI_dst_in = TI_dst
+            call smooth_max(TI_dst_in, TI_tmp, TI_dst)
+        end if
         ! Calculate the turbulence added to the inflow of the downstream turbine by the 
         ! wake of the upstream turbine
         TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
                     ((x/rotor_diameter_ust)**(-0.32_dp))
-        
+    
         ! Calculate the total turbulence intensity at the downstream turbine based on 
         ! current upstream turbine
         rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
         TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
         TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
-        
+    
         ! Check if this is the max and use it if it is
 !         TI_dst_in = TI_dst
         call smooth_max(TI_dst_in, TI_tmp, TI_dst)

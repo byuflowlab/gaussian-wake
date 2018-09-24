@@ -220,11 +220,11 @@ class GaussianWake(Component):
         self.add_param('model_params:z_ref', val=80.0, pass_by_object=True, desc='wind speed measurement height')
         self.add_param('model_params:z_0', val=0.0, pass_by_object=True, desc='ground height')
         self.add_param('model_params:shear_exp', val=0.15, pass_by_object=True, desc='wind shear calculation exponent')
-        self.add_param('model_params:wake_combination_method', val=0, pass_by_object=True,
+        self.add_param('model_params:wake_combination_method', val=1, pass_by_object=True,
                        desc='select how the wakes should be combined')
-        self.add_param('model_params:ti_calculation_method', val=0, pass_by_object=True,
+        self.add_param('model_params:ti_calculation_method', val=2, pass_by_object=True,
                        desc='select how the wakes should be combined')
-        self.add_param('model_params:calc_k_star', val=False, pass_by_object=True,
+        self.add_param('model_params:calc_k_star', val=True, pass_by_object=True,
                        desc='choose to calculate wake expansion based on TI if True')
         self.add_param('model_params:sort', val=True, pass_by_object=True,
                        desc='decide whether turbines should be sorted before solving for directional power')
@@ -336,11 +336,18 @@ class GaussianWake(Component):
 
             # ws_array = porteagel_visualize(nTurbines, nSamples, turbineXw, turbineYw, turbineZ, velX, velY, velZ, rotorDiameter,
             #                                Ct, axialInduction, wind_speed, np.copy(yaw), ky, kz, alpha, beta, I)
-            ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ,
-                                                   rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
-                                                   alpha, beta, I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
-                                                   velX, velY, velZ, wake_combination_method, interp_type,
-                                                   ti_calculation_method, calc_k_star, opt_exp_fac)
+            # ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+            #                                        rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
+            #                                        alpha, beta, I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
+            #                                        velX, velY, velZ, wake_combination_method, interp_type,
+            #                                        ti_calculation_method, calc_k_star, opt_exp_fac)
+            ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ, rotorDiameter, Ct,
+                                                   wind_speed, yaw, ky, kz, alpha, beta, I, RotorPointsY,
+                                                   RotorPointsZ, z_ref, z_0, shear_exp, velX, velY, velZ,
+                                                   wake_combination_method, ti_calculation_method, calc_k_star,
+                                                   opt_exp_fac, wake_model_version, interp_type, use_ct_curve,
+                                                   ct_curve_wind_speed, ct_curve_ct)
+
 
             unknowns['wsArray%i' % direction_id] = ws_array
 
