@@ -5,10 +5,11 @@ import cPickle as pickle
 
 from openmdao.api import Problem
 
-from wakeexchange.OptimizationGroups import OptAEP
-from wakeexchange.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
-from wakeexchange.floris import floris_wrapper, add_floris_params_IndepVarComps
-from wakeexchange.utilities import sunflower_points
+from plantenergy.OptimizationGroups import OptAEP
+from plantenergy.GeneralWindFarmGroups import AEPGroup
+from plantenergy.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
+from plantenergy.floris import floris_wrapper, add_floris_params_IndepVarComps
+from plantenergy.utilities import sunflower_points, circumference_points
 
 
 def plot_data_vs_model(ax=None, datax=np.zeros(0), datay=np.zeros(0), modelx=np.zeros(0),
@@ -57,7 +58,8 @@ def setup_probs():
     rotorDiameter = 126.4
     rotorArea = np.pi*rotorDiameter*rotorDiameter/4.0
     axialInduction = 1.0/3.0
-    CP = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
+    # CP = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
+    CP = 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
     # CP =0.768 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
     CT = 4.0*axialInduction*(1.0-axialInduction)
     generator_efficiency = 0.944
@@ -75,11 +77,37 @@ def setup_probs():
 
     Ct = np.array([CT, CT])
     Cp = np.array([CP, CP])
+    nRotorPoints = 4
+    rotor_pnt_typ = 0
+    location = 0.69
 
-    gauss_prob = Problem(root=OptAEP(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
-                               wake_model=gauss_wrapper, datasize=0, minSpacing=2.0,
-                               params_IdepVar_func=add_gauss_params_IndepVarComps,
-                               params_IndepVar_args={}))
+    filename = "./input_files/NREL5MWCPCT_dict.p"
+    # filename = "../input_files/NREL5MWCPCT_smooth_dict.p"
+    import cPickle as pickle
+
+    data = pickle.load(open(filename, "rb"))
+    ct_curve = np.zeros([data['wind_speed'].size, 2])
+    ct_curve[:, 0] = data['wind_speed']
+    ct_curve[:, 1] = data['CT']
+
+    gauss_model_options = {'nSamples': 0,
+                          'nRotorPoints': nRotorPoints,
+                          'use_ct_curve': True,
+                          'ct_curve': ct_curve,
+                          'interp_type': 1,
+                          'use_rotor_components': False,
+                          'verbose': False}
+
+    # gauss_prob = Problem(root=AEPGroup(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
+    #                            wake_model=gauss_wrapper, datasize=0, minSpacing=2.0,
+    #                            params_IdepVar_func=add_gauss_params_IndepVarComps, wake_model_options=gauss_model_options,
+    #                            params_IndepVar_args={'nRotorPoints': nRotorPoints}))
+
+    gauss_prob = Problem(root=AEPGroup(nTurbines=nTurbines, nDirections=nDirections, use_rotor_components=False,
+                                       wake_model=gauss_wrapper, datasize=0,
+                                       params_IdepVar_func=add_gauss_params_IndepVarComps,
+                                       wake_model_options=gauss_model_options,
+                                       params_IndepVar_args={'nRotorPoints': nRotorPoints}))
 
 
     floris_options = {'differentiable': True, 'nSamples': 0, 'use_rotor_components': False}
@@ -123,7 +151,7 @@ def setup_probs():
             #  1:Linear upstream velocity superposition,
             #  2:Sum of squares freestream superposition,
             #  3:Sum of squares upstream velocity superposition]
-            ti_calculation_method = 0  # can be [0:No added TI calculations,
+            ti_calculation_method = 2  # can be [0:No added TI calculations,
             # 1:TI by Niayifar and Porte Agel altered by Annoni and Thomas,
             # 2:TI by Niayifar and Porte Agel 2016,
             # 3:no yet implemented]
@@ -150,8 +178,6 @@ def setup_probs():
             # shear_exp = 0.161084449732
             shear_exp = 0.11
 
-            nRotorPoints = 1
-
             prob['model_params:wake_combination_method'] = wake_combination_method
             prob['model_params:ti_calculation_method'] = ti_calculation_method
             prob['model_params:calc_k_star'] = calc_k_star
@@ -164,7 +190,12 @@ def setup_probs():
             prob['model_params:shear_exp'] = shear_exp
             print "in gauss setup"
             if nRotorPoints > 1:
-                prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
+                if rotor_pnt_typ == 0:
+                    points = circumference_points(nRotorPoints, location)
+                elif rotor_pnt_typ == 1:
+                    points = sunflower_points(nRotorPoints)
+                print points
+                prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = points
                 print "setting rotor points"
 
     return probs
