@@ -65,16 +65,16 @@ class test_interpolation(unittest.TestCase):
     #     interp_type = 0
     #
     #     # set up points for interpolation
-    #     x = np.array([0., 1., 2.])
-    #     y = np.array([0., 1., 0.])
+    #     x = np.array([-1., -0.5, 0., 0.5, 1.])
+    #     y = np.array([-1., -0.125, 0., 0.125, 1.])
     #
     #     # set location of interpolation
-    #     xval = 0.5
+    #     xval = 0.125
     #
     #     # get interpolated y value
-    #     yval = interpolation(interp_type, x, y, xval)
+    #     yval = interpolation(interp_type, x, y, xval, 3.0, 3.0, True)
     #
-    #     self.assertEqual(yval, 0.5)
+    #     self.assertEqual(yval, 0.0625)
 
     def test_linear(self):
 
@@ -89,7 +89,7 @@ class test_interpolation(unittest.TestCase):
         xval = 0.5
 
         # get interpolated y value
-        yval = interpolation(interp_type, x, y, xval)
+        yval = interpolation(interp_type, x, y, xval, 0.0, 0.0, False)
 
         self.assertEqual(yval, 0.5)
 

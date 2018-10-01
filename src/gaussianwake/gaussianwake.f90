@@ -266,7 +266,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 !         print *, wtVelocity(turbI)
         if (use_ct_curve) then
             call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
-                              & wtVelocity(turbI), Ct_local(turbI))
+                              & wtVelocity(turbI), Ct_local(turbI), 0.0_dp, 0.0_dp, .false.)
         end if
     
     end do
@@ -513,7 +513,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
         
         if (use_ct_curve) then
             call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
-                              & wtVelocity(turbI), Ct_local(turbI))
+                              & wtVelocity(turbI), Ct_local(turbI), 0.0_dp, 0.0_dp, .false.)
         end if
        
     end do
@@ -1478,7 +1478,7 @@ subroutine smooth_max(x, y, g)
 !     print *, "g is ", g
 end subroutine smooth_max
 
-subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
+subroutine interpolation(nPoints, interp_type, x, y, xval, yval, dy0in, dy1in, usedyin)
 
     implicit none
     
@@ -1489,6 +1489,8 @@ subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
     integer, intent(in) :: nPoints, interp_type
     real(dp), dimension(nPoints), intent(in) :: x, y
     real(dp), intent(in) :: xval
+    real(dp), intent(in):: dy0in, dy1in
+    logical :: usedyin
     
     ! local
     integer :: idx
@@ -1503,6 +1505,11 @@ subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
 !         print *, "interpolation point is out of bounds"
 ! !         STOP 1
 !     end if
+
+    if (usedyin .and. (interp_type == 1)) then
+        print *, "end point derivatives may not be specified for linear interpolation"
+        STOP 1
+    end if
     
     if (xval < x(1)) then
         yval = y(1)
@@ -1528,16 +1535,27 @@ subroutine interpolation(nPoints, interp_type, x, y, xval, yval)
     
             ! approximate derivative at left end of interval
             if (idx == 1) then
-                dy0 = 0.0_dp
+            
+                if (usedyin) then
+                    dy0 = dy0in
+                else
+                    dy0 = 0.0_dp
+                endif
+    
             else
-                dy0 = (y(idx) - y(idx-1))/(x(idx) - x(idx-1))
+                dy0 = (y(idx+1) - y(idx-1))/(x(idx+1) - x(idx-1))
             end if
     
             ! approximate derivative at the right end of interval
             if (idx >= nPoints-1) then
-                dy1 = 0.0_dp
+            
+                if(usedyin)then
+                    dy1 = dy1in
+                else
+                    dy1 = 0.0_dp
+                endif
             else
-                dy1 = (y(idx+2) - y(idx+1))/(x(idx+2) - x(idx+1))
+                dy1 = (y(idx+2) - y(idx))/(x(idx+2) - x(idx))
             end if
     
             ! call Hermite spline routine
