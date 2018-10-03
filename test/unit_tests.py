@@ -93,7 +93,33 @@ class test_interpolation(unittest.TestCase):
 
         self.assertEqual(yval, 0.5)
 
+class test_ctcp_curve(unittest.TestCase):
 
+    def setUp(self):
+        filename = "./input_files/NREL5MWCPCT_dict.p"
+        import cPickle as pickle
+        data = pickle.load(open(filename, "rb"))
+        cp_data = np.zeros([data['wind_speed'].size])
+        ct_data = np.zeros([data['wind_speed'].size])
+        wind_speed_data = np.zeros([data['wind_speed'].size])
+        cp_data[:] = data['CP']
+        ct_data[:] = data['CT']
+        wind_speed_data[:] = data['wind_speed']
+
+        self.ct_data = ct_data
+        self.cp_data = cp_data
+        self.wind_speed_data = wind_speed_data
+
+        self.options = {'use_ct_curve': True,
+                   'ct_curve_ct': self.ct_data,
+                   'ct_curve_wind_speed': self.wind_speed_data}
+
+    def test_5mw_ct_greater_than_1_warning(self):
+
+        from gaussianwake.gaussianwake import GaussianWake
+        import pytest
+
+        pytest.warns(Warning, GaussianWake, nTurbines=6, options=self.options)
 
 
 if __name__ == "__main__":

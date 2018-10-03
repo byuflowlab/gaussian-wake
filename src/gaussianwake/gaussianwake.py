@@ -156,6 +156,8 @@ class GaussianWake(Component):
     def __init__(self, nTurbines, direction_id=0, options=None):
         super(GaussianWake, self).__init__()
 
+        import warnings
+
         self.deriv_options['type'] = 'user'
         # self.deriv_options['form'] = 'central'
         # self.deriv_options['step_size'] = 1.0e-12
@@ -169,7 +171,8 @@ class GaussianWake(Component):
             self.nSamples = nSamples = 0
             self.nRotorPoints = 1
             self.use_ct_curve = False
-            self.ct_curve = np.array([0.0, 0.0])
+            self.ct_curve_ct = np.array([0.0])
+            self.ct_curve_wind_speed = np.array([0.0])
             self.interp_type = 1
         else:
             # self.radius_multiplier = options['radius multiplier']
@@ -183,18 +186,22 @@ class GaussianWake(Component):
                 self.nRotorPoints = nRotorPoints = 1
             try:
                 self.use_ct_curve = options['use_ct_curve']
-                self.ct_curve = options['ct_curve']
+                self.ct_curve_ct = options['ct_curve_ct']
+                self.ct_curve_wind_speed = options['ct_curve_wind_speed']
 
-                if np.any(self.ct_curve>1.):
-                    raise Warning('Ct values must be <= 1, clipping provided values accordingly')
-                    self.ct_curve = np.clip(self.ct_curve, a_max=1.0)
             except:
                 self.use_ct_curve = False
-                self.ct_curve = np.array([0.0, 0.0])
+                self.ct_curve_ct = np.array([0.0])
+                self.ct_curve_wind_speed = np.array([0.0])
             try:
                 self.interp_type = options['interp_type']
             except:
                 self.interp_type = 1
+
+        if np.any(self.ct_curve_ct > 0.):
+            if np.any(self.ct_curve_ct > 1.):
+                warnings.warn('Ct values must be <= 1, clipping provided values accordingly')
+                self.ct_curve_ct = np.clip(self.ct_curve_ct, a_max=1.0, a_min=None)
 
         # unused but required for compatibility
 
