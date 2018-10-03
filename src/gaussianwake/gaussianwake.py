@@ -184,6 +184,10 @@ class GaussianWake(Component):
             try:
                 self.use_ct_curve = options['use_ct_curve']
                 self.ct_curve = options['ct_curve']
+
+                if np.any(self.ct_curve>1.):
+                    raise Warning('Ct values must be <= 1, clipping provided values accordingly')
+                    self.ct_curve = np.clip(self.ct_curve, a_max=1.0)
             except:
                 self.use_ct_curve = False
                 self.ct_curve = np.array([0.0, 0.0])
