@@ -307,9 +307,8 @@ class GaussianWake(Component):
         interp_type = self.interp_type
 
         if use_ct_curve:
-            ct_curve = self.ct_curve
-            ct_curve_wind_speed = self.ct_curve[:, 0]
-            ct_curve_ct = self.ct_curve[:, 1]
+            ct_curve_wind_speed = self.ct_curve_wind_speed
+            ct_curve_ct = self.ct_curve_ct
         else:
             ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
             ct_curve_ct = Ct
@@ -408,9 +407,8 @@ class GaussianWake(Component):
         interp_type = self.interp_type
 
         if use_ct_curve:
-            ct_curve = self.ct_curve
-            ct_curve_wind_speed = self.ct_curve[:, 0]
-            ct_curve_ct = self.ct_curve[:, 1]
+            ct_curve_wind_speed = self.ct_curve_wind_speed
+            ct_curve_ct = self.ct_curve_ct
         else:
             ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
             ct_curve_ct = Ct
