@@ -198,10 +198,11 @@ class GaussianWake(Component):
             except:
                 self.interp_type = 1
 
+        ct_max = 0.99
         if np.any(self.ct_curve_ct > 0.):
-            if np.any(self.ct_curve_ct > 1.):
+            if np.any(self.ct_curve_ct > ct_max):
                 warnings.warn('Ct values must be <= 1, clipping provided values accordingly')
-                self.ct_curve_ct = np.clip(self.ct_curve_ct, a_max=1.0, a_min=None)
+                self.ct_curve_ct = np.clip(self.ct_curve_ct, a_max=ct_max, a_min=None)
 
         # unused but required for compatibility
 
