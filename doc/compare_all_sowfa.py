@@ -86,14 +86,14 @@ def setup_probs():
     import cPickle as pickle
 
     data = pickle.load(open(filename, "rb"))
-    ct_curve = np.zeros([data['wind_speed'].size, 2])
-    ct_curve[:, 0] = data['wind_speed']
-    ct_curve[:, 1] = data['CT']
+    ct_curve_wind_speed = data['wind_speed']
+    ct_curve_ct= data['CT']
 
     gauss_model_options = {'nSamples': 0,
                           'nRotorPoints': nRotorPoints,
                           'use_ct_curve': True,
-                          'ct_curve': ct_curve,
+                          'ct_curve_ct': ct_curve_ct,
+                          'ct_curve_wind_speed': ct_curve_wind_speed,
                           'interp_type': 1,
                           'use_rotor_components': False,
                           'verbose': False}
@@ -151,10 +151,12 @@ def setup_probs():
             #  1:Linear upstream velocity superposition,
             #  2:Sum of squares freestream superposition,
             #  3:Sum of squares upstream velocity superposition]
-            ti_calculation_method = 2  # can be [0:No added TI calculations,
-            # 1:TI by Niayifar and Porte Agel altered by Annoni and Thomas,
-            # 2:TI by Niayifar and Porte Agel 2016,
-            # 3:no yet implemented]
+            ti_calculation_method = 5  # can be [0:No added TI calculations,
+                                                # 1:TI by Niayifar and Porte Agel altered by Annoni and Thomas,
+                                                # 2:TI by Niayifar and Porte Agel 2016,
+                                                # 3:TI by Niayifar and Porte Agel 2016 with added soft max function,
+                                                # 4:TI by Niayifar and Porte Agel 2016 using area overlap ratio,
+                                                # 5:TI by Niayifar and Porte Agel 2016 using area overlap ratio and SM function]
             calc_k_star = True
             z_ref = 90.0
             z_0 = 0.001
