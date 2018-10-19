@@ -252,6 +252,9 @@ class GaussianWake(Component):
         self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
                        desc='increase spread for optimization')
 
+        self.add_param('model_params:sm_smoothing', val=100.0, pass_by_object=True,
+                       desc='adjust degree of smoothing in the smooth-max for local TI calcs')
+
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
         if nSamples > 0:
@@ -294,6 +297,8 @@ class GaussianWake(Component):
 
         print_ti = params['model_params:print_ti']
 
+        sm_smoothing = params['model_params:sm_smoothing']
+
 
         # rename inputs and outputs
         turbineXw = params['turbineXw']
@@ -332,7 +337,7 @@ class GaussianWake(Component):
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
                                                calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct)
+                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
@@ -357,7 +362,7 @@ class GaussianWake(Component):
                                                    RotorPointsZ, z_ref, z_0, shear_exp, velX, velY, velZ,
                                                    wake_combination_method, ti_calculation_method, calc_k_star,
                                                    opt_exp_fac, wake_model_version, interp_type, use_ct_curve,
-                                                   ct_curve_wind_speed, ct_curve_ct)
+                                                   ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
 
 
             unknowns['wsArray%i' % direction_id] = ws_array
@@ -403,6 +408,8 @@ class GaussianWake(Component):
         opt_exp_fac = params['model_params:opt_exp_fac']
 
         wake_model_version = params['model_params:wake_model_version']
+
+        sm_smoothing = params['model_params:sm_smoothing']
 
         use_ct_curve = self.use_ct_curve
         interp_type = self.interp_type
