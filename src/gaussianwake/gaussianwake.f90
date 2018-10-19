@@ -12,7 +12,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
                              TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
                              wake_model_version, interp_type, &
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wtVelocity)
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
+                             wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter Ct yawDeg
 
@@ -36,6 +37,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
+    real)dp), intent(in) :: sm_smoothing
 
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs, Ct_local, ky_local, kz_local
@@ -226,7 +228,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         
                         call added_ti_func(TI, Ct_local(turb), x, ky_local(turb), rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
-                                           & turbineZ(turbI), TI_ust_tmp, &
+                                           & turbineZ(turbI), sm_smoothing, TI_ust_tmp, &
                                            & TI_calculation_method, TI_area_ratio_tmp, &
                                            & TI_dst_tmp, TI_area_ratio, TIturbs(turbI))
                                            
@@ -299,7 +301,8 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
                              calc_k_star, opt_exp_fac, wake_model_version, interp_type, &
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, wsArray)
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                             wsArray)
                              
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
     !                        Ct yawDeg
@@ -323,8 +326,9 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
+    real)dp), intent(in) :: sm_smoothing
     real(dp), dimension(nSamples), intent(in) :: velX, velY, velZ
-
+       
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs, wtVelocity
     real(dp) :: TI_area_ratio, TI_area_ratio_tmp, TI_dst_tmp, TI_ust_tmp
@@ -484,7 +488,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                         ! calculate TI value at each turbine
                         call added_ti_func(TI, Ct_local(turb), x, ky_local(turb), rotorDiameter(turb), & 
                                            & rotorDiameter(turbI), deltay, turbineZ(turb), &
-                                           & turbineZ(turbI), TI_ust_tmp, &
+                                           & turbineZ(turbI), sm_smoothing, TI_ust_tmp, &
                                            & TI_calculation_method, TI_area_ratio_tmp, & 
                                            & TI_dst_tmp, TI_area_ratio, &
                                            & TIturbs(turbI))
@@ -1095,7 +1099,7 @@ end subroutine wake_combination_func
 
 ! combines wakes using various methods
 subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, & 
-                        & deltay, wake_height, turbine_height, TI_ust, &
+                        & deltay, wake_height, turbine_height, sm_smoothing, TI_ust, &
                         & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
                                  
     implicit none
@@ -1105,8 +1109,8 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
     ! in
     real(dp), intent(in) :: Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst
-    real(dp), intent(in) :: deltay, wake_height, turbine_height, TI_ust, TI
-    real(dp), intent(in) :: TI_area_ratio_in, TI_dst_in
+    real(dp), intent(in) :: deltay, wake_height, turbine_height, sm_smoothing
+    real(dp), intent(in) :: TI_ust, TI, TI_area_ratio_in, TI_dst_in
     integer, intent(in) :: TI_calculation_method
     
     ! local
@@ -1240,7 +1244,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         !end if
 !         print *, "before: ", TI_dst, TI_tmp
 !         TI_dst_in = TI_dst
-        call smooth_max(TI_dst_in, TI_tmp, TI_dst)
+        call smooth_max(sm_smoothing, TI_dst_in, TI_tmp, TI_dst)
 !         print *, "after:: ", TI_dst, TI_tmp
 
     ! Niayifar and Porte Agel 2015, 2016 using max on area TI ratio
@@ -1313,7 +1317,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         
             ! Check if this is the max and use it if it is
     !         TI_dst_in = TI_dst
-            call smooth_max(TI_dst_in, TI_tmp, TI_dst)
+            call smooth_max(sm_smoothing, TI_dst_in, TI_tmp, TI_dst)
         end if
         ! Calculate the turbulence added to the inflow of the downstream turbine by the 
         ! wake of the upstream turbine
@@ -1328,7 +1332,7 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
     
         ! Check if this is the max and use it if it is
 !         TI_dst_in = TI_dst
-        call smooth_max(TI_dst_in, TI_tmp, TI_dst)
+        call smooth_max(sm_smoothing, TI_dst_in, TI_tmp, TI_dst)
      
     !print *, "sigma: ", sigma
     ! TODO add other TI calculation methods
@@ -1449,7 +1453,7 @@ subroutine discontinuity_point_func(x0, rotor_diameter, ky, kz, yaw, Ct, discont
     
 end subroutine discontinuity_point_func
 
-subroutine smooth_max(x, y, g)
+subroutine smooth_max(s, x, y, g)
 
     implicit none
     
@@ -1457,18 +1461,13 @@ subroutine smooth_max(x, y, g)
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: x, y
+    real(dp), intent(in) :: s, x, y
     
     ! out
     real(dp), intent(out) :: g
     
-    ! local
-    real(dp) :: s
-    
     intrinsic log, exp
-    
-    s = 100.0_dp
-    
+      
 !     g = (log(exp(s*x) + exp(s*y)))/s
 !     print *, "g1 = ", g
     
