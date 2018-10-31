@@ -251,8 +251,9 @@ class GaussianWake(Component):
 
         self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
                        desc='increase spread for optimization')
-        self.add_param('model_params:sm_smoothing', val=1.0, pass_by_object=True,
-                       desc='control the smoothness of the soft max')
+
+        self.add_param('model_params:sm_smoothing', val=700.0, pass_by_object=True,
+                       desc='adjust degree of smoothing in the smooth-max for local TI calcs')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 

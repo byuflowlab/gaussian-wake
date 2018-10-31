@@ -37,7 +37,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
-    real)dp), intent(in) :: sm_smoothing
+    real(dp), intent(in) :: sm_smoothing
 
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs, Ct_local, ky_local, kz_local
@@ -301,7 +301,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
                              calc_k_star, opt_exp_fac, wake_model_version, interp_type, &
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
                              wsArray)
                              
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
@@ -326,7 +326,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
-    real)dp), intent(in) :: sm_smoothing
+    real(dp), intent(in) :: sm_smoothing
     real(dp), dimension(nSamples), intent(in) :: velX, velY, velZ
        
     ! local (General)
@@ -1275,13 +1275,14 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
         ! current upstream turbine
         rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
         TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
-        TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
         ! Check if this is the max and use it if it is
         if (TI_area_ratio_tmp > TI_area_ratio_in) then
 !            print *, "ti_area_ratio_tmp > ti_area_ratio"
-           TI_dst = TI_tmp
+           !TI_dst = TI_tmp
            TI_area_ratio = TI_area_ratio_tmp
+           TI_dst = sqrt(TI**2.0_dp + (TI_area_ratio)**2.0_dp)
+           
         end if
     
     ! Niayifar and Porte Agel 2015, 2016 using smooth max on area TI ratio
@@ -1304,40 +1305,26 @@ subroutine added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_di
                              wake_overlap)
         ! only include turbines with area overlap in the softmax
         if (wake_overlap > 0.0_dp) then
+        
             ! Calculate the turbulence added to the inflow of the downstream turbine by the 
             ! wake of the upstream turbine
             TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
                         ((x/rotor_diameter_ust)**(-0.32_dp))
         
-            ! Calculate the total turbulence intensity at the downstream turbine based on 
-            ! current upstream turbine
+
             rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
             TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
-            TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
+            !TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
         
-            ! Check if this is the max and use it if it is
-    !         TI_dst_in = TI_dst
-            call smooth_max(sm_smoothing, TI_dst_in, TI_tmp, TI_dst)
+            ! Run through the smooth max to get an approximation of the true max TI area ratio
+            call smooth_max(sm_smoothing, TI_area_ratio_in, TI_area_ratio_tmp, TI_area_ratio)
+            
+            ! Calculate the total turbulence intensity at the downstream turbine based on 
+            ! the result of the smooth max function
+            TI_dst = sqrt(TI**2.0_dp + TI_area_ratio**2.0_dp)
+            
         end if
-        ! Calculate the turbulence added to the inflow of the downstream turbine by the 
-        ! wake of the upstream turbine
-        TI_added = 0.73_dp*(axial_induction_ust**0.8325_dp)*(TI_ust**0.0325_dp)* & 
-                    ((x/rotor_diameter_ust)**(-0.32_dp))
     
-        ! Calculate the total turbulence intensity at the downstream turbine based on 
-        ! current upstream turbine
-        rotor_area_dst = 0.25_dp*pi*rotor_diameter_dst**2_dp
-        TI_area_ratio_tmp = TI_added*(wake_overlap/rotor_area_dst)
-        TI_tmp = sqrt(TI**2.0_dp + (TI_added*(wake_overlap/rotor_area_dst))**2.0_dp)
-    
-        ! Check if this is the max and use it if it is
-!         TI_dst_in = TI_dst
-        call smooth_max(sm_smoothing, TI_dst_in, TI_tmp, TI_dst)
-     
-    !print *, "sigma: ", sigma
-    ! TODO add other TI calculation methods
-    
-        
     ! wake combination method error 
     else
         print *, "Invalid added TI calculation method. Must be one of [0,1,2,3,4,5]."
@@ -1455,6 +1442,16 @@ end subroutine discontinuity_point_func
 
 subroutine smooth_max(s, x, y, g)
 
+    ! based on John D. Cook's writings at 
+    ! (1) https://www.johndcook.com/blog/2010/01/13/soft-maximum/
+    ! and
+    ! (2) https://www.johndcook.com/blog/2010/01/20/how-to-compute-the-soft-maximum/
+    
+    ! s controls the level of smoothing used in the smooth max
+    ! x and y are the values to be compared
+    
+    ! g is the result
+
     implicit none
     
     ! define precision to be the standard for a double precision ! on local system
@@ -1463,18 +1460,22 @@ subroutine smooth_max(s, x, y, g)
     ! in
     real(dp), intent(in) :: s, x, y
     
+    ! local
+    real(dp) :: max_val, min_val
+    
     ! out
     real(dp), intent(out) :: g
     
-    intrinsic log, exp
-      
-!     g = (log(exp(s*x) + exp(s*y)))/s
-!     print *, "g1 = ", g
+    intrinsic log, exp, max, min
+
+    ! LogSumExponential Method - used this in the past
+    ! g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
+
+    ! non-overflowing version of Smooth Max function (see ref 2 above)
+    max_val = max(x, y)
+    min_val = min(x, y)
+    g = (log(1.0_dp + exp(s*(min_val - max_val)))+s*max_val)/s
     
-    g = (x*exp(s*x)+y*exp(s*y))/(exp(s*x)+exp(s*y))
-!     print *, "g2 = ", g
-    
-!     print *, "g is ", g
 end subroutine smooth_max
 
 subroutine interpolation(nPoints, interp_type, x, y, xval, yval, dy0in, dy1in, usedyin)
