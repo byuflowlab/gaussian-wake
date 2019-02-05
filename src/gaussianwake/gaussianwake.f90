@@ -173,7 +173,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), &
                                                  & kz_local(turb), yaw(turb), Ct_local(turb), & 
                                                  & discontinuity_point)
-                    
+                    !print *, "discontinuity point is: ", discontinuity_point
                     if (x > discontinuity_point) then
                     
                         !print *, x
@@ -567,7 +567,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                 ! find the final point where the original model is undefined
                 call discontinuity_point_func(x0, rotorDiameter(turb), ky_local(turb), kz_local(turb), yaw(turb), Ct_local(turb), & 
                                              & discontinuity_point)
-                                             
+!                 print *, "discontinuity point is: ", discontinuity_point
                 ! far wake region
                 if (x > discontinuity_point) then
                 
