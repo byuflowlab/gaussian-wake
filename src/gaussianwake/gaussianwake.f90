@@ -13,7 +13,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                              TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
                              wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
-                             wtVelocity)
+                             expratemultiplier, wtVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter Ct yawDeg
 
@@ -37,7 +37,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
-    real(dp), intent(in) :: sm_smoothing
+    real(dp), intent(in) :: sm_smoothing, expratemultiplier
 
     ! local (General)
     real(dp), dimension(nTurbines) :: yaw, TIturbs, Ct_local, ky_local, kz_local
@@ -48,6 +48,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
     Integer :: u, d, turb, turbI, p
     real(dp), parameter :: pi = 3.141592653589793_dp
+    real(dp) :: ky_adjusted, kz_adjusted, sigmay_spread, sigmaz_spread
 
     ! model out
     real(dp), dimension(nTurbines), intent(out) :: wtVelocity
@@ -146,10 +147,18 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     !print *, "theta_c_0 ", theta_c_0
                     ! horizontal spread
                     call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+
+                    ky_adjusted = ky_local(turb)*expratemultiplier
+                    call sigmay_func(ky_adjusted, deltax0, rotorDiameter(turb), yaw(turb), sigmay_spread)
+
                     !print *, "sigmay ", sigmay
                     !print *, "rotorDiameter after sigmay", rotorDiameter
                     ! vertical spread
                     call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
+
+                    kz_adjusted = kz_local(turb)*expratemultiplier
+                    call sigmaz_func(kz_adjusted, deltax0, rotorDiameter(turb), sigmaz_spread)
+
                     !print *, "sigmaz ", sigmaz
                     !print *, "rotorDiameter after sigmaz ", rotorDiameter
                     ! horizontal cross-wind wake displacement from hub
@@ -182,7 +191,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
                                         & wake_model_version, kz_local(turb), x, &
-                                        & opt_exp_fac, deltav)  
+                                        & opt_exp_fac, sigmay_spread, sigmaz_spread, deltav) ! TODO finish implementing angle wec
                         !print *, "rotorDiameter after far deltav ", rotorDiameter
                     ! near wake region (linearized)
                     else
@@ -301,7 +310,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
                              calc_k_star, opt_exp_fac, wake_model_version, interp_type, &
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, expratemultiplier, &
                              wsArray)
                              
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter
@@ -326,7 +335,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
-    real(dp), intent(in) :: sm_smoothing
+    real(dp), intent(in) :: sm_smoothing, expratemultiplier
     real(dp), dimension(nSamples), intent(in) :: velX, velY, velZ
        
     ! local (General)

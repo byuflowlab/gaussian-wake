@@ -255,6 +255,9 @@ class GaussianWake(Component):
         self.add_param('model_params:sm_smoothing', val=700.0, pass_by_object=True,
                        desc='adjust degree of smoothing in the smooth-max for local TI calcs')
 
+        self.add_param('model_params:exp_rate_multiplier', val=1.0, pass_by_object=True,
+                       desc='multiply wake expansion rate as wec alternative')
+
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
 
         if nSamples > 0:
@@ -298,6 +301,7 @@ class GaussianWake(Component):
         print_ti = params['model_params:print_ti']
 
         sm_smoothing = params['model_params:sm_smoothing']
+        exp_rate_multiplier = params['model_params:exp_rate_multiplier']
 
 
         # rename inputs and outputs
@@ -337,7 +341,8 @@ class GaussianWake(Component):
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
                                                calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                                               exp_rate_multiplier)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
@@ -362,7 +367,7 @@ class GaussianWake(Component):
                                                    RotorPointsZ, z_ref, z_0, shear_exp, velX, velY, velZ,
                                                    wake_combination_method, ti_calculation_method, calc_k_star,
                                                    opt_exp_fac, wake_model_version, interp_type, use_ct_curve,
-                                                   ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                                   ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
 
             unknowns['wsArray%i' % direction_id] = ws_array
@@ -411,6 +416,8 @@ class GaussianWake(Component):
 
         sm_smoothing = params['model_params:sm_smoothing']
 
+        exp_rate_multiplier = params['model_params:exp_rate_multiplier']
+
         use_ct_curve = self.use_ct_curve
         interp_type = self.interp_type
 
@@ -454,7 +461,7 @@ class GaussianWake(Component):
                              rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
                              I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
                              ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                             use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
         wtVelocityb_dxwd = wtVelocityb
 
@@ -473,7 +480,8 @@ class GaussianWake(Component):
                                            wake_combination_method,
                                            ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
                                            wake_model_version, interp_type,
-                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                                           exp_rate_multiplier)
 
         wtVelocityb_dywd = wtVelocityb
 
@@ -492,7 +500,8 @@ class GaussianWake(Component):
                                            wake_combination_method,
                                            ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
                                            wake_model_version, interp_type,
-                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                                           exp_rate_multiplier)
 
         wtVelocityb_dzd = wtVelocityb
 
@@ -511,7 +520,8 @@ class GaussianWake(Component):
                                            wake_combination_method,
                                            ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
                                            wake_model_version, interp_type,
-                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
+                                           exp_rate_multiplier)
 
         wtVelocityb_drd = wtVelocityb
 
@@ -530,7 +540,7 @@ class GaussianWake(Component):
                                            wake_combination_method,
                                            ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
                                            wake_model_version, interp_type,
-                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
         wtVelocityb_dctd = wtVelocityb
 
@@ -549,7 +559,7 @@ class GaussianWake(Component):
                                            wake_combination_method,
                                            ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
                                            wake_model_version, interp_type,
-                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+                                           use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
         wtVelocityb_dyawd = wtVelocityb
 

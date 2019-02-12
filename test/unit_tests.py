@@ -12,6 +12,7 @@ from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, delta
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
 from _porteagel_fortran import interpolation, hermite_spline
+from openmdao.api import Problem, Group
 
 class test_hermite_spline(unittest.TestCase):
 
@@ -120,6 +121,53 @@ class test_ctcp_curve(unittest.TestCase):
         import pytest
 
         pytest.warns(Warning, GaussianWake, nTurbines=6, options=self.options)
+
+class test_wec(unittest.TestCase):
+
+    def setUp(self):
+        filename = "./input_files/NREL5MWCPCT_dict.p"
+        import cPickle as pickle
+        data = pickle.load(open(filename, "rb"))
+        cp_data = np.zeros([data['wind_speed'].size])
+        ct_data = np.zeros([data['wind_speed'].size])
+        wind_speed_data = np.zeros([data['wind_speed'].size])
+        cp_data[:] = data['CP']
+        ct_data[:] = data['CT']
+        wind_speed_data[:] = data['wind_speed']
+
+        self.ct_data = ct_data
+        self.cp_data = cp_data
+        self.wind_speed_data = wind_speed_data
+
+        self.options = {'use_ct_curve': True,
+                   'ct_curve_ct': self.ct_data,
+                   'ct_curve_wind_speed': self.wind_speed_data}
+
+        nTurbines = 2
+        from gaussianwake.gaussianwake import GaussianWake
+        prob = Problem(root=Group())
+        prob.root.add('wakemodel', GaussianWake(nTurbines, options=self.options), promotes=['*'])
+        prob.setup()
+        self.prob = prob
+
+    def test_increase_deficit_by_wake_expansion(self):
+        prob = self.prob
+        turbineX = np.array([0., 400.])
+        turbineY = np.array([0., 100.])
+        rotor_diameter = 50.
+        prob['turbineXw'] = turbineX
+        prob['turbineYw'] = turbineY
+        prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+
+        prob.run_once()
+        wspeed0 = prob['wtVelocity0'][1]
+        prob['model_params:exp_rate_multiplier'] = 1.50
+        prob.run_once()
+        wspeed1 = prob['wtVelocity0'][1]
+
+        print wspeed0, wspeed1
+
+        self.assertGreater(wspeed1,wspeed0)
 
 
 if __name__ == "__main__":
