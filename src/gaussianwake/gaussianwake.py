@@ -249,7 +249,7 @@ class GaussianWake(Component):
         self.add_param('model_params:wake_model_version', val=2016, pass_by_object=True,
                        desc='choose whether to use Bastankhah 2014 or 2016')
 
-        self.add_param('model_params:opt_exp_fac', val=1.0, pass_by_object=True,
+        self.add_param('model_params:wec_factor', val=1.0, pass_by_object=True,
                        desc='increase spread for optimization')
 
         self.add_param('model_params:sm_smoothing', val=700.0, pass_by_object=True,
@@ -296,7 +296,7 @@ class GaussianWake(Component):
         shear_exp = params['model_params:shear_exp']
         wake_model_version = params['model_params:wake_model_version']
 
-        opt_exp_fac = params['model_params:opt_exp_fac']
+        wec_factor = params['model_params:wec_factor']
 
         print_ti = params['model_params:print_ti']
 
@@ -340,9 +340,8 @@ class GaussianWake(Component):
                                                wind_speed, np.copy(yaw),
                                                ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
                                                z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method,
-                                               calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
-                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
-                                               exp_rate_multiplier)
+                                               calc_k_star, wec_factor, print_ti, wake_model_version, interp_type,
+                                               use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
         # velocitiesTurbines = _porteagel_analyze(turbineXw, turbineYw, turbineZ, rotorDiameter,
         #                    Ct, axialInduction, wind_speed, yaw, ky, kz, alpha, beta, I)
@@ -361,14 +360,13 @@ class GaussianWake(Component):
             #                                        rotorDiameter, Ct, wind_speed, np.copy(yaw), ky, kz,
             #                                        alpha, beta, I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
             #                                        velX, velY, velZ, wake_combination_method, interp_type,
-            #                                        ti_calculation_method, calc_k_star, opt_exp_fac)
+            #                                        ti_calculation_method, calc_k_star, wec_factor)
             ws_array = porteagel_visualize_fortran(turbineXw, sorted_x_idx, turbineYw, turbineZ, rotorDiameter, Ct,
                                                    wind_speed, yaw, ky, kz, alpha, beta, I, RotorPointsY,
                                                    RotorPointsZ, z_ref, z_0, shear_exp, velX, velY, velZ,
                                                    wake_combination_method, ti_calculation_method, calc_k_star,
-                                                   opt_exp_fac, wake_model_version, interp_type, use_ct_curve,
+                                                   wec_factor, wake_model_version, interp_type, use_ct_curve,
                                                    ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
-
 
             unknowns['wsArray%i' % direction_id] = ws_array
 
@@ -410,7 +408,7 @@ class GaussianWake(Component):
         z_0 = params['model_params:z_0']
         shear_exp = params['model_params:shear_exp']
 
-        opt_exp_fac = params['model_params:opt_exp_fac']
+        wec_factor = params['model_params:wec_factor']
 
         wake_model_version = params['model_params:wake_model_version']
 
@@ -446,7 +444,7 @@ class GaussianWake(Component):
         #                          rotorDiameter, Ct, wind_speed, yawDeg,
         #                          ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,z_ref, z_0,
         #                          shear_exp, wake_combination_method, ti_calculation_method, calc_k_star,
-        #                          opt_exp_fac, print_ti, wake_model_version, interp_type, use_ct_curve, ct_curve_wind_speed,
+        #                          wec_factor, print_ti, wake_model_version, interp_type, use_ct_curve, ct_curve_wind_speed,
         #                          ct_curve_ct, wtVelocityb)
 
 
@@ -460,8 +458,9 @@ class GaussianWake(Component):
         wtVelocityb = porteagel_analyze_dv(turbineXw, turbineXwd, sorted_x_idx, turbineYw, turbineYwd, turbineZ, turbineZd,
                              rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
                              I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
-                             ti_calculation_method, calc_k_star, opt_exp_fac, print_ti, wake_model_version, interp_type,
+                             ti_calculation_method, calc_k_star, wec_factor, print_ti, wake_model_version, interp_type,
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
+
 
         wtVelocityb_dxwd = wtVelocityb
 
@@ -478,7 +477,7 @@ class GaussianWake(Component):
                                            alpha, beta,
                                            I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                            wake_combination_method,
-                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           ti_calculation_method, calc_k_star, wec_factor, print_ti,
                                            wake_model_version, interp_type,
                                            use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
                                            exp_rate_multiplier)
@@ -498,7 +497,7 @@ class GaussianWake(Component):
                                            alpha, beta,
                                            I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                            wake_combination_method,
-                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           ti_calculation_method, calc_k_star, wec_factor, print_ti,
                                            wake_model_version, interp_type,
                                            use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
                                            exp_rate_multiplier)
@@ -518,7 +517,7 @@ class GaussianWake(Component):
                                            alpha, beta,
                                            I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                            wake_combination_method,
-                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           ti_calculation_method, calc_k_star, wec_factor, print_ti,
                                            wake_model_version, interp_type,
                                            use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing,
                                            exp_rate_multiplier)
@@ -538,7 +537,7 @@ class GaussianWake(Component):
                                            alpha, beta,
                                            I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                            wake_combination_method,
-                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           ti_calculation_method, calc_k_star, wec_factor, print_ti,
                                            wake_model_version, interp_type,
                                            use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 
@@ -557,7 +556,7 @@ class GaussianWake(Component):
                                            alpha, beta,
                                            I, RotorPointsY, RotorPointsZ, z_ref, z_0, shear_exp,
                                            wake_combination_method,
-                                           ti_calculation_method, calc_k_star, opt_exp_fac, print_ti,
+                                           ti_calculation_method, calc_k_star, wec_factor, print_ti,
                                            wake_model_version, interp_type,
                                            use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier)
 

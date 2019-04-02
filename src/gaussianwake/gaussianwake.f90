@@ -10,7 +10,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                              rotorDiameter, Ct, wind_speed, &
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, &
                              z_ref, z_0, shear_exp, wake_combination_method, &
-                             TI_calculation_method, calc_k_star, opt_exp_fac, print_ti, &
+                             TI_calculation_method, calc_k_star, wec_factor, print_ti, &
                              wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
                              expratemultiplier, wtVelocity)
@@ -34,7 +34,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines) :: Ct
-    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
+    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, wec_factor
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
     real(dp), intent(in) :: sm_smoothing, expratemultiplier
@@ -191,7 +191,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                         call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
                                         & wake_model_version, kz_local(turb), x, &
-                                        & opt_exp_fac, sigmay_spread, sigmaz_spread, deltav) ! TODO finish implementing angle wec
+                                        & wec_factor, sigmay_spread, sigmaz_spread, deltav) ! TODO finish implementing angle wec
                         !print *, "rotorDiameter after far deltav ", rotorDiameter
                     ! near wake region (linearized)
                     else
@@ -208,14 +208,14 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                        !  print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
 !                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
 !                                          & wake_model_version, kz_local, x0, &
-!                                          & opt_exp_fac
+!                                          & wec_factor
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct_local(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, & 
                                          & wake_model_version, kz_local(turb), x0, & 
-                                         & opt_exp_fac, deltav)
+                                         & wec_factor, deltav)
                                          
                         !print *, "rotorDiameter after deltav near ", rotorDiameter
                     end if
@@ -309,7 +309,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                              yawDeg, ky, kz, alpha, beta, TI, RotorPointsY, RotorPointsZ, & 
                              z_ref, z_0, shear_exp, velX, velY, velZ, &
                              wake_combination_method, TI_calculation_method, &
-                             calc_k_star, opt_exp_fac, wake_model_version, interp_type, &
+                             calc_k_star, wec_factor, wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, expratemultiplier, &
                              wsArray)
                              
@@ -332,7 +332,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     real(dp), dimension(nTurbines), intent(in) :: rotorDiameter, yawDeg
     real(dp), dimension(nTurbines), intent(in) :: Ct
-    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, opt_exp_fac
+    real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, wec_factor
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
     real(dp), intent(in) :: sm_smoothing, expratemultiplier
@@ -454,7 +454,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                         call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                         & sigmay, sigmaz, rotorDiameter(turb), & 
                                         & wake_model_version, kz_local(turb), x, &
-                                        & opt_exp_fac, deltav)  
+                                        & wec_factor, deltav)
                                         
                     ! near wake region (linearized)
                     else
@@ -471,14 +471,14 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                         ! print *, "inputs in parent: ", deltay, deltaz, Ct(turb), yaw(turb), sigmay_dp, sigmaz_dp, &
 !                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, &
 !                                          & wake_model_version, kz_local, x0, &
-!                                          & opt_exp_fac
+!                                          & wec_factor
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
                                          & Ct_local(turb), yaw(turb), sigmay_dp, sigmaz_dp, & 
                                          & rotorDiameter(turb), x, discontinuity_point, sigmay_dp, sigmaz_dp, & 
                                          & wake_model_version, kz_local(turb), x0, & 
-                                         & opt_exp_fac, deltav)
+                                         & wec_factor, deltav)
                                          
               
                     end if
@@ -584,7 +584,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                     call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb),  &
                                     & sigmay, sigmaz, rotorDiameter(turb), & 
                                     & wake_model_version, kz_local(turb), x, & 
-                                    & opt_exp_fac, deltav)
+                                    & wec_factor, deltav)
                                     
                 ! near wake region (linearized)
                 else
@@ -605,7 +605,7 @@ subroutine porteagel_visualize(nTurbines, nSamples, nRotorPoints, nCtPoints, tur
                                      & rotorDiameter(turb), x, discontinuity_point, & 
                                      & sigmay_dp, sigmaz_dp,    & 
                                      & wake_model_version, kz_local(turb), x0, &
-                                     & opt_exp_fac, deltav)
+                                     & wec_factor, deltav)
 
                 end if
             
@@ -770,7 +770,7 @@ end subroutine wake_offset_func
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the far wake region
 subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, & 
-                      & rotor_diameter_ust, version, k, deltax, opt_exp_fac, deltav) 
+                      & rotor_diameter_ust, version, k, deltax, wec_factor, deltav)
                        
     implicit none
 
@@ -779,7 +779,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
 
     ! in
     real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay
-    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, opt_exp_fac
+    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, wec_factor
     real(dp), intent(in) :: k, deltax    ! only for 2014 version
     integer, intent(in) :: version
     
@@ -808,7 +808,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
             (1.0_dp - sqrt(1.0_dp - Ct                                                   &
                            / (8.0_dp * ((k*deltax/rotor_diameter_ust)+epsilon_2014)**2)))* &
             exp((-1.0_dp/(2.0_dp*((k*deltax/rotor_diameter_ust) + epsilon_2014)**2))*      & 
-            ((deltaz/(opt_exp_fac*rotor_diameter_ust))**2 + (deltay/(opt_exp_fac*rotor_diameter_ust))**2))           &
+            ((deltaz/(wec_factor*rotor_diameter_ust))**2 + (deltay/(wec_factor*rotor_diameter_ust))**2))           &
         )
        ! print *, "deltav 2014 = ", deltav
     else if (version == 2016) then
@@ -816,7 +816,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
         deltav = (                                                                    &
             (1.0_dp - sqrt(1.0_dp - Ct *                                                         &
                            cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter_ust ** 2)))) *     &
-            exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) * exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)&
+            exp(-0.5_dp * (deltay / (wec_factor*sigmay)) ** 2) * exp(-0.5_dp * (deltaz / (wec_factor*sigmaz)) ** 2)&
         )
     else
         print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
@@ -833,7 +833,7 @@ end subroutine deltav_func
 subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
                                  & discontinuity_point, sigmay0, sigmaz0, version, k, &
-                                 & deltax0_dp, opt_exp_fac, deltav) 
+                                 & deltax0_dp, wec_factor, deltav)
                        
     implicit none
 
@@ -842,7 +842,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
     ! in
     real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay
-    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, opt_exp_fac
+    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, wec_factor
     real(dp), intent(in) :: x, discontinuity_point, sigmay0, sigmaz0
     real(dp), intent(in) :: k, deltax0_dp    ! only for 2014 version
     integer, intent(in) :: version
@@ -861,7 +861,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 !     print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
 !                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
 !                                  & discontinuity_point, sigmay0, sigmaz0, version, k, &
-!                                  & deltax0_dp, opt_exp_fac
+!                                  & deltax0_dp, wec_factor
     if (version == 2014) then
         if (yaw > 0.0_dp) then
             print *, "model version 2014 may only be used when yaw=0"
@@ -881,7 +881,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
         deltav = (                                                                       &
              (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *                &
             exp((-1.0_dp/(2.0_dp*(k*deltax0_dp/rotor_diameter_ust + epsilon_2014)**2))*      & 
-            ((deltaz/(opt_exp_fac*rotor_diameter_ust))**2 + (deltay/(opt_exp_fac*rotor_diameter_ust))**2))           &
+            ((deltaz/(wec_factor*rotor_diameter_ust))**2 + (deltay/(wec_factor*rotor_diameter_ust))**2))           &
         )
     else if (version == 2016) then
 
@@ -895,8 +895,8 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
         ! linearized gaussian magnitude term for near wake
         deltav = (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *       &
-            exp(-0.5_dp * (deltay / (opt_exp_fac*sigmay)) ** 2) *                                 &
-            exp(-0.5_dp * (deltaz / (opt_exp_fac*sigmaz)) ** 2)
+            exp(-0.5_dp * (deltay / (wec_factor*sigmay)) ** 2) *                                 &
+            exp(-0.5_dp * (deltaz / (wec_factor*sigmaz)) ** 2)
     else
         print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
         stop 1
