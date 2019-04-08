@@ -148,9 +148,49 @@ class test_wec(unittest.TestCase):
         prob = Problem(root=Group())
         prob.root.add('wakemodel', GaussianWake(nTurbines, options=self.options), promotes=['*'])
         prob.setup()
+        prob['wind_speed'] = 8.
         self.prob = prob
 
-    def test_increase_deficit_by_wake_expansion(self):
+    def test_no_change_in_deficit_by_wake_spread_rate_multiplier_at_center(self):
+        prob = self.prob
+        turbineX = np.array([0., 400.])
+        turbineY = np.array([0., 0.])
+        rotor_diameter = 50.
+        prob['turbineXw'] = turbineX
+        prob['turbineYw'] = turbineY
+        prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+        prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_factor'] = 1.0
+
+        prob.run_once()
+        wspeed0 = prob['wtVelocity0'][1]
+        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob.run_once()
+        wspeed1 = prob['wtVelocity0'][1]
+
+        self.assertEqual(wspeed1, wspeed0)
+
+    def test_no_change_in_deficit_by_wake_diameter_multiplier_at_center(self):
+        prob = self.prob
+        turbineX = np.array([0., 400.])
+        turbineY = np.array([0., 0.])
+        rotor_diameter = 50.
+        prob['turbineXw'] = turbineX
+        prob['turbineYw'] = turbineY
+        prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_factor'] = 1.0
+
+        prob.run_once()
+        wspeed0 = prob['wtVelocity0'][1]
+        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob.run_once()
+        wspeed1 = prob['wtVelocity0'][1]
+
+        self.assertEqual(wspeed1, wspeed0)
+
+    def test_increase_deficit_by_wake_diameter_expansion(self):
         prob = self.prob
         turbineX = np.array([0., 400.])
         turbineY = np.array([0., 100.])
@@ -158,16 +198,37 @@ class test_wec(unittest.TestCase):
         prob['turbineXw'] = turbineX
         prob['turbineYw'] = turbineY
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_factor'] = 1.0
 
         prob.run_once()
         wspeed0 = prob['wtVelocity0'][1]
-        prob['model_params:exp_rate_multiplier'] = 1.50
+        prob['model_params:wec_factor'] = 2.0
         prob.run_once()
         wspeed1 = prob['wtVelocity0'][1]
 
-        print wspeed0, wspeed1
+        self.assertGreater(wspeed0, wspeed1)
 
-        self.assertGreater(wspeed1,wspeed0)
+    def test_increase_deficit_by_wake_expansion_rate_multiplier(self):
+        prob = self.prob
+        turbineX = np.array([0., 400.])
+        turbineY = np.array([0., 100.])
+        rotor_diameter = 50.
+        prob['turbineXw'] = turbineX
+        prob['turbineYw'] = turbineY
+        prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
+        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_factor'] = 1.0
+
+        prob.run_once()
+        prob['model_params:wec_factor'] = 1.0
+        wspeed0 = prob['wtVelocity0'][1]
+        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob.run_once()
+        wspeed1 = prob['wtVelocity0'][1]
+
+        self.assertGreater(wspeed0, wspeed1)
+
 
 
 if __name__ == "__main__":
