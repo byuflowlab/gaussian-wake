@@ -18,11 +18,11 @@ class plotting_tests_wec():
 
     def __init__(self):
 
-        rotor_diamter = 126.4
-        self.rotor_diameter = rotor_diamter
+        rotor_diameter = 126.4
+        self.rotor_diameter = rotor_diameter
         # define turbine locations in global reference frame
-        turbineX = np.array([0.0, 3.*rotor_diamter, 7.*rotor_diamter])
-        turbineY = np.array([-2.*rotor_diamter, 2.*rotor_diamter, 0.0])
+        turbineX = np.array([0.0, 3.*rotor_diameter, 7.*rotor_diameter])
+        turbineY = np.array([-2.*rotor_diameter, 2.*rotor_diameter, 0.0])
         hubHeight = np.zeros_like(turbineX)+90.
         # import matplotlib.pyplot as plt
         # plt.plot(turbineX, turbineY, 'o')
@@ -40,7 +40,7 @@ class plotting_tests_wec():
 
         # define initial values
         for turbI in range(0, nTurbines):
-            rotorDiameter[turbI] = rotor_diamter           # m
+            rotorDiameter[turbI] = rotor_diameter           # m
             axialInduction[turbI] = 1.0/3.0
             Ct[turbI] = 4.0*axialInduction[turbI]*(1.0-axialInduction[turbI])
             Cp[turbI] = 0.7737/0.944 * 4.0 * 1.0/3.0 * np.power((1 - 1.0/3.0), 2)
@@ -84,6 +84,7 @@ class plotting_tests_wec():
         prob['Cp_in'] = Cp
         prob['model_params:wec_factor'] = 1.0
         prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wake_model_version'] = '2016'
 
         # run the problem
         prob.run()
@@ -96,13 +97,13 @@ class plotting_tests_wec():
         plt.plot(self.pos_range/self.rotor_diameter, self.vel_range, label=self.label)
         plt.show()
 
-    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=7, x1=7, y0=-4, y1=4):
+    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=7, x1=7, y0=-4, y1=4, res=100):
 
         if x0 == x1:
-            x_range = np.array([x0])
+            x_range = np.array([x0*self.rotor_diameter])
         else:
             x_range = np.linspace(x0*self.rotor_diameter, x1*self.rotor_diameter)
-        y_range = np.linspace(y0*self.rotor_diameter, y1*self.rotor_diameter)
+        y_range = np.linspace(y0*self.rotor_diameter, y1*self.rotor_diameter, res)
 
         xx, yy = np.meshgrid(x_range, y_range)
 
@@ -115,6 +116,7 @@ class plotting_tests_wec():
             for j in np.arange(0, xx.shape[1]):
                 prob['turbineX'][2] = xx[int(i), int(j)]
                 prob['turbineY'][2] = yy[int(i), int(j)]
+                # print prob['turbineX'], prob['turbineY']
                 prob.run_once()
                 vel[int(i), int(j)] = self.prob['wtVelocity0'][2]
 
@@ -124,19 +126,55 @@ class plotting_tests_wec():
 
         return 0
 
+    def plot_cross_sections(self, exp_type='angle', save_image=True):
+
+        if exp_type == 'angle':
+            # xivals = np.arange(1.0, 100.0, 5)
+            xivals = np.array([1.0, 10, 20, 30, 40, 50, 60, 70])
+            angle_on = 1
+            diam_on = 0
+        elif exp_type =="diam":
+            xivals = np.arange(1.0, 10.0, .5)
+            diam_on = 1
+            angle_on = 0
+        else:
+            raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
+
+        for i in np.arange(0, xivals.size):
+            self.get_velocity(wec_diameter_multiplier=xivals[i] ** diam_on, wec_exp_rate_multiplier=xivals[i] ** angle_on)
+            plt.plot(self.yy / self.rotor_diameter, self.vel, label=xivals[i])
+
+        plt.ylabel('Inflow Velocity (m/s)')
+        plt.xlabel('Y/D')
+        plt.legend(loc=3, frameon=False)
+        if save_image:
+            plt.savefig(exp_type+''+".pdf",tranparent=True)
+        plt.show()
+
+    def plot_contour(self, exp_type='angle', xival=1.):
+
+        if exp_type == 'angle':
+            angle_on = 1
+            diam_on = 0
+        elif exp_type =="diam":
+            diam_on = 1
+            angle_on = 0
+        else:
+            raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
+
+
+        self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0, x1=10)
+
+
+        plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel)
+
+        plt.ylabel('Inflow Velocity (m/s)')
+        plt.xlabel('Y/D')
+        plt.legend()
+        plt.show()
 
 if __name__ == "__main__":
 
-    xivals = np.arange(1.0, 10.0, .5)
     mytest = plotting_tests_wec()
-
-
-    for i in np.arange(0, xivals.size):
-
-        mytest.get_velocity(wec_diameter_multiplier=xivals[i]**1, wec_exp_rate_multiplier=xivals[i]**0)
-        plt.plot(mytest.yy/mytest.rotor_diameter, mytest.vel, label=xivals[i])
-
-    plt.ylabel('Inflow Velocity (m/s)')
-    plt.xlabel('Y/D')
-    plt.legend()
-    plt.show()
+    # mytest.plot_cross_sections(exp_type='angle')
+    mytest.plot_contour(exp_type='angle',xival=20)
