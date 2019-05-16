@@ -799,7 +799,7 @@ subroutine deltav_func(deltay, deltaz, Ct, yaw, sigmay, sigmaz, &
         deltav = (                                                                    &
             (1.0_dp - sqrt(1.0_dp - Ct *                                                         &
                            cos(yaw) / (8.0_dp * sigmay * sigmaz / (rotor_diameter_ust ** 2)))) *     &
-            exp(-0.5_dp * (deltay / (wec_factor*sigmay_spread)) ** 2) * exp(-0.5_dp * (deltaz / (wec_factor*sigmaz_spread)) ** 2)&
+            exp(-0.5_dp * (deltay / (sigmay_spread)) ** 2) * exp(-0.5_dp * (deltaz / (sigmaz_spread)) ** 2)&
         )
     else
         print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
