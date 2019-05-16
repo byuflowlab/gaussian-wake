@@ -159,8 +159,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     ! vertical spread at discontinuity point
                     call sigmaz_func(kz_local(turb), deltax0_dp, rotorDiameter(turb), sigmaz_d)
                     
-                    call sigma_spread_func(x, expratemultiplier, ky, x0, sigmay_0, sigmay_d, sigmay_spread)
-                                                 
+                    ! calculate new spread for WEC in y (horizontal)
+                    call sigma_spread_func(x, expratemultiplier, wec_factor, ky, x0, sigmay_0, sigmay_d, sigmay_spread)
+                    
+                    ! calculate new spread for WEC in z (horizontal)
+                    call sigma_spread_func(x, expratemultiplier, wec_factor, kz, x0, sigmaz_0, sigmaz_d, sigmaz_spread)
+                    
                     if (x > x0) then
     
                         ! velocity difference in the wake
@@ -173,10 +177,11 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
-                                         & Ct_local(turb), yaw(turb), sigmay_d, sigmaz_d, & 
-                                         & rotorDiameter(turb), x, discontinuity_point, sigmay_d, sigmaz_d, &
-                                         & wake_model_version, kz_local(turb), x0, & 
-                                         & wec_factor, sigmay_spread, sigmaz_spread, deltav)
+                                         & Ct_local(turb), yaw(turb), sigmay_0, sigmaz_0, & 
+                                         & rotorDiameter(turb), x, discontinuity_point, & 
+                                         & sigmay_d, sigmaz_d, wake_model_version, &
+                                         & kz_local(turb), x0, sigmay_spread, &
+                                         & sigmaz_spread, wec_factor, deltav)
                                          
                     end if
                 
@@ -671,7 +676,7 @@ subroutine sigmaz_func(kz, deltax0, rotor_diameter, sigmaz)
     
 end subroutine sigmaz_func
 
-subroutine sigma_spread_func(x, expratemultiplier, k, x0, sigma_0, sigma_d, sigma_spread)
+subroutine sigma_spread_func(x, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d, sigma_spread)
 
     implicit none
     
@@ -679,7 +684,7 @@ subroutine sigma_spread_func(x, expratemultiplier, k, x0, sigma_0, sigma_d, sigm
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: x, k, expratemultiplier, k, x0, sigma_0, sigma_d 
+    real(dp), intent(in) :: x, k, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d 
 
     ! out
     real(dp), intent(out) :: sigma_spread
@@ -687,15 +692,22 @@ subroutine sigma_spread_func(x, expratemultiplier, k, x0, sigma_0, sigma_d, sigm
     ! local
     real)dp) :: k_near_wake, sigma_0_new
     
+    ! get slope of wake expansion in the near wake
     k_near_wake = expratemultiplier * (sigma_0 - sigma_d) / x0
+    
+    ! get new value for wake spread at the point of far wake onset
     sigmay_0_new = k_near_wake * x0 + sigma_d
 
+    ! get the wake spread at the point of interest
     if (x > x0 .and. k >= k_near_wake) then
-        sigma_spread = k * (x - x0) + sigmay_0_new
+        ! for points further downstream than the point of far wake onset and low spreading angles
+        sigma_spread = wec_factor*(k * (x - x0) + sigmay_0_new)
     else if (x >= x0 .and. k < k_near_wake) then
-        sigma_spread = k_near_wake * (x - x0) + sigma_0_new
+        ! for points further downstream than the point of far wake onset and high spreading angles
+        sigma_spread = wec_factor*(k_near_wake * (x - x0) + sigma_0_new)
     else 
-        sigma_spread = k_near_wake * x + sigma_d
+        ! for points further upstream than the point of far wake onset (all spreading angles)
+        sigma_spread = wec_factor*(k_near_wake * x + sigma_d)
     end if
     
 end subroutine sigma_spread_func
@@ -802,20 +814,20 @@ end subroutine deltav_func
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the near wake region only
 subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
-                                 & sigmay, sigmaz, rotor_diameter_ust, x, &
-                                 & discontinuity_point, sigmay0, sigmaz0, version, k, &
-                                 & deltax0_dp, wec_factor, sigmay_spread, sigmaz_spread, deltav)
-                       
+                                 & sigmay_0, sigmaz_0, rotor_diameter_ust, x, &
+                                 & discontinuity_point, sigmay_d, sigmaz_d, version, k_2014, &
+                                 & deltax0_2014, sigmay_spread, sigmaz_spread, , wec_factor_2014, deltav)
+
     implicit none
 
     ! define precision to be the standard for a double precision ! on local system
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay
-    real(dp), intent(in) :: sigmaz, rotor_diameter_ust, wec_factor, sigmay_spread, sigmaz_spread
-    real(dp), intent(in) :: x, discontinuity_point, sigmay0, sigmaz0
-    real(dp), intent(in) :: k, deltax0_dp    ! only for 2014 version
+    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay_0, sigmaz_0
+    real(dp), intent(in) :: rotor_diameter_ust, sigmay_spread, sigmaz_spread
+    real(dp), intent(in) :: x, discontinuity_point, sigmay_d, sigmaz_d
+    real(dp), intent(in) :: k_2014, deltax0_2014, wec_factor_2014    ! only for 2014 version
     integer, intent(in) :: version
     
     ! local
@@ -827,13 +839,8 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
 
     ! load intrinsic functions
     intrinsic cos, sqrt, exp
-
-   !  print *, 'wake model version in deltav near wake: ', version
-!     print *, "inputs: ", deltay, deltaz, Ct, yaw,  &
-!                                  & sigmay, sigmaz, rotor_diameter_ust, x, &
-!                                  & discontinuity_point, sigmay0, sigmaz0, version, k, &
-!                                  & deltax0_dp, wec_factor
-    if (version == 2014) then
+    
+    if (version == 2014) then !TODO fix 2014 version
         if (yaw > 0.0_dp) then
             print *, "model version 2014 may only be used when yaw=0"
             stop 1
@@ -843,32 +850,35 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
         
         ! magnitude term of gaussian at x0
         deltav0m = (1.0_dp - sqrt(1.0_dp - Ct                                            &
-                           / (8.0_dp * (k*deltax0_dp/rotor_diameter_ust+epsilon_2014)**2)))
+                           / (8.0_dp * (k_2014*deltax0_2014/rotor_diameter_ust+epsilon_2014)**2)))
         
         ! initialize the gaussian magnitude term at the rotor for the linear interpolation
-        deltavr = deltav0m
+        deltavr = (1.0_dp - sqrt(1.0_dp - Ct                                            &
+                           / (8.0_dp * (k_2014*deltaxd_2014/rotor_diameter_ust+epsilon_2014)**2)))
         
         ! linearized gaussian magnitude term for near wake
         deltav = (                                                                       &
              (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *                &
-            exp((-1.0_dp/(2.0_dp*(k*deltax0_dp/rotor_diameter_ust + epsilon_2014)**2))*      & 
-            ((deltaz/(wec_factor*rotor_diameter_ust))**2 + (deltay/(wec_factor*rotor_diameter_ust))**2))           &
+            exp((-1.0_dp/(2.0_dp*(k*deltax0_2014/rotor_diameter_ust + epsilon_2014)**2))*      & 
+            ((deltaz/(wec_factor_2014*rotor_diameter_ust))**2 + (deltay/(wec_factor_2014*rotor_diameter_ust))**2))           &
         )
+        
     else if (version == 2016) then
 
         ! magnitude term of gaussian at x0
-        deltav0m = (                                         &
-                    (1.0_dp - sqrt(1.0_dp - Ct *                          &
-                    cos(yaw) / (8.0_dp * sigmay0 * sigmaz0 /              &
-                                                (rotor_diameter_ust ** 2)))))
+        deltav0m = ((1.0_dp - sqrt(1.0_dp - Ct *                          &
+                    cos(yaw) / (8.0_dp * sigmay_0 * sigmaz_0/(rotor_diameter_ust ** 2)))))
         ! initialize the gaussian magnitude term at the rotor for the linear interpolation
-        deltavr = deltav0m
+        deltavr = ((1.0_dp - sqrt(1.0_dp - Ct *                          &
+                    cos(yaw) / (8.0_dp * sigmay_d * sigmaz_d/(rotor_diameter_ust ** 2)))))
 
         ! linearized gaussian magnitude term for near wake
-        deltav = (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *       &
-            exp(-0.5_dp * (deltay / (wec_factor*sigmay_spread)) ** 2) *                                 &
-            exp(-0.5_dp * (deltaz / (wec_factor*sigmaz_spread)) ** 2)
+        deltav = (((deltav0m - deltavr)/x0) * x + deltavr) *       &
+            exp(-0.5_dp * (deltay / (sigmay_spread)) ** 2) * &
+            exp(-0.5_dp * (deltaz / (sigmaz_spread)) ** 2)
+            
     else
+    
         print *, "Invalid Bastankhah and Porte Agel model version. Must be 2014 or 2016. ", version, " was given."
         stop 1
     end if
