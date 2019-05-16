@@ -48,7 +48,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     real(dp) :: LocalRotorPointY, LocalRotorPointZ, point_velocity, point_z, point_velocity_with_shear
     Integer :: u, d, turb, turbI, p
     real(dp), parameter :: pi = 3.141592653589793_dp
-    real(dp) :: ky_adjusted, kz_adjusted, sigmay_spread, sigmaz_spread
+    real(dp) :: sigmay_0, sigmaz_0, sigmay_spread, sigmaz_spread
 
     ! model out
     real(dp), dimension(nTurbines), intent(out) :: wtVelocity
@@ -159,6 +159,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                     ! vertical spread at discontinuity point
                     call sigmaz_func(kz_local(turb), deltax0_dp, rotorDiameter(turb), sigmaz_d)
                     
+                    ! horizontal spread at far wake onset point
+                    call sigmay_func(ky_local(turb), 0.0_dp, rotorDiameter(turb), yaw(turb), sigmay_0)
+            
+                    ! vertical spread at at far wake onset point
+                    call sigmaz_func(kz_local(turb), 0.0_dp, rotorDiameter(turb), sigmaz_0)
+                    
                     ! calculate new spread for WEC in y (horizontal)
                     call sigma_spread_func(x, expratemultiplier, wec_factor, ky, x0, sigmay_0, sigmay_d, sigmay_spread)
                     
@@ -177,7 +183,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
 
                         ! velocity deficit in the nearwake (linear model)
                         call deltav_near_wake_lin_func(deltay, deltaz, &
-                                         & Ct_local(turb), yaw(turb), sigmay_0, sigmaz_0, & 
+                                         & Ct_local(turb), yaw(turb), sigmay_0, sigmaz_0, x0, & 
                                          & rotorDiameter(turb), x, discontinuity_point, & 
                                          & sigmay_d, sigmaz_d, wake_model_version, &
                                          & kz_local(turb), x0, sigmay_spread, &
@@ -227,13 +233,16 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
         rpts = REAL(nRotorPoints, dp)
 
         wtVelocity(turbI) = wtVelocity(turbI)/rpts
-
+        !print *, "velocity for ", turbI, " is ", wtvelocity(turbI)
         if (use_ct_curve) then
             call interpolation(nCtPoints, interp_type, ct_curve_wind_speed, ct_curve_ct, & 
                               & wtVelocity(turbI), Ct_local(turbI), 0.0_dp, 0.0_dp, .false.)
         end if
     
     end do
+    
+    !print *, wtVelocity
+    
 
 end subroutine porteagel_analyze
 
@@ -684,24 +693,24 @@ subroutine sigma_spread_func(x, expratemultiplier, wec_factor, k, x0, sigma_0, s
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: x, k, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d 
+    real(dp), intent(in) :: x, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d 
 
     ! out
     real(dp), intent(out) :: sigma_spread
     
     ! local
-    real)dp) :: k_near_wake, sigma_0_new
+    real(dp) :: k_near_wake, sigma_0_new
     
     ! get slope of wake expansion in the near wake
     k_near_wake = expratemultiplier * (sigma_0 - sigma_d) / x0
     
     ! get new value for wake spread at the point of far wake onset
-    sigmay_0_new = k_near_wake * x0 + sigma_d
+    sigma_0_new = k_near_wake * x0 + sigma_d
 
     ! get the wake spread at the point of interest
     if (x > x0 .and. k >= k_near_wake) then
         ! for points further downstream than the point of far wake onset and low spreading angles
-        sigma_spread = wec_factor*(k * (x - x0) + sigmay_0_new)
+        sigma_spread = wec_factor*(k * (x - x0) + sigma_0_new)
     else if (x >= x0 .and. k < k_near_wake) then
         ! for points further downstream than the point of far wake onset and high spreading angles
         sigma_spread = wec_factor*(k_near_wake * (x - x0) + sigma_0_new)
@@ -813,10 +822,10 @@ end subroutine deltav_func
 
 ! calculates the velocity difference between hub velocity and free stream for a given wake
 ! for use in the near wake region only
-subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
-                                 & sigmay_0, sigmaz_0, rotor_diameter_ust, x, &
+subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
+                                 & sigmay_0, sigmaz_0, x0, rotor_diameter_ust, x, &
                                  & discontinuity_point, sigmay_d, sigmaz_d, version, k_2014, &
-                                 & deltax0_2014, sigmay_spread, sigmaz_spread, , wec_factor_2014, deltav)
+                                 & deltaxd_2014, sigmay_spread, sigmaz_spread, wec_factor_2014, deltav)
 
     implicit none
 
@@ -824,10 +833,10 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay_0, sigmaz_0
+    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay_0, sigmaz_0, x0
     real(dp), intent(in) :: rotor_diameter_ust, sigmay_spread, sigmaz_spread
     real(dp), intent(in) :: x, discontinuity_point, sigmay_d, sigmaz_d
-    real(dp), intent(in) :: k_2014, deltax0_2014, wec_factor_2014    ! only for 2014 version
+    real(dp), intent(in) :: k_2014, deltaxd_2014, wec_factor_2014    ! only for 2014 version
     integer, intent(in) :: version
     
     ! local
@@ -850,7 +859,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
         
         ! magnitude term of gaussian at x0
         deltav0m = (1.0_dp - sqrt(1.0_dp - Ct                                            &
-                           / (8.0_dp * (k_2014*deltax0_2014/rotor_diameter_ust+epsilon_2014)**2)))
+                           / (8.0_dp * (k_2014*deltaxd_2014/rotor_diameter_ust+epsilon_2014)**2)))
         
         ! initialize the gaussian magnitude term at the rotor for the linear interpolation
         deltavr = (1.0_dp - sqrt(1.0_dp - Ct                                            &
@@ -859,7 +868,7 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw,  &
         ! linearized gaussian magnitude term for near wake
         deltav = (                                                                       &
              (((deltav0m - deltavr)/discontinuity_point) * x + deltavr) *                &
-            exp((-1.0_dp/(2.0_dp*(k*deltax0_2014/rotor_diameter_ust + epsilon_2014)**2))*      & 
+            exp((-1.0_dp/(2.0_dp*(k_2014*deltaxd_2014/rotor_diameter_ust + epsilon_2014)**2))*      & 
             ((deltaz/(wec_factor_2014*rotor_diameter_ust))**2 + (deltay/(wec_factor_2014*rotor_diameter_ust))**2))           &
         )
         

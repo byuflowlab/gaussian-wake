@@ -78,6 +78,7 @@ class test_guass(unittest.TestCase):
         prob['generatorEfficiency'] = generatorEfficiency
         prob['windSpeeds'] = np.array([wind_speed])
         prob['model_params:z_ref'] = 90.
+        prob['model_params:wake_model_version'] = 2016.
         prob['air_density'] = air_density
         prob['windDirections'] = np.array([wind_direction])
         prob['windFrequencies'] = np.array([wind_frequency])
@@ -86,6 +87,8 @@ class test_guass(unittest.TestCase):
 
         # run the problem
         prob.run()
+
+        print(prob['wtVelocity0'])
 
         self.prob = prob
 

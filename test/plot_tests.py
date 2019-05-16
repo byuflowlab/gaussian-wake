@@ -97,12 +97,12 @@ class plotting_tests_wec():
         plt.plot(self.pos_range/self.rotor_diameter, self.vel_range, label=self.label)
         plt.show()
 
-    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=7, x1=7, y0=-4, y1=4, res=100):
+    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=100):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
         else:
-            x_range = np.linspace(x0*self.rotor_diameter, x1*self.rotor_diameter)
+            x_range = np.linspace(x0*self.rotor_diameter, x1*self.rotor_diameter, res)
         y_range = np.linspace(y0*self.rotor_diameter, y1*self.rotor_diameter, res)
 
         xx, yy = np.meshgrid(x_range, y_range)
@@ -118,7 +118,7 @@ class plotting_tests_wec():
                 prob['turbineY'][2] = yy[int(i), int(j)]
                 # print prob['turbineX'], prob['turbineY']
                 prob.run_once()
-                vel[int(i), int(j)] = self.prob['wtVelocity0'][2]
+                vel[int(i), int(j)] = self.prob['AEP']
 
         self.vel = vel
         self.xx = xx
@@ -163,13 +163,13 @@ class plotting_tests_wec():
             raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
 
 
-        self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0, x1=10)
+        self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
 
 
-        plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel)
+        plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel, cmap='coolwarm')
 
-        plt.ylabel('Inflow Velocity (m/s)')
-        plt.xlabel('Y/D')
+        plt.ylabel('Y/D')
+        plt.xlabel('X/D')
         plt.legend()
         plt.show()
 
@@ -177,4 +177,5 @@ if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
     # mytest.plot_cross_sections(exp_type='angle')
-    mytest.plot_contour(exp_type='angle',xival=20)
+    for xival in np.arange(0, 10)
+    mytest.plot_contour(exp_type='diam',xival=5)
