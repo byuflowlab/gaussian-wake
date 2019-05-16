@@ -177,5 +177,5 @@ if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
     # mytest.plot_cross_sections(exp_type='angle')
-    for xival in np.arange(0, 10)
-    mytest.plot_contour(exp_type='diam',xival=5)
+    # for xival in np.arange(0, 10)
+    mytest.plot_contour(exp_type='diam',xival=10)
