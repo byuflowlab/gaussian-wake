@@ -185,7 +185,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     ! local
     Real(dp) :: deficit_sum, x, deltav, x0, deltax0, theta_c_0, sigmay, sigmaz
     Real(dp) :: wake_offset, discontinuity_point, deltax0_d, sigmay_d, sigmaz_d
-    Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, sigmay, sigmaz, point_velocity
+    Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
     Integer :: u, turb
 
     ! initialize deficit summation term to zero
@@ -214,21 +214,6 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 
             ! downstream distance from far wake onset to downstream turbine
             deltax0 = x - x0
-            
-            ! determine the initial wake angle at the onset of far wake
-            call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
-            
-            ! horizontal spread
-            call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), &
-            yaw(turb), sigmay)
-
-            ! vertical spread
-            call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
-
-            ! horizontal cross-wind wake displacement from hub
-            call wake_offset_func(rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                 & ky_local(turb), kz_local(turb), &
-                                 Ct_local(turb), sigmay, sigmaz, wake_offset)
             
             ! find the final point where the original model is undefined
             call discontinuity_point_func(x0, rotorDiameter(turb), & 
@@ -262,6 +247,14 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             
             ! calculate new spread for WEC in z (horizontal)
             call sigma_spread_func(x, expratemultiplier, wec_factor, kz_local, x0, sigmaz_0, sigmaz_d, sigmaz_spread)
+            
+            ! determine the initial wake angle at the onset of far wake
+            call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
+            
+            ! horizontal cross-wind wake displacement from hub
+            call wake_offset_func(x, rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
+                                 & ky_local(turb), kz_local(turb), &
+                                 Ct_local(turb), sigmay, sigmaz, wake_offset)
             
             if (x > x0) then
             
@@ -782,39 +775,47 @@ end subroutine sigma_spread_func
 
 ! calculates the horizontal distance from the wake center to the hub of the turbine making
 ! the wake
-subroutine wake_offset_func(rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay, &
+subroutine wake_offset_func(x, rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay, &
                             & sigmaz, wake_offset)
-                            
+
     implicit none
 
     ! define precision to be the standard for a double precision ! on local system
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay
+    real(dp), intent(in) :: x, rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay
     real(dp), intent(in) :: sigmaz
 
     ! out
     real(dp), intent(out) :: wake_offset
 
     intrinsic cos, sqrt, log
+    
+    if (x < x0) then
+    
+        wake_offset = theta_c_0*x
+    
+    else
                             
-    ! horizontal cross-wind wake displacement from hub
-    wake_offset = rotor_diameter * (                                           &
-                  theta_c_0 * x0 / rotor_diameter +                            &
-                  (theta_c_0 / 14.7_dp) * sqrt(cos(yaw) / (ky * kz * Ct)) *    &
-                  (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct) - Ct) *                 &
-                  log(                                                         &
-                    ((1.6_dp + sqrt(Ct)) *                                     &
-                     (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
-                                    (cos(yaw) * rotor_diameter ** 2))          &
-                      - sqrt(Ct))) /                                           &
-                    ((1.6_dp - sqrt(Ct)) *                                     &
-                     (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
-                                    (cos(yaw) * rotor_diameter ** 2))          &
-                      + sqrt(Ct)))                                             &
-                  )                                                            &
-    )
+        ! horizontal cross-wind wake displacement from hub
+        wake_offset = rotor_diameter * (                                           &
+                      theta_c_0 * x0 / rotor_diameter +                            &
+                      (theta_c_0 / 14.7_dp) * sqrt(cos(yaw) / (ky * kz * Ct)) *    &
+                      (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct) - Ct) *                 &
+                      log(                                                         &
+                        ((1.6_dp + sqrt(Ct)) *                                     &
+                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
+                                        (cos(yaw) * rotor_diameter ** 2))          &
+                          - sqrt(Ct))) /                                           &
+                        ((1.6_dp - sqrt(Ct)) *                                     &
+                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
+                                        (cos(yaw) * rotor_diameter ** 2))          &
+                          + sqrt(Ct)))                                             &
+                      )                                                            &
+        )
+    end if
+    
 end subroutine wake_offset_func
 
 
