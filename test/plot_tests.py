@@ -85,6 +85,7 @@ class plotting_tests_wec():
         prob['model_params:wec_factor'] = 1.0
         prob['model_params:exp_rate_multiplier'] = 1.0
         prob['model_params:wake_model_version'] = '2016'
+        prob['model_params:ti_calculation_method'] = 0
 
         # run the problem
         prob.run()
@@ -118,7 +119,7 @@ class plotting_tests_wec():
                 prob['turbineY'][2] = yy[int(i), int(j)]
                 # print prob['turbineX'], prob['turbineY']
                 prob.run_once()
-                vel[int(i), int(j)] = self.prob['AEP']
+                vel[int(i), int(j)] = self.prob['wtVelocity0'][2]
 
         self.vel = vel
         self.xx = xx
@@ -176,6 +177,6 @@ class plotting_tests_wec():
 if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
-    # mytest.plot_cross_sections(exp_type='angle')
-    for xival in np.arange(0, 10)
-    mytest.plot_contour(exp_type='diam',xival=5)
+    mytest.plot_cross_sections(exp_type='angle')
+    # for xival in np.arange(0, 10)
+    # mytest.plot_contour(exp_type='diam',xival=1)

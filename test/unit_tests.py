@@ -14,6 +14,34 @@ from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinu
 from _porteagel_fortran import interpolation, hermite_spline
 from openmdao.api import Problem, Group
 
+class test_basic_subroutines(unittest.TestCase):
+
+    def setUp(self):
+        self.tolerance = 1E-6
+        self.d = 126.4
+        self.yaw = np.pi/6.
+        self.ct = 0.8
+        self.alpha = 2.32
+        self.beta = 0.154
+        self.ti = 0.1
+        self.ky = 0.25
+        self.kz = 0.2
+
+    def test_x0_func(self):
+
+        x0 = x0_func(self.d, self.yaw, self.ct, self.alpha, self.ti, self.beta)
+
+        self.assertAlmostEqual(x0, 353.2313474, delta=self.tolerance)
+
+    def test_discontinuity_point_func(self):
+
+        x0 = 353.0
+
+        xd = discontinuity_point_func(x0, self.d, self.ky, self.kz, self.yaw, self.ct)
+
+        self.assertAlmostEqual(xd, 335.5180515, delta=self.tolerance)
+
+
 class test_hermite_spline(unittest.TestCase):
 
     def test_linear(self):
