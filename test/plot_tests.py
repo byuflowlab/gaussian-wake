@@ -98,7 +98,7 @@ class plotting_tests_wec():
         plt.plot(self.pos_range/self.rotor_diameter, self.vel_range, label=self.label)
         plt.show()
 
-    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=100):
+    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
@@ -152,7 +152,7 @@ class plotting_tests_wec():
             plt.savefig(exp_type+''+".pdf",tranparent=True)
         plt.show()
 
-    def plot_contour(self, exp_type='angle', xival=1.):
+    def plot_contour(self, exp_type='angle', xival=1., save_fig=False):
 
         if exp_type == 'angle':
             angle_on = 1
@@ -172,11 +172,17 @@ class plotting_tests_wec():
         plt.ylabel('Y/D')
         plt.xlabel('X/D')
         plt.legend()
-        plt.show()
+        if save_fig:
+            plt.title('%s Factor: %s' %(exp_type, xival))
+            plt.savefig('%s_%.2f.pdf' % (exp_type, xival))
+        else:
+            plt.show()
 
 if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
-    mytest.plot_cross_sections(exp_type='angle')
-    # for xival in np.arange(0, 10)
-    # mytest.plot_contour(exp_type='diam',xival=1)
+
+    # mytest.plot_cross_sections(exp_type='angle')
+    for xival in np.linspace(1, 10, 11):
+        mytest.plot_contour(exp_type='diam', xival=xival, save_fig=True)
+
