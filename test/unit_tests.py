@@ -7,7 +7,7 @@ Brigham Young University
 import unittest
 import numpy as np
 
-from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, theta_c_0_func, sigmay_func
+from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, theta_c_0_func, sigmay_func, sigma_spread_func
 from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, deltav_near_wake_lin_func
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
@@ -40,6 +40,77 @@ class test_basic_subroutines(unittest.TestCase):
         xd = discontinuity_point_func(x0, self.d, self.ky, self.kz, self.yaw, self.ct)
 
         self.assertAlmostEqual(xd, 335.5180515, delta=self.tolerance)
+
+    def test_sigmay_func(self):
+
+        deltax0 = 500. - 353.0
+
+        xd = sigmay_func(self.ky, deltax0, self.d, self.yaw)
+
+        self.assertAlmostEqual(xd, 75.45193794, delta=self.tolerance)
+
+    def test_sigmaz_func(self):
+
+        deltax0 = 500. - 353.0
+
+        xd = sigmaz_func(self.kz, deltax0, self.d)
+
+        self.assertAlmostEqual(xd, 74.08914857, delta=self.tolerance)
+
+    def test_theta_c_0_func(self):
+
+        theta_c_0 = theta_c_0_func(self.yaw, self.ct)
+
+        self.assertAlmostEqual(theta_c_0, , delta=self.tolerance)
+
+class test_sigma_spread(unittest.TestCase):
+
+    def setUp(self):
+        self.tolerance = 1E-6
+        self.d = 126.4
+        self.yaw = np.pi / 6.
+        self.ct = 0.8
+        self.alpha = 2.32
+        self.beta = 0.154
+        self.ti = 0.1
+        self.ky = 0.25
+        self.kz = 0.2
+
+        x = np.array([500.0, 500.0, 500.0, 200.0, -10.0])
+        xi_d = np.array([1.0, 2.0, 1.0, 1.0, 1.0])
+        xi_a = np.array([1.0, 1.0, 50.0, 1.0, 1.0])
+
+        sigma_0 = 38.7
+        sigma_d = 4.14
+
+        x0 = 353.0
+
+        self.sigma_spread = np.zeros_like(x)
+        for i in np.arange(0, x.size):
+            self.sigma_spread[i] = sigma_spread_func(x[i], xi_a[i], xi_d[i], self.ky, x0, sigma_0, sigma_d)
+
+        self.correct_results = np.array([75.45, 150.9, 2451.73206799, 23.72073654, 0.0])
+
+    def test_sigma_spread_func_case1(self):
+
+        self.assertAlmostEqual(self.sigma_spread[0], self.correct_results[0], delta=self.tolerance)
+
+    def test_sigma_spread_func_case2(self):
+
+        self.assertAlmostEqual(self.sigma_spread[1], self.correct_results[1], delta=self.tolerance)
+
+    def test_sigma_spread_func_case3(self):
+
+        self.assertAlmostEqual(self.sigma_spread[2], self.correct_results[2], delta=self.tolerance)
+
+    def test_sigma_spread_func_case4(self):
+
+        self.assertAlmostEqual(self.sigma_spread[3], self.correct_results[3], delta=self.tolerance)
+
+    def test_sigma_spread_func_case5(self):
+
+        self.assertAlmostEqual(self.sigma_spread[4], self.correct_results[4], delta=self.tolerance)
+
 
 
 class test_hermite_spline(unittest.TestCase):

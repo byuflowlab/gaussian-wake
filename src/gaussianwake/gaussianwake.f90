@@ -248,7 +248,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
         deltav = 0.0_dp
         
         ! check turbine relative locations
-        if (x > (0.0_dp + tol)) then
+        if (x > tol) then
         
             ! determine the onset location of far wake
             call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
@@ -803,15 +803,15 @@ subroutine sigma_spread_func(x, expratemultiplier, wec_factor, k, x0, sigma_0, s
     sigma_0_new = k_near_wake * x0 + sigma_d
 
     ! get the wake spread at the point of interest
-    if (x > x0 .and. k >= k_near_wake) then
+    if ((x .ge. x0) .and. (k .gt. k_near_wake)) then
         ! for points further downstream than the point of far wake onset and low spreading angles
         sigma_spread = wec_factor*(k * (x - x0) + sigma_0_new)
-    else if (x >= x0 .and. k < k_near_wake) then
-        ! for points further downstream than the point of far wake onset and high spreading angles
-        sigma_spread = wec_factor*(k_near_wake * (x - x0) + sigma_0_new)
-    else 
-        ! for points further upstream than the point of far wake onset (all spreading angles)
+    else if (x .ge. 0.0_dp) then
+        ! for points in the near wake and/or with high spreading angles
         sigma_spread = wec_factor*(k_near_wake * x + sigma_d)
+    else
+        ! for when the point is not in a wake
+        sigma_spread = 0.0_dp
     end if
     
 end subroutine sigma_spread_func
