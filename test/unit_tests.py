@@ -61,7 +61,32 @@ class test_basic_subroutines(unittest.TestCase):
 
         theta_c_0 = theta_c_0_func(self.yaw, self.ct)
 
-        self.assertAlmostEqual(theta_c_0, , delta=self.tolerance)
+        self.assertAlmostEqual(theta_c_0, 0.080852297, delta=self.tolerance)
+
+    def test_wake_offset_func_near_wake(self):
+        x = 200.
+        theta_c_0 = 0.0808
+        sigmay = 36.
+        sigmaz = 43.
+        x0 = 353.
+
+        delta = wake_offset_func(x, self.d, theta_c_0, x0, self.yaw, self.ky, self.kz, self.ct, sigmay, sigmaz)
+
+        self.assertAlmostEqual(delta, 16.16, delta=self.tolerance)
+
+    def test_wake_offset_func_far_wake(self):
+
+        x = 500.
+        x0 = 353.
+        theta_c_0 = 0.0808
+        sigmay = 75.45193794
+        sigmaz = 74.08914857
+
+        delta = wake_offset_func(x, self.d, theta_c_0, x0, self.yaw, self.ky, self.kz, self.ct, sigmay, sigmaz)
+        
+        self.assertAlmostEqual(delta, 33.89352568, delta=self.tolerance)
+
+
 
 class test_sigma_spread(unittest.TestCase):
 
@@ -81,7 +106,7 @@ class test_sigma_spread(unittest.TestCase):
         xi_a = np.array([1.0, 1.0, 50.0, 1.0, 1.0])
 
         sigma_0 = 38.7
-        sigma_d = 4.14
+        sigma_d = 34.2
 
         x0 = 353.0
 
@@ -89,7 +114,7 @@ class test_sigma_spread(unittest.TestCase):
         for i in np.arange(0, x.size):
             self.sigma_spread[i] = sigma_spread_func(x[i], xi_a[i], xi_d[i], self.ky, x0, sigma_0, sigma_d)
 
-        self.correct_results = np.array([75.45, 150.9, 2451.73206799, 23.72073654, 0.0])
+        self.correct_results = np.array([75.45, 150.9, 352.8968838, 36.7495751, 0.0])
 
     def test_sigma_spread_func_case1(self):
 

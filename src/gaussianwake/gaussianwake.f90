@@ -829,6 +829,9 @@ subroutine wake_offset_func(x, rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, s
     ! in
     real(dp), intent(in) :: x, rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay
     real(dp), intent(in) :: sigmaz
+    
+    ! local
+    real(dp) :: a, b, c, d, e, f, g
 
     ! out
     real(dp), intent(out) :: wake_offset
@@ -840,23 +843,17 @@ subroutine wake_offset_func(x, rotor_diameter, theta_c_0, x0, yaw, ky, kz, Ct, s
         wake_offset = theta_c_0*x
     
     else
-                            
-        ! horizontal cross-wind wake displacement from hub
-        wake_offset = rotor_diameter * (                                           &
-                      theta_c_0 * x0 / rotor_diameter +                            &
-                      (theta_c_0 / 14.7_dp) * sqrt(cos(yaw) / (ky * kz * Ct)) *    &
-                      (2.9_dp + 1.3_dp * sqrt(1.0_dp - Ct) - Ct) *                 &
-                      log(                                                         &
-                        ((1.6_dp + sqrt(Ct)) *                                     &
-                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
-                                        (cos(yaw) * rotor_diameter ** 2))          &
-                          - sqrt(Ct))) /                                           &
-                        ((1.6_dp - sqrt(Ct)) *                                     &
-                         (1.6_dp * sqrt(8.0_dp * sigmay * sigmaz /                 &
-                                        (cos(yaw) * rotor_diameter ** 2))          &
-                          + sqrt(Ct)))                                             &
-                      )                                                            &
-        )
+    
+        a = theta_c_0*x0
+        b = rotor_diameter*theta_c_0/14.7_dp
+        c = sqrt(cos(yaw)/(ky*kz*Ct))
+        d = 2.9_dp+1.3_dp*sqrt(1.0_dp - Ct)-Ct
+        e = 1.6_dp*sqrt(8.0_dp*sigmay*sigmaz/((rotor_diameter**2)*cos(yaw)))
+        f = (1.6_dp+sqrt(Ct))*(e-sqrt(Ct))
+        g = (1.6_dp-sqrt(Ct))*(e+sqrt(Ct))
+        
+        wake_offset = a + b * c * d * log(f/g)
+
     end if
     
 end subroutine wake_offset_func
