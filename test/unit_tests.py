@@ -86,7 +86,53 @@ class test_basic_subroutines(unittest.TestCase):
         
         self.assertAlmostEqual(delta, 33.89352568, delta=self.tolerance)
 
+    def test_deltav_func_2016(self):
 
+        d = 126.4
+        yaw = np.pi / 6.
+        ky = 0.25
+        kz = 0.2
+
+        sigmay = 75.0
+        sigmaz = 74.0
+        ct = 0.8
+        z = 100.0
+        zh = 90.0
+        wec_factor = 1.0
+        y = 50.0
+        delta = 33.89
+        x = 500.
+
+        deltay = y-delta
+        deltaz = z-zh
+
+        deltav = deltav_func(deltay, deltaz, ct, yaw, sigmay, sigmaz, d, 2016, self.ky, x, wec_factor, sigmay, sigmaz)
+
+        self.assertAlmostEqual(deltav, 0.1293410999394427, delta=self.tolerance)
+
+    def test_deltav_func_2014(self):
+
+        d = 126.4
+        yaw = np.pi / 6.
+        ky = 0.25
+        kz = 0.2
+
+        sigmay = 75.0
+        sigmaz = 74.0
+        ct = 0.8
+        z = 100.0
+        zh = 90.0
+        wec_factor = 1.0
+        y = 50.0
+        delta = 33.89
+        x = 500.
+
+        deltay = y-delta
+        deltaz = z-zh
+
+        deltav = deltav_func(deltay, deltaz, ct, yaw, sigmay, sigmaz, d, 2014, self.ky, x, wec_factor, sigmay, sigmaz)
+
+        self.assertAlmostEqual(deltav, 0.03264659097, delta=self.tolerance)
 
 class test_sigma_spread(unittest.TestCase):
 
