@@ -960,11 +960,11 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
         ! magnitude term of gaussian at x0
         deltav0m = (1.0_dp - sqrt(1.0_dp - Ct                                            &
                            / (8.0_dp * (k_2014*x0/rotor_diameter_ust+epsilon_2014)**2)))
-        print *, 'dv0m', deltav0m
+        
         ! initialize the gaussian magnitude term at the rotor for the linear interpolation
         deltavdm = (1.0_dp - sqrt(1.0_dp - Ct                                            &
                            / (8.0_dp * (k_2014*discontinuity_point/rotor_diameter_ust+epsilon_2014)**2)))
-        print *, 'dvdm', deltavdm
+        
         ! linearized gaussian magnitude term for near wake
         deltav = (                                                                       &
              (((deltav0m - deltavdm)/x0) * x + deltavdm) *                &
