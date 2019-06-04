@@ -134,6 +134,41 @@ class test_basic_subroutines(unittest.TestCase):
 
         self.assertAlmostEqual(deltav, 0.03264659097, delta=self.tolerance)
 
+    def test_near_deltav_func_2014(self):
+
+        version = 2014
+
+        # x = 353.0
+        # x = 0.0
+        x0 = 353.0
+        xd = 335.0
+        yaw = 0.0
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+        x = 200.0
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
+                                            sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+        self.assertAlmostEqual(deltav, 0.027941992346249663, delta=self.tolerance)
+        x = 353.
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
+                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+        self.assertAlmostEqual(deltav, 0.0401329549842686, delta=self.tolerance)
+        x = 0.0
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
+                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+
+        self.assertAlmostEqual(deltav, 0.00048145926305030354, delta=self.tolerance)
+
+
 class test_sigma_spread(unittest.TestCase):
 
     def setUp(self):
