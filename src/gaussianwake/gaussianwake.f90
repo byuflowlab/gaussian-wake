@@ -224,7 +224,8 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
      Real(dp), intent(out) :: point_velocity_with_shear
     
     ! local
-    Real(dp) :: deficit_sum, x, deltav, x0, deltax0, theta_c_0, sigmay, sigmaz
+    Real(dp) :: old_deficit_sum, deficit_sum
+    Real(dp) :: x, deltav, x0, deltax0, theta_c_0, sigmay, sigmaz
     Real(dp) :: wake_offset, discontinuity_point, deltax0_d, sigmay_d, sigmaz_d
     Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
     Real(dp) :: sigmay_spread, sigmaz_spread
@@ -324,9 +325,10 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  
             end if
         
+            old_deficit_sum = deficit_sum
             ! combine deficits according to selected wake combination method
             call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
-                                       wake_combination_method, deficit_sum)
+                                       wake_combination_method, old_deficit_sum, deficit_sum)
         
         end if
     
@@ -1144,9 +1146,9 @@ subroutine overlap_area_func(turbine_y, turbine_z, rotor_diameter, &
                              
 end subroutine overlap_area_func
 
-! combines wakes using various methods
+ ! combines wakes using various methods
 subroutine wake_combination_func(wind_speed, turb_inflow, deltav,                  &
-                                 wake_combination_method, deficit_sum)
+                                 wake_combination_method, old_deficit_sum, new_deficit_sum)
                                  
     ! combines wakes to calculate velocity at a given turbine
     ! wind_speed                = Free stream velocity
@@ -1162,31 +1164,31 @@ subroutine wake_combination_func(wind_speed, turb_inflow, deltav,               
     integer, parameter :: dp = kind(0.d0)
     
     ! in
-    real(dp), intent(in) :: wind_speed, turb_inflow, deltav
+    real(dp), intent(in) :: wind_speed, turb_inflow, deltav, old_deficit_sum
     integer, intent(in) :: wake_combination_method
     
     ! out    
-    real(dp), intent(inout) :: deficit_sum
+    real(dp), intent(out) :: new_deficit_sum
     
     ! intrinsic functions
     intrinsic sqrt
     
     ! freestream linear superposition (Lissaman 1979)
     if (wake_combination_method == 0) then
-        deficit_sum = deficit_sum + wind_speed*deltav
+        new_deficit_sum = old_deficit_sum + wind_speed*deltav
 
     ! local velocity linear superposition (Niayifar and Porte Agel 2015, 2016)
     else if (wake_combination_method == 1) then
-        deficit_sum = deficit_sum + turb_inflow*deltav
+        new_deficit_sum = old_deficit_sum + turb_inflow*deltav
         !print *, "here"
         
     ! sum of squares freestream superposition (Katic et al. 1986)
     else if (wake_combination_method == 2) then 
-        deficit_sum = sqrt(deficit_sum**2 + (wind_speed*deltav)**2)
+        new_deficit_sum = sqrt(old_deficit_sum**2 + (wind_speed*deltav)**2)
     
     ! sum of squares local velocity superposition (Voutsinas 1990)
     else if (wake_combination_method == 3) then
-        deficit_sum = sqrt(deficit_sum**2 + (turb_inflow*deltav)**2)
+        new_deficit_sum = sqrt(old_deficit_sum**2 + (turb_inflow*deltav)**2)
     
     ! wake combination method error
     else

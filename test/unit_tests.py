@@ -26,6 +26,7 @@ class test_basic_subroutines(unittest.TestCase):
         self.ti = 0.1
         self.ky = 0.25
         self.kz = 0.2
+        self.wind_speed = 8.0
 
     def test_x0_func(self):
 
@@ -134,12 +135,36 @@ class test_basic_subroutines(unittest.TestCase):
 
         self.assertAlmostEqual(deltav, 0.03264659097, delta=self.tolerance)
 
-    def test_near_deltav_func_2014(self):
+    def test_near_deltav_func_2014_rotor_location(self):
+
+        version = 2014
+        x0 = 353.0
+        xd = 335.0
+        yaw = 0.0
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+
+        x = 0.0
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
+                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+
+        self.assertAlmostEqual(deltav, 0.00048145926305030354, delta=self.tolerance)
+
+
+
+    def test_near_deltav_func_2014_midrange_location(self):
 
         version = 2014
 
-        # x = 353.0
-        # x = 0.0
         x0 = 353.0
         xd = 335.0
         yaw = 0.0
@@ -158,15 +183,154 @@ class test_basic_subroutines(unittest.TestCase):
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
                                             sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
         self.assertAlmostEqual(deltav, 0.027941992346249663, delta=self.tolerance)
-        x = 353.
-        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
-                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
-        self.assertAlmostEqual(deltav, 0.0401329549842686, delta=self.tolerance)
-        x = 0.0
-        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
-                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
 
-        self.assertAlmostEqual(deltav, 0.00048145926305030354, delta=self.tolerance)
+    def test_near_deltav_func_2014_x0_location(self):
+        version = 2014
+
+        x0 = 353.0
+        xd = 335.0
+        yaw = 0.0
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+
+        x = 353.
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
+                                           sigmay_d,
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+        self.assertAlmostEqual(deltav, 0.0401329549842686, delta=self.tolerance)
+
+    def test_near_deltav_func_2016_rotor_location(self):
+        version = 2016
+        x0 = 353.0
+        xd = 335.0
+        yaw = np.pi/6.
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+        x = 0.0
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
+                                           sigmay_d,
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+
+        self.assertAlmostEqual(deltav, 0.05319773340098457, delta=self.tolerance)
+
+    def test_near_deltav_func_2016_midrange_location(self):
+        version = 2016
+
+        x0 = 353.0
+        xd = 335.0
+        yaw = np.pi/6.
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+        x = 200.0
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
+                                           sigmay_d,
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+        self.assertAlmostEqual(deltav, 0.0388723745762739, delta=self.tolerance)
+
+    def test_near_deltav_func_2016_x0_location(self):
+        version = 2016
+
+        x0 = 353.0
+        xd = 335.0
+        yaw = np.pi/6.
+        sigmay_spread = 45.
+        sigmaz_spread = 45.
+        sigmay_0 = 50.0
+        sigmaz_0 = 50.0
+        sigmay_d = 40.0
+        sigmaz_d = 40.0
+        wec_factor = 1.0
+
+        deltay = 100.0
+        deltaz = 5.0
+
+        x = 353.
+        deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
+                                           sigmay_d,
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+        self.assertAlmostEqual(deltav, 0.027913475075370238, delta=self.tolerance)
+
+    def test_wake_combination_func_Lissaman1979(self):
+
+        Uk = 7.0
+        deltav = 0.05
+        wake_combination_method = 0
+        deficit_sum = 2.0
+
+        new_sum = wake_combination_func(self.wind_speed, Uk, deltav, wake_combination_method, deficit_sum)
+
+        self.assertAlmostEqual(new_sum, 2.4, delta=self.tolerance)
+
+    def test_wake_combination_func_Katic1986(self):
+
+        Uk = 7.0
+        deltav = 0.05
+        wake_combination_method = 2
+        deficit_sum = 2.0
+
+        new_sum = wake_combination_func(self.wind_speed, Uk, deltav, wake_combination_method, deficit_sum)
+
+        self.assertAlmostEqual(new_sum, 2.039607805437114, delta=self.tolerance)
+
+    def test_wake_combination_func_Voutsinas1990(self):
+
+        Uk = 7.0
+        deltav = 0.05
+        wake_combination_method = 3
+        deficit_sum = 2.0
+
+        new_sum = wake_combination_func(self.wind_speed, Uk, deltav, wake_combination_method, deficit_sum)
+
+        self.assertAlmostEqual(new_sum, 2.0303940504246953, delta=self.tolerance)
+
+    def test_wake_combination_func_Niayifar2016(self):
+
+        Uk = 7.0
+        deltav = 0.05
+        wake_combination_method = 1
+        deficit_sum = 2.0
+
+        new_sum = wake_combination_func(self.wind_speed, Uk, deltav, wake_combination_method, deficit_sum)
+
+        self.assertAlmostEqual(new_sum, 2.35, delta=self.tolerance)
+
+    def test_wind_shear_func(self):
+
+        z = 90.0
+        zo = 2.0
+        zr = 80.0
+        psi = 0.15
+
+        wind_velocity_with_shear = wind_shear_func(z, self.wind_speed, zr, zo, psi)
+
+        self.assertAlmostEqual(wind_velocity_with_shear, 8.14607111996, delta=self.tolerance)
 
 
 class test_sigma_spread(unittest.TestCase):
