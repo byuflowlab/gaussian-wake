@@ -178,11 +178,115 @@ class plotting_tests_wec():
         else:
             plt.show()
 
+    def plot_data(self):
+
+        data = np.genfromtxt('./input_files/wpd_datasets.csv',delimiter=',',usecols=np.arange(0,8),skip_header=True)
+        data0x = data[~np.isnan(data[:,0]), 0]
+        data0y = data[~np.isnan(data[:, 1]), 1]
+        data1x = data[~np.isnan(data[:, 2]), 2]
+        data1y = data[~np.isnan(data[:, 3]), 3]
+        data2x = data[~np.isnan(data[:, 4]), 4]
+        data2y = data[~np.isnan(data[:, 5]), 5]
+        data3x = data[~np.isnan(data[:, 6]), 6]
+        data3y = data[~np.isnan(data[:, 7]), 7]
+
+        data0x, data0y = zip(*sorted(zip(data0x, data0y)))
+        data1x, data1y = zip(*sorted(zip(data1x, data1y)))
+        data2x, data2y = zip(*sorted(zip(data2x, data2y)))
+        data3x, data3y = zip(*sorted(zip(data3x, data3y)))
+
+        plt.plot([0, data0x[-1], data0x[-1]], [data0y[0], data0y[0], 0])
+        plt.plot([0, data1x[-1], data1x[-1]], [data1y[0], data1y[0], 0])
+        plt.plot(data2x, data2y)
+        plt.plot(data3x, data3y)
+
+        plt.show()
+
+        return 0
+
+    def plot_data_with_model(self):
+
+        # data
+        data = np.genfromtxt('./input_files/wpd_datasets.csv', delimiter=',', usecols=np.arange(0, 8), skip_header=True)
+        data0x = data[~np.isnan(data[:, 0]), 0]
+        data0y = data[~np.isnan(data[:, 1]), 1]
+        data1x = data[~np.isnan(data[:, 2]), 2]
+        data1y = data[~np.isnan(data[:, 3]), 3]
+        data2x = data[~np.isnan(data[:, 4]), 4]
+        data2y = data[~np.isnan(data[:, 5]), 5]
+        data3x = data[~np.isnan(data[:, 6]), 6]
+        data3y = data[~np.isnan(data[:, 7]), 7]
+
+        data0x, data0y = np.array(zip(*sorted(zip(data0x, data0y))))
+        data1x, data1y = np.array(zip(*sorted(zip(data1x, data1y))))
+        data2x, data2y = np.array(zip(*sorted(zip(data2x, data2y))))
+        data3x, data3y = np.array(zip(*sorted(zip(data3x, data3y))))
+
+        # model
+        from _porteagel_fortran import point_velocity_with_shear_func
+
+        turbI = -1
+        wake_combination_method = 1
+        wake_model_version = 2016
+        sorted_x_idx = np.array([0])
+        pointY = 0.0
+        pointZ = 0.125
+        tol = 1E-12
+        alpha = 2.32
+        beta = 0.154
+        expratemultiplier = 1.0
+        wec_factor = 1.0
+        wind_speed = 4.88
+        z_ref = 0.125
+        z_0 = 0.000022
+        shear_exp = 0.1
+        turbineXw = np.array([0])
+        turbineYw = np.array([0])
+        turbineZ = np.array([0.125])
+        rotorDiameter = np.array([0.15])
+        yaw = np.array([20.*np.pi/180.0])
+        wtVelocity = np.array([wind_speed])
+        Ct_local = np.array([0.7374481936835376])
+        TIturbs = 0.04 #np.array([0.001])
+        ky_local = 0.022 #np.array([0.3837*TIturbs[0] + 0.003678])
+        kz_local = 0.022 #np.array([0.3837*TIturbs[0] + 0.003678])
+
+        modelx = np.linspace(20.*tol, 13, 100)
+        point_vel = np.ones_like(modelx)
+        for i in np.arange(0, modelx.size):
+            pointX = modelx[i]*rotorDiameter[0]
+            print 'pointX (python) = ', pointX
+            point_vel[i] = point_velocity_with_shear_func(turbI, wake_combination_method,
+                                          wake_model_version,
+                                          sorted_x_idx, pointX, pointY, pointZ,
+                                          tol, alpha, beta, expratemultiplier, wec_factor,
+                                          wind_speed, z_ref, z_0, shear_exp,
+                                          turbineXw, turbineYw, turbineZ,
+                                          rotorDiameter, yaw, wtVelocity,
+                                          Ct_local, TIturbs, ky_local, kz_local)
+
+            print point_vel[i]
+
+        modelval = (wind_speed-point_vel)/wind_speed
+        # plot
+
+
+        plt.plot([0, data0x[-1], data0x[-1]], [data0y[0], data0y[0], 0], '-')
+        plt.plot([0, data1x[-1], data1x[-1]], [data1y[0], data1y[0], 0],'--')
+        plt.plot(data2x, data2y,'-')
+        plt.plot(data3x, data3y,'--')
+
+        plt.plot(modelx, modelval)
+
+        plt.show()
+
+        return 0
+
 if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
-
+    mytest.plot_data_with_model()
     # mytest.plot_cross_sections(exp_type='angle')
-    for xival in np.linspace(1, 10, 11):
-        mytest.plot_contour(exp_type='diam', xival=xival, save_fig=True)
+    # for xival in np.linspace(1, 10, 11):
+    #     mytest.plot_contour(exp_type='diam', xival=xival, save_fig=True)
 

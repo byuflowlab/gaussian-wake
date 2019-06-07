@@ -233,7 +233,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 
     ! initialize deficit summation term to zero
     deficit_sum = 0.0_dp
-
+    print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
     do, u=1, nTurbines ! at turbineX-locations
     
         ! get index of upstream turbine
@@ -254,7 +254,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             ! determine the onset location of far wake
             call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                         & TIturbs(turb), beta, x0)
-
+            print *, 'x0/d=', x0/rotorDiameter(1)
             ! downstream distance from far wake onset to downstream turbine
             deltax0 = x - x0
             
@@ -298,15 +298,14 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             call wake_offset_func(x, rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
                                  & ky_local(turb), kz_local(turb), &
                                  Ct_local(turb), sigmay, sigmaz, wake_offset)
-            
-            if (x > x0) then
-            
-                ! cross wind distance from point location to upstream turbine wake center
-                deltay = pointY - (turbineYw(turb) + wake_offset)
-    
-                ! vertical distance from upstream hub height to height of point of interest
-                deltaz = pointZ - turbineZ(turb)
+            print *, x
+            ! cross wind distance from point location to upstream turbine wake center
+            deltay = pointY - (turbineYw(turb) + wake_offset)
 
+            ! vertical distance from upstream hub height to height of point of interest
+            deltaz = pointZ - turbineZ(turb)
+
+            if (x > x0) then
                 ! velocity difference in the wake
                 call deltav_func(deltay, deltaz, Ct_local(turb), yaw(turb), &
                                 & sigmay, sigmaz, rotorDiameter(turb), & 
@@ -314,7 +313,6 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                 & wec_factor, sigmay_spread, sigmaz_spread, deltav)
                                 
             else
-
                 ! velocity deficit in the nearwake (linear model)
                 call deltav_near_wake_lin_func(deltay, deltaz, &
                                  & Ct_local(turb), yaw(turb), sigmay_0, sigmaz_0, x0, & 
@@ -324,7 +322,6 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  & sigmaz_spread, wec_factor, deltav)
                                  
             end if
-        
             old_deficit_sum = deficit_sum
             ! combine deficits according to selected wake combination method
             call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
