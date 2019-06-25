@@ -377,24 +377,89 @@ class test_basic_subroutines(unittest.TestCase):
 
         self.assertAlmostEqual(wind_velocity_with_shear, 8.14607111996, delta=self.tolerance)
 
-# class test_point_velocity_with_shear(unittest.TestCase):
+    def test_k_star_func(self):
+
+        ti_ust = 0.1
+
+        kstar = k_star_func(ti_ust)
+
+        self.assertAlmostEqual(kstar, 0.042048, delta=self.tolerance)
+
+    def test_ct_to_axial_ind_func_normal_ct(self):
+
+        ct = 0.84
+        axial_induction = ct_to_axial_ind_func(ct)
+
+        self.assertAlmostEqual(axial_induction, 0.3, delta=self.tolerance)
+
+    def test_ct_to_axial_ind_func_high_ct(self):
+
+        ct = 0.97
+        axial_induction = ct_to_axial_ind_func(ct)
+
+        self.assertAlmostEqual(axial_induction, 0.4119957249x, delta=self.tolerance)
+
+
+# class test_added_ti_func(self):
+#
 #     def setUp(self):
-#         self.tolerance = 1E-6
-#         self.d = 126.4
-#         self.yaw = np.pi/6.
-#         self.ct = 0.8
-#         self.alpha = 2.32
-#         self.beta = 0.154
-#         self.ti = 0.1
-#         self.ky = 0.25
-#         self.kz = 0.2
-#         self.wind_speed = 8.0
 #
-#     def test_x0_func_hand_calc(self):
 #
-#         velocity = point_velocity_with_shear_func(self.d, self.yaw, self.ct, self.alpha, self.ti, self.beta)
+#     def test_added_ti_func_Niayifar_2016_max(self):
 #
-#         self.assertAlmostEqual(x0, 353.2313474, delta=self.tolerance)
+#         added_ti = added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, &
+#         & deltay, wake_height, turbine_height, sm_smoothing, TI_ust, &
+#         & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
+#
+#     def test_added_ti_func_Niayifar_2016(self):
+#
+#         added_ti = added_ti_func_smoothmax(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, &
+#         & deltay, wake_height, turbine_height, sm_smoothing, TI_ust, &
+#         & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
+#
+
+class test_point_velocity_with_shear(unittest.TestCase):
+    def setUp(self):
+        self.tolerance = 1E-2
+        self.turbI = -1
+        self.wake_combination_method = 1
+        self.wake_model_version = 2016
+        self.sorted_x_idx = np.array([0])
+        self.rotorDiameter = np.array([0.15])
+        self.pointX = self.rotorDiameter*5.
+        self.pointY = 0.24*self.rotorDiameter
+        self.pointZ = 0.125
+        self.tol = 1E-12
+        self.alpha = 2.32
+        self.beta = 0.154
+        self.expratemultiplier = 1.0
+        self.wec_factor = 1.0
+        self.wind_speed = 4.88
+        self.z_ref = 0.125
+        self.z_0 = 0.000022
+        self.shear_exp = 0.1
+        self.turbineXw = np.array([0])
+        self.turbineYw = np.array([0])
+        self.turbineZ = np.array([0.125])
+        self.yaw = np.array([20. * np.pi / 180.0])
+        self.wtVelocity = np.array([self.wind_speed])
+        self.Ct_local = 0.7361200568897026 * np.ones_like(self.turbineXw)  # np.array([0.7374481936835376])
+        self.TIturbs = 0.025 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
+        self.ky_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+        self.kz_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+
+
+    def test_point_velocity_with_shear(self):
+
+            point_velocity_with_shear = point_velocity_with_shear_func(self.turbI, self.wake_combination_method, self.wake_model_version,
+                                                      self.sorted_x_idx, self.pointX, self.pointY, self.pointZ, self.tol,
+                                                      self.alpha, self.beta, self.expratemultiplier, self.wec_factor,
+                                                      self.wind_speed, self.z_ref, self.z_0, self.shear_exp, self.turbineXw,
+                                                      self.turbineYw, self.turbineZ, self.rotorDiameter, self.yaw,
+                                                      self.wtVelocity, self.Ct_local, self.TIturbs, self.ky_local,
+                                                      self.kz_local)
+
+            self.assertAlmostEqual(point_velocity_with_shear/self.wind_speed, 0.406, delta=self.tolerance)
 
 class test_sigma_spread(unittest.TestCase):
 
