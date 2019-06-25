@@ -12,6 +12,8 @@ from openmdao.api import Problem
 
 from plantenergy.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
 
+from _porteagel_fortran import wake_offset_func
+
 import matplotlib.pyplot as plt
 
 class plotting_tests_wec():
@@ -246,38 +248,72 @@ class plotting_tests_wec():
         rotorDiameter = np.array([0.15])
         yaw = np.array([20.*np.pi/180.0])
         wtVelocity = np.array([wind_speed])
-        Ct_local = np.array([0.7374481936835376])
-        TIturbs = 0.04 #np.array([0.001])
+        Ct_local = 0.7374481936835376*np.ones_like(turbineXw) #np.array([0.7374481936835376])
+        TIturbs = 0.08*np.ones_like(turbineXw) #*np.array([0.01]) #np.array([0.001])
         ky_local = 0.022 #np.array([0.3837*TIturbs[0] + 0.003678])
         kz_local = 0.022 #np.array([0.3837*TIturbs[0] + 0.003678])
 
-        modelx = np.linspace(20.*tol, 13, 100)
-        point_vel = np.ones_like(modelx)
-        for i in np.arange(0, modelx.size):
-            pointX = modelx[i]*rotorDiameter[0]
-            print 'pointX (python) = ', pointX
-            point_vel[i] = point_velocity_with_shear_func(turbI, wake_combination_method,
-                                          wake_model_version,
-                                          sorted_x_idx, pointX, pointY, pointZ,
-                                          tol, alpha, beta, expratemultiplier, wec_factor,
-                                          wind_speed, z_ref, z_0, shear_exp,
-                                          turbineXw, turbineYw, turbineZ,
-                                          rotorDiameter, yaw, wtVelocity,
-                                          Ct_local, TIturbs, ky_local, kz_local)
+        # a = (1./(2.*np.cos(yaw)))*(1.-np.sqrt(1.-Ct_local*np.cos(yaw)))
+        Ct_local[:] = np.cos(yaw)*Ct_local
+        print Ct_local
+        # quit()
+        def x0_func(yaw, ct, alpha, beta, ti, d):
 
-            print point_vel[i]
+            x0od = np.cos(yaw)*(1.+np.sqrt(1.-ct))/(np.sqrt(2.)*(alpha*ti+beta*(1.-np.sqrt(1.-ct))))
+
+            return x0od
+
+        x0od = x0_func(yaw[0], Ct_local[0], alpha, beta, TIturbs[0], rotorDiameter[0])
+        print 'test x0/d is ', x0od
+        # quit()
+        modelx = np.linspace(tol*1E3, 20, 100)
+        modely = np.linspace(0, 0, 1)
+        point_vel = np.ones([modelx.size, modely.size])
+        for i in np.arange(0, modelx.size):
+            pointX = modelx[i] * rotorDiameter[0]
+            # print 'pointX (python) = ', pointX
+            _, wake_offset = point_velocity_with_shear_func(turbI, wake_combination_method,
+                                                            wake_model_version,
+                                                            sorted_x_idx, pointX, pointY, pointZ,
+                                                            tol, alpha, beta, expratemultiplier, wec_factor,
+                                                            wind_speed, z_ref, z_0, shear_exp,
+                                                            turbineXw, turbineYw, turbineZ,
+                                                            rotorDiameter, yaw, wtVelocity,
+                                                            Ct_local, TIturbs, ky_local, kz_local)
+            print 'offset 1', wake_offset
+
+            for j in np.arange(0, modely.size):
+
+                pointY = wake_offset + modely[j]*rotorDiameter[0]
+                # pointY = modely[j]*rotorDiameter[0]
+                point_vel[i, j], wake_offset = point_velocity_with_shear_func(turbI, wake_combination_method,
+                                                                wake_model_version,
+                                                                sorted_x_idx, pointX, pointY, pointZ,
+                                                                tol, alpha, beta, expratemultiplier, wec_factor,
+                                                                wind_speed, z_ref, z_0, shear_exp,
+                                                                turbineXw, turbineYw, turbineZ,
+                                                                rotorDiameter, yaw, wtVelocity,
+                                                                Ct_local, TIturbs, ky_local, kz_local)
+
+                # print 'offset 2', point_vel[i], wake_offset
 
         modelval = (wind_speed-point_vel)/wind_speed
         # plot
 
 
-        plt.plot([0, data0x[-1], data0x[-1]], [data0y[0], data0y[0], 0], '-')
-        plt.plot([0, data1x[-1], data1x[-1]], [data1y[0], data1y[0], 0],'--')
-        plt.plot(data2x, data2y,'-')
-        plt.plot(data3x, data3y,'--')
+        plt.plot([data0x[-1], data0x[-1]], [0, 1], '-.r', label='Experimental $x_0$')
+        # plt.plot([0, data1x[-1], data1x[-1]], [data1y[0], data1y[0], 0],'--', label='Experimental $x_0$, for #\gamma_f$')
+        plt.plot(data2x, data2y,'-r', label='Experimental Deficit')
+        # plt.plot(data3x, data3y,'--')
+        plt.plot([x0od, x0od], [0, 1], '--b', label='Our $x_0$')
 
-        plt.plot(modelx, modelval)
-
+        for k in np.arange(0, modely.size):
+            plt.plot(modelx, modelval[:, k], 'b', label='Our Deficit') #label='%.2f' % (modely[k]))
+        plt.ylabel('$max[\Delta u / u_h]$')
+        plt.xlabel('$x/d$')
+        # plt.title('Using $x_0$ as published')
+        plt.title('Using $x_0$ with negative sign in numerator')
+        plt.legend()
         plt.show()
 
         return 0

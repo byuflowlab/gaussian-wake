@@ -139,16 +139,13 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 ! determine the onset location of far wake
                 call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                             & TIturbs(turb), beta, x0)
-                            
-                ! downstream distance from far wake onset to downstream turbine
-                deltax0 = x - x0
                 
                 if (deltax0 > 0.0_dp) then
-                    ! horizontal spread at discontinuity point
-                    call sigmay_func(ky_local(turb), deltax0, rotorDiameter(turb), yaw(turb), sigmay)
+                    ! horizontal spread 
+                    call sigmay_func(x, x0, ky_local(turb), rotorDiameter(turb), yaw(turb), sigmay)
     
-                    ! vertical spread at discontinuity point
-                    call sigmaz_func(kz_local(turb), deltax0, rotorDiameter(turb), sigmaz)
+                    ! vertical spread 
+                    call sigmaz_func(x, x0, kz_local(turb), rotorDiameter(turb), sigmaz)
                 end if
                 
                 ! determine the initial wake angle at the onset of far wake
@@ -222,18 +219,19 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     
     ! out
      Real(dp), intent(out) :: point_velocity_with_shear
+     Real(dp) :: wake_offset
     
     ! local
     Real(dp) :: old_deficit_sum, deficit_sum
-    Real(dp) :: x, deltav, x0, deltax0, theta_c_0, sigmay, sigmaz
-    Real(dp) :: wake_offset, discontinuity_point, deltax0_d, sigmay_d, sigmaz_d
+    Real(dp) :: x, deltav, x0, theta_c_0, sigmay, sigmaz
+    Real(dp) :: discontinuity_point, sigmay_d, sigmaz_d
     Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
     Real(dp) :: sigmay_spread, sigmaz_spread
     Integer :: u, turb
 
     ! initialize deficit summation term to zero
     deficit_sum = 0.0_dp
-    print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
+!     print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
     do, u=1, nTurbines ! at turbineX-locations
     
         ! get index of upstream turbine
@@ -254,42 +252,38 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             ! determine the onset location of far wake
             call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                         & TIturbs(turb), beta, x0)
-            print *, 'x0/d=', x0/rotorDiameter(1)
-            ! downstream distance from far wake onset to downstream turbine
-            deltax0 = x - x0
+                        
+            ! print *, 'x0/d=', x0/rotorDiameter(1)
             
             ! find the final point where the original model is undefined
             call discontinuity_point_func(x0, rotorDiameter(turb), & 
                                          ky_local(turb), kz_local(turb), &
                                          yaw(turb), Ct_local(turb), & 
-                                         discontinuity_point)
-                                         
-            ! determine distance from discontinuity point to far wake onset
-            deltax0_d = discontinuity_point - x0   
+                                         discontinuity_point)  
                                          
             ! horizontal spread at discontinuity point
-            call sigmay_func(ky_local(turb), deltax0_d, rotorDiameter(turb), yaw(turb), sigmay_d)
+            call sigmay_func(discontinuity_point, x0, ky_local(turb), rotorDiameter(turb), yaw(turb), sigmay_d)
     
             ! vertical spread at discontinuity point
-            call sigmaz_func(kz_local(turb), deltax0_d, rotorDiameter(turb), sigmaz_d)
+            call sigmaz_func(discontinuity_point, x0, kz_local(turb), rotorDiameter(turb), sigmaz_d)
             
             ! horizontal spread at far wake onset point
-            call sigmay_func(ky_local(turb), 0.0_dp, rotorDiameter(turb), yaw(turb), sigmay_0)
+            call sigmay_func(x0, x0, ky_local(turb), rotorDiameter(turb), yaw(turb), sigmay_0)
     
             ! vertical spread at at far wake onset point
-            call sigmaz_func(kz_local(turb), 0.0_dp, rotorDiameter(turb), sigmaz_0)
+            call sigmaz_func(x0, x0, kz_local(turb), rotorDiameter(turb), sigmaz_0)
             
             ! calculate wake spread in horizontal at point of interest
-            call sigma_spread_func(x, 1.0_dp, 1.0_dp, ky_local(turb), x0, sigmay_0, sigmay_d, sigmay)
+            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, 1.0_dp, 1.0_dp,  sigmay)
             
             ! calculate wake spread in vertical at point of interest
-            call sigma_spread_func(x, 1.0_dp, 1.0_dp, kz_local(turb), x0, sigmaz_0, sigmaz_d, sigmaz)
+            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, 1.0_dp, 1.0_dp, sigmaz)
             
             ! calculate new spread for WEC in y (horizontal)
-            call sigma_spread_func(x, expratemultiplier, wec_factor, ky_local(turb), x0, sigmay_0, sigmay_d, sigmay_spread)
+            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, expratemultiplier, wec_factor, sigmay_spread)
             
             ! calculate new spread for WEC in z (horizontal)
-            call sigma_spread_func(x, expratemultiplier, wec_factor, kz_local(turb), x0, sigmaz_0, sigmaz_d, sigmaz_spread)
+            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, expratemultiplier, wec_factor, sigmaz_spread)
             
             ! determine the initial wake angle at the onset of far wake
             call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
@@ -298,7 +292,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             call wake_offset_func(x, rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
                                  & ky_local(turb), kz_local(turb), &
                                  Ct_local(turb), sigmay, sigmaz, wake_offset)
-            print *, x
+            ! print *, x
             ! cross wind distance from point location to upstream turbine wake center
             deltay = pointY - (turbineYw(turb) + wake_offset)
 
@@ -735,7 +729,7 @@ end subroutine theta_c_0_func
 
 ! calculates the horizontal spread of the wake at a given distance from the onset of far 
 ! wake condition
-subroutine sigmay_func(ky, deltax0, rotor_diameter, yaw, sigmay)
+subroutine sigmay_func(x, x0, ky, rotor_diameter, yaw, sigmay)
     
     implicit none
 
@@ -743,7 +737,7 @@ subroutine sigmay_func(ky, deltax0, rotor_diameter, yaw, sigmay)
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: ky, deltax0, rotor_diameter, yaw
+    real(dp), intent(in) :: ky, x, x0, rotor_diameter, yaw
 
     ! out
     real(dp), intent(out) :: sigmay
@@ -751,14 +745,14 @@ subroutine sigmay_func(ky, deltax0, rotor_diameter, yaw, sigmay)
     intrinsic cos, sqrt
     
     ! horizontal spread
-    sigmay = ky * deltax0 + rotor_diameter * cos(yaw) / sqrt(8.0_dp)
+    sigmay = ky * (x-x0) + rotor_diameter * cos(yaw) / sqrt(8.0_dp)
     
 end subroutine sigmay_func
     
     
 ! calculates the vertical spread of the wake at a given distance from the onset of far 
 ! wake condition
-subroutine sigmaz_func(kz, deltax0, rotor_diameter, sigmaz)
+subroutine sigmaz_func(x, x0, kz, rotor_diameter, sigmaz)
     
     implicit none
 
@@ -766,7 +760,7 @@ subroutine sigmaz_func(kz, deltax0, rotor_diameter, sigmaz)
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: kz, deltax0, rotor_diameter
+    real(dp), intent(in) :: kz, x, x0, rotor_diameter
 
     ! out
     real(dp), intent(out) :: sigmaz
@@ -775,11 +769,11 @@ subroutine sigmaz_func(kz, deltax0, rotor_diameter, sigmaz)
     intrinsic sqrt
     
     ! vertical spread
-    sigmaz = kz * deltax0 + rotor_diameter / sqrt(8.0_dp)
+    sigmaz = kz * (x-x0) + rotor_diameter / sqrt(8.0_dp)
     
 end subroutine sigmaz_func
 
-subroutine sigma_spread_func(x, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d, sigma_spread)
+subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_factor, sigma_spread)
 
     implicit none
     
@@ -787,7 +781,7 @@ subroutine sigma_spread_func(x, expratemultiplier, wec_factor, k, x0, sigma_0, s
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: x, expratemultiplier, wec_factor, k, x0, sigma_0, sigma_d 
+    real(dp), intent(in) :: x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_factor 
 
     ! out
     real(dp), intent(out) :: sigma_spread

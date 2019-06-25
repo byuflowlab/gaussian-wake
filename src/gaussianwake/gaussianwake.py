@@ -25,11 +25,11 @@ def full_wake_offset_func(turbineXw, position_x, rotorDiameter, Ct, yaw, ky, kz,
 
     theta_c_0 = theta_c_0_func(yaw, Ct)
 
-    deltax0 = position_x - (turbineXw + x0)
+    x = position_x - turbineXw
 
-    sigmay = sigmay_func(ky, deltax0, rotorDiameter, yaw)
+    sigmay = sigmay_func(x, x0, ky, rotorDiameter, yaw)
 
-    sigmaz = sigmaz_func(kz, deltax0, rotorDiameter)
+    sigmaz = sigmaz_func(x, x0, kz, rotorDiameter)
 
     wake_offset =  wake_offset_func(rotorDiameter, theta_c_0, x0, yaw, ky, kz, Ct, sigmay, sigmaz)
 

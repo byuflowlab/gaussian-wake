@@ -11,7 +11,7 @@ from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, 
 from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, deltav_near_wake_lin_func
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
-from _porteagel_fortran import interpolation, hermite_spline
+from _porteagel_fortran import interpolation, hermite_spline, point_velocity_with_shear_func
 from openmdao.api import Problem, Group
 
 class test_basic_subroutines(unittest.TestCase):
@@ -28,11 +28,56 @@ class test_basic_subroutines(unittest.TestCase):
         self.kz = 0.2
         self.wind_speed = 8.0
 
-    def test_x0_func(self):
+    def test_x0_func_hand_calc(self):
 
         x0 = x0_func(self.d, self.yaw, self.ct, self.alpha, self.ti, self.beta)
 
         self.assertAlmostEqual(x0, 353.2313474, delta=self.tolerance)
+
+    def test_x0_func_data_yaw0(self):
+        rotor_diameter = 0.15 # m
+        yaw = 0.0*np.pi/180. #radians
+        ct = 0.8214036062840235
+        ti = 0.074
+        #
+        # 3.77839335632898, 0.6643546778702326
+        # 3.704230762943225, 0.7361200568897026
+        # 3.849186706118913, 0.7866577299700839
+        # 3.848583479099574, 0.8214036062840235
+
+        x0 = x0_func(rotor_diameter, yaw, ct, self.alpha, ti, self.beta)
+
+        self.assertAlmostEqual(x0/rotor_diameter, 3.862413891540104, delta=1E-2)
+
+    def test_x0_func_data_yaw10(self):
+        rotor_diameter = 0.15  # m
+        yaw = 10.0 * np.pi / 180.  # radians
+        ct = 0.7866577299700839
+        ti = 0.074
+
+        x0 = x0_func(rotor_diameter, yaw, ct, self.alpha, ti, self.beta)
+
+        self.assertAlmostEqual(x0/rotor_diameter, 3.973368012202963, delta=1E-1)
+
+    def test_x0_func_data_yaw20(self):
+        rotor_diameter = 0.15  # m
+        yaw = 20.0 * np.pi / 180.  # radians
+        ct = 0.7361200568897026
+        ti = 0.074
+
+        x0 = x0_func(rotor_diameter, yaw, ct, self.alpha, ti, self.beta)
+
+        self.assertAlmostEqual(x0/rotor_diameter, 4.051040798613613, delta=1E-1)
+
+    def test_x0_func_data_yaw30(self):
+        rotor_diameter = 0.15  # m
+        yaw = 30.0 * np.pi / 180.  # radians
+        ct = 0.6643546778702326
+        ti = 0.074
+
+        x0 = x0_func(rotor_diameter, yaw, ct, self.alpha, ti, self.beta)
+
+        self.assertAlmostEqual(x0/rotor_diameter, 4.053814723717636, delta=1E-1)
 
     def test_discontinuity_point_func(self):
 
@@ -44,17 +89,19 @@ class test_basic_subroutines(unittest.TestCase):
 
     def test_sigmay_func(self):
 
-        deltax0 = 500. - 353.0
+        x = 500.0
+        x0 = 353.0
 
-        xd = sigmay_func(self.ky, deltax0, self.d, self.yaw)
+        xd = sigmay_func(x, x0, self.ky, self.d, self.yaw)
 
         self.assertAlmostEqual(xd, 75.45193794, delta=self.tolerance)
 
     def test_sigmaz_func(self):
 
-        deltax0 = 500. - 353.0
+        x = 500.0
+        x0 = 353.0
 
-        xd = sigmaz_func(self.kz, deltax0, self.d)
+        xd = sigmaz_func(x, x0, self.kz, self.d)
 
         self.assertAlmostEqual(xd, 74.08914857, delta=self.tolerance)
 
@@ -84,7 +131,7 @@ class test_basic_subroutines(unittest.TestCase):
         sigmaz = 74.08914857
 
         delta = wake_offset_func(x, self.d, theta_c_0, x0, self.yaw, self.ky, self.kz, self.ct, sigmay, sigmaz)
-        
+
         self.assertAlmostEqual(delta, 33.89352568, delta=self.tolerance)
 
     def test_deltav_func_2016(self):
@@ -158,8 +205,6 @@ class test_basic_subroutines(unittest.TestCase):
                                   sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
 
         self.assertAlmostEqual(deltav, 0.00048145926305030354, delta=self.tolerance)
-
-
 
     def test_near_deltav_func_2014_midrange_location(self):
 
@@ -332,6 +377,24 @@ class test_basic_subroutines(unittest.TestCase):
 
         self.assertAlmostEqual(wind_velocity_with_shear, 8.14607111996, delta=self.tolerance)
 
+# class test_point_velocity_with_shear(unittest.TestCase):
+#     def setUp(self):
+#         self.tolerance = 1E-6
+#         self.d = 126.4
+#         self.yaw = np.pi/6.
+#         self.ct = 0.8
+#         self.alpha = 2.32
+#         self.beta = 0.154
+#         self.ti = 0.1
+#         self.ky = 0.25
+#         self.kz = 0.2
+#         self.wind_speed = 8.0
+#
+#     def test_x0_func_hand_calc(self):
+#
+#         velocity = point_velocity_with_shear_func(self.d, self.yaw, self.ct, self.alpha, self.ti, self.beta)
+#
+#         self.assertAlmostEqual(x0, 353.2313474, delta=self.tolerance)
 
 class test_sigma_spread(unittest.TestCase):
 
@@ -357,7 +420,7 @@ class test_sigma_spread(unittest.TestCase):
 
         self.sigma_spread = np.zeros_like(x)
         for i in np.arange(0, x.size):
-            self.sigma_spread[i] = sigma_spread_func(x[i], xi_a[i], xi_d[i], self.ky, x0, sigma_0, sigma_d)
+            self.sigma_spread[i] = sigma_spread_func(x[i], x0, self.ky, sigma_0, sigma_d, xi_a[i], xi_d[i])
 
         self.correct_results = np.array([75.45, 150.9, 352.8968838, 36.7495751, 0.0])
 
@@ -380,8 +443,6 @@ class test_sigma_spread(unittest.TestCase):
     def test_sigma_spread_func_case5(self):
 
         self.assertAlmostEqual(self.sigma_spread[4], self.correct_results[4], delta=self.tolerance)
-
-
 
 class test_hermite_spline(unittest.TestCase):
 
