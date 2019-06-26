@@ -397,19 +397,108 @@ class test_basic_subroutines(unittest.TestCase):
         ct = 0.97
         axial_induction = ct_to_axial_ind_func(ct)
 
-        self.assertAlmostEqual(axial_induction, 0.4119957249x, delta=self.tolerance)
+        self.assertAlmostEqual(axial_induction, 0.4119957249, delta=self.tolerance)
 
+    def test_smooth_max(self):
+
+        x = 12.
+        y = 13.
+        s = 100.
+        smax1 = smooth_max(s, x, y)
+
+        self.assertAlmostEqual(smax1, 13.0, delta=self.tolerance)
+
+    def test_overlap_area_func_rotor_all_in_wake(self):
+
+        turbiney = 50.
+        turbinez = 90.
+        rotor_diameter = 100.
+        wake_center_y = 0.0
+        wake_center_z = 90.0
+        wake_diameter = 200.
+        wake_overlap = overlap_area_func(turbiney, turbinez, rotor_diameter, wake_center_y, wake_center_z, wake_diameter)
+
+        self.assertAlmostEqual(wake_overlap, np.pi*rotor_diameter**2/4, delta=self.tolerance)
+
+    def test_overlap_area_func_rotor_all_in_wake_perfect_overlap(self):
+        turbiney = 0.
+        turbinez = 90.
+        rotor_diameter = 100.
+        wake_center_y = 0.0
+        wake_center_z = 90.0
+        wake_diameter = 200.
+        wake_overlap = overlap_area_func(turbiney, turbinez, rotor_diameter, wake_center_y, wake_center_z,
+                                         wake_diameter)
+
+        self.assertAlmostEqual(wake_overlap, np.pi * rotor_diameter ** 2 / 4, delta=self.tolerance)
+
+    def test_overlap_area_func_wake_all_in_rotor(self):
+
+        turbiney = 50.
+        turbinez = 90.
+        rotor_diameter = 200.
+        wake_center_y = 0.0
+        wake_center_z = 90.0
+        wake_diameter = 100.
+        wake_overlap = overlap_area_func(turbiney, turbinez, rotor_diameter, wake_center_y, wake_center_z, wake_diameter)
+
+        self.assertAlmostEqual(wake_overlap, np.pi*wake_diameter**2/4, delta=self.tolerance)
+
+    def test_overlap_area_func_wake_all_in_rotor_perfect_overlap(self):
+
+        turbiney = 0.
+        turbinez = 90.
+        rotor_diameter = 200.
+        wake_center_y = 0.0
+        wake_center_z = 90.0
+        wake_diameter = 100.
+        wake_overlap = overlap_area_func(turbiney, turbinez, rotor_diameter, wake_center_y, wake_center_z, wake_diameter)
+
+        self.assertAlmostEqual(wake_overlap, np.pi*wake_diameter**2/4, delta=self.tolerance)
+
+    def test_overlap_area_func_no_overlap(self):
+
+        turbiney = 0.
+        turbinez = 90.
+        rotor_diameter = 100.
+        wake_center_y = 100.0
+        wake_center_z = 90.0
+        wake_diameter = 100.
+        wake_overlap = overlap_area_func(turbiney, turbinez, rotor_diameter, wake_center_y, wake_center_z, wake_diameter)
+
+        self.assertAlmostEqual(wake_overlap, 0.0, delta=self.tolerance)
+
+    #TODO add tests for partial overlap
 
 # class test_added_ti_func(self):
+#     self.tolerance = 1E-6
+#     self.d = 126.4
+#     self.yaw = np.pi / 6.
+#     self.ct = 0.8
+#     self.alpha = 2.32
+#     self.beta = 0.154
+#     self.ti = 0.1
+#     self.ky = 0.25
+#     self.kz = 0.2
+#     self.wind_speed = 8.0
 #
 #     def setUp(self):
 #
+#         self.TI = 0.1
+#         self.x = 500.
+#         self.rotor_diameter = 100.
+#         self.deltay = 100.
+#         self.wake_height = 90.
+#         self.turbine_height = 90.
+#         self.sm_smoothing = 700.
+#         self.TI_ust = 0.13
+#         self.TI_calculation_method
 #
 #     def test_added_ti_func_Niayifar_2016_max(self):
 #
-#         added_ti = added_ti_func(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, &
-#         & deltay, wake_height, turbine_height, sm_smoothing, TI_ust, &
-#         & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
+#         added_ti = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter, self.rotor_diameter,
+#                                  self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing, self.TI_ust,
+#                                  TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
 #
 #     def test_added_ti_func_Niayifar_2016(self):
 #
