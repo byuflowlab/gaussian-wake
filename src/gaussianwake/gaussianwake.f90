@@ -70,8 +70,15 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     TIturbs = TI
     
     ! initialize the local wake factors
-    ky_local(:) = ky
-    kz_local(:) = kz
+    if (calc_k_star .eqv. .true.) then
+        call k_star_func(TI, k_star)
+        ky_local(:) = k_star
+        kz_local(:) = k_star
+    else
+        ky_local(:) = ky
+        kz_local(:) = kz
+    end if
+    
     Ct_local(:) = Ct
 
     do, d=1, nTurbines
@@ -136,9 +143,12 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 ! calculate downstream distance between wind turbines
                 x = turbineXw(turbI) - turbineXw(turb)
                 
-                ! determine the onset location of far wake
+                ! determine the far-wake onset location 
                 call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                             & TIturbs(turb), beta, x0)
+                
+                ! calculate the distance from the onset of far-wake
+                deltax0 = x - x0
                 
                 if (deltax0 > 0.0_dp) then
                     ! horizontal spread 
@@ -174,15 +184,15 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
             
             end do
             
-        end if
-                                   
-        ! calculate wake spreading parameter at turbI based on local turbulence intensity
-        if (calc_k_star .eqv. .true.) then
+            ! calculate wake spreading parameter at turbI based on local turbulence intensity
+            if (calc_k_star .eqv. .true.) then
         
-            call k_star_func(TIturbs(turbI), k_star)
-            ky_local(turbI) = k_star
-            kz_local(turbI) = k_star
+                call k_star_func(TIturbs(turbI), k_star)
+                ky_local(turbI) = k_star
+                kz_local(turbI) = k_star
         
+            end if
+            
         end if
 
     end do

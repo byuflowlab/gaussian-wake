@@ -14,6 +14,11 @@ from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinu
 from _porteagel_fortran import interpolation, hermite_spline, point_velocity_with_shear_func
 from openmdao.api import Problem, Group
 
+def power_func_v80(v):
+    # power curve fit for vestas v80 from Niayifar 2016
+    p = 0.17819 * v ** 5 - 6.5198 * v ** 4 + 90.623 * v ** 3 - 574.62 * v ** 2 + 1727.2 * v - 1975.0
+
+    return p
 class test_basic_subroutines(unittest.TestCase):
 
     def setUp(self):
@@ -470,42 +475,84 @@ class test_basic_subroutines(unittest.TestCase):
 
     #TODO add tests for partial overlap
 
-# class test_added_ti_func(self):
-#     self.tolerance = 1E-6
-#     self.d = 126.4
-#     self.yaw = np.pi / 6.
-#     self.ct = 0.8
-#     self.alpha = 2.32
-#     self.beta = 0.154
-#     self.ti = 0.1
-#     self.ky = 0.25
-#     self.kz = 0.2
-#     self.wind_speed = 8.0
-#
-#     def setUp(self):
-#
-#         self.TI = 0.1
-#         self.x = 500.
-#         self.rotor_diameter = 100.
-#         self.deltay = 100.
-#         self.wake_height = 90.
-#         self.turbine_height = 90.
-#         self.sm_smoothing = 700.
-#         self.TI_ust = 0.13
-#         self.TI_calculation_method
-#
-#     def test_added_ti_func_Niayifar_2016_max(self):
-#
-#         added_ti = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter, self.rotor_diameter,
-#                                  self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing, self.TI_ust,
-#                                  TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
-#
-#     def test_added_ti_func_Niayifar_2016(self):
-#
-#         added_ti = added_ti_func_smoothmax(TI, Ct_ust, x, k_star_ust, rotor_diameter_ust, rotor_diameter_dst, &
-#         & deltay, wake_height, turbine_height, sm_smoothing, TI_ust, &
-#         & TI_calculation_method, TI_area_ratio_in, TI_dst_in, TI_area_ratio, TI_dst)
-#
+class test_added_ti_func(unittest.TestCase):
+
+    def setUp(self):
+
+        self.tolerance = 1E-2
+        self.yaw = 0.0
+        self.ct = 0.8
+        self.alpha = 2.32
+        self.beta = 0.154
+        self.ti = 0.1
+        self.ky = 0.022
+        self.kz = 0.022
+        self.wind_speed = 8.0
+
+        self.TI = 0.077
+        self.x = 560.
+        self.rotor_diameter = 80.
+        self.deltay = 0.
+        self.wake_height = 70.
+        self.turbine_height = 70.
+        self.sm_smoothing = 700.
+
+
+    def test_added_ti_func_Niayifar_2016_max_2nd_turb(self):
+
+        TI_calculation_method = 4
+        TI_area_ratio_in = 0.0
+        TI_dst_in = 0.0
+        TI_ust = 0.077
+
+        ti_area_ratio, ti_dst = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter, self.rotor_diameter,
+                                 self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing, TI_ust,
+                                 TI_calculation_method, TI_area_ratio_in, TI_dst_in)
+
+        self.assertAlmostEqual(ti_dst, 0.1476, delta=self.tolerance)
+
+    def test_added_ti_func_Niayifar_2016_max_3rd_turb(self):
+
+        TI_calculation_method = 4
+        TI_area_ratio_in = 0.0
+        TI_dst_in = 0.0
+        TI_ust = 0.1476
+
+        ti_area_ratio, ti_dst = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter, self.rotor_diameter,
+                                 self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing, TI_ust,
+                                 TI_calculation_method, TI_area_ratio_in, TI_dst_in)
+
+        self.assertAlmostEqual(ti_dst, 0.1476, delta=self.tolerance)
+
+    def test_added_ti_func_Niayifar_2016_smoothmax_2nd_turb(self):
+
+        TI_calculation_method = 5
+        TI_area_ratio_in = 0.0
+        TI_dst_in = 0.0
+        TI_ust = 0.077
+
+        ti_area_ratio, ti_dst = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter,
+                                              self.rotor_diameter,
+                                              self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing,
+                                              TI_ust,
+                                              TI_calculation_method, TI_area_ratio_in, TI_dst_in)
+
+        self.assertAlmostEqual(ti_dst, 0.1476, delta=self.tolerance)
+
+    def test_added_ti_func_Niayifar_2016_smoothmax_3rd_turb(self):
+
+        TI_calculation_method = 5
+        TI_area_ratio_in = 0.0
+        TI_dst_in = 0.0
+        TI_ust = 0.1476
+
+        ti_area_ratio, ti_dst = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter,
+                                              self.rotor_diameter,
+                                              self.deltay, self.wake_height, self.turbine_height, self.sm_smoothing,
+                                              TI_ust,
+                                              TI_calculation_method, TI_area_ratio_in, TI_dst_in)
+
+        self.assertAlmostEqual(ti_dst, 0.1476, delta=self.tolerance)
 
 class test_point_velocity_with_shear(unittest.TestCase):
     def setUp(self):
@@ -533,7 +580,7 @@ class test_point_velocity_with_shear(unittest.TestCase):
         self.yaw = np.array([20. * np.pi / 180.0])
         self.wtVelocity = np.array([self.wind_speed])
         self.Ct_local = 0.7361200568897026 * np.ones_like(self.turbineXw)  # np.array([0.7374481936835376])
-        self.TIturbs = 0.025 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
+        self.TIturbs = 0.025 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001]) #TODO check point velocity tests and ti input
         self.ky_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
         self.kz_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
 
@@ -813,7 +860,90 @@ class test_wec(unittest.TestCase):
 
         self.assertGreater(wspeed0, wspeed1)
 
+class test_porteagel_analyze(unittest.TestCase):
 
+    def setUp(self):
+        self.tolerance = 1E-2
+        self.wake_combination_method = 1
+        self.wake_model_version = 2016
+        self.rotor_diameter = 80.
+        self.hub_height = 70.
+        self.ct = 0.8
+        self.alpha = 2.32
+        self.beta = 0.154
+        self.expratemultiplier = 1.0
+        self.wec_factor = 1.0
+        self.wind_speed = 8.0
+        self.z_ref = self.hub_height
+        self.z_0 = 0.000022
+        self.shear_exp = 0.1
+        self.yaw = 0.0
+        self.wtVelocity = np.array([self.wind_speed])
+        self.TI = 0.077
+        self.ky = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+        self.kz = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+        self.RotorPointsY = np.array([0])
+        self.RotorPointsZ = np.array([0])
+        self.TI_calculation_method = 0
+        self.calc_k_star = True
+        self.print_ti = False
+        self.interp_type = 1
+        self.sm_smoothing = 700.
+
+    def test_wt_velocity_1_turb(self):
+        turbineXw = np.array([0.0])
+        turbineYw = np.array([0.0])
+        turbineZ = np.ones_like(turbineXw)*self.hub_height
+        sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
+        rotorDiameter = np.ones_like(turbineXw)*self.rotor_diameter
+        Ct = np.ones_like(turbineXw)*self.ct
+        yaw = np.ones_like(turbineXw)*self.yaw
+        TI_turbs = np.ones_like(turbineXw)*self.TI
+
+        use_ct_curve = False
+        ct_curve_wind_speed = np.array([self.wind_speed])
+        ct_curve_ct = np.array([self.ct])
+
+        wt_velocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+                                        rotorDiameter, Ct, self.wind_speed,
+                                        yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY, self.RotorPointsZ,
+                                        self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
+                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
+                                        self.wake_model_version, self.interp_type, use_ct_curve,
+                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
+                                        self.expratemultiplier)
+
+        self.assertAlmostEqual(wt_velocity, 8.0, delta=self.tolerance)
+
+    def test_wt_velocity_row_of_horns_rev(self):
+        loc_data = np.loadtxt('input_files/horns_rev_locations.txt', delimiter=',')
+        turbineXw = loc_data[:, 0]
+        turbineYw = loc_data[:, 1]
+        turbineZ = np.ones_like(turbineXw)*self.hub_height
+        sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
+        rotorDiameter = np.ones_like(turbineXw)*self.rotor_diameter
+        Ct = np.ones_like(turbineXw)*self.ct
+        yaw = np.ones_like(turbineXw)*self.yaw
+        TI_turbs = np.ones_like(turbineXw)*self.TI
+
+        use_ct_curve = True
+        ct_data = np.loadtxt('input_files/predicted_ct_vestas_v80_niayifar2016.txt', delimiter=',')
+        ct_curve_wind_speed = ct_data[:,0]
+        ct_curve_ct = ct_data[:,1]
+
+        wtVelocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+                                        rotorDiameter, Ct, self.wind_speed,
+                                        yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY, self.RotorPointsZ,
+                                        self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
+                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
+                                        self.wake_model_version, self.interp_type, use_ct_curve,
+                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
+                                        self.expratemultiplier)
+
+        free_stream_power = power_func_v80(self.wind_speed)
+        wtPower = power_func_v80(wtVelocity)
+
+        self.assertAlmostEqual(wtVelocity[1], 1.0, delta=self.tolerance)
 
 if __name__ == "__main__":
 
