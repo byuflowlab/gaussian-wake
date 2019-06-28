@@ -184,7 +184,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
             
             end do
             
-            print *, 'ti turbI', TIturbs(turbI)
+            ! print *, 'ti turbI', TIturbs(turbI)
             
             ! calculate wake spreading parameter at turbI based on local turbulence intensity
             if (calc_k_star .eqv. .true.) then
@@ -246,7 +246,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 !     print *,
 !     print *, 'turbI', turbI
     
-    call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
+!     call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
     
 !     print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
     do, u=1, nTurbines ! at turbineX-locations
@@ -338,16 +338,16 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             end if
 !             print *, 'ti turb', TIturbs(turb)
 !             print *, 'deltav', deltav
-            print *, sigmay_spread, sigmaz_spread
+!             print *, sigmay_spread, sigmaz_spread
             ! if (deltav>0.5) then
 !                 print *, 
 !                 
 !             end if
 
-            call wind_shear_func(pointZ, wtVelocity(turb), z_ref, z_0, shear_exp, inflow_with_shear)
+!             call wind_shear_func(pointZ, wtVelocity(turb), z_ref, z_0, shear_exp, inflow_with_shear)
             old_deficit_sum = deficit_sum
             ! combine deficits according to selected wake combination method
-            call wake_combination_func(wind_speed_with_shear, inflow_with_shear, deltav,         &
+            call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
                                        wake_combination_method, old_deficit_sum, deficit_sum)
         
         end if
@@ -355,8 +355,9 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     end do
 !     print *, 'deficit_sum', deficit_sum
     ! find velocity at point p due to the wake of turbine turb
-!     call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
-    point_velocity_with_shear = wind_speed_with_shear - deficit_sum
+    
+    point_velocity = wind_speed - deficit_sum
+    call wind_shear_func(pointZ, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
 !     print *, 'wind_speed_with_shear', wind_speed_with_shear
 !     print *, 'point_velocity', point_velocity_with_shear
     ! adjust sample point velocity for shear
