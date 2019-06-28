@@ -234,7 +234,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
      Real(dp) :: wake_offset
     
     ! local
-    Real(dp) :: old_deficit_sum, deficit_sum
+    Real(dp) :: old_deficit_sum, deficit_sum, wind_speed_with_shear, inflow_with_shear
     Real(dp) :: x, deltav, x0, theta_c_0, sigmay, sigmaz
     Real(dp) :: discontinuity_point, sigmay_d, sigmaz_d
     Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
@@ -243,8 +243,10 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 
     ! initialize deficit summation term to zero
     deficit_sum = 0.0_dp
-    print *,
-    print *, 'turbI', turbI
+!     print *,
+!     print *, 'turbI', turbI
+    
+    call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
     
 !     print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
     do, u=1, nTurbines ! at turbineX-locations
@@ -252,8 +254,8 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
         ! get index of upstream turbine
         turb = sorted_x_idx(u) + 1
         
-        print *, 'turb', turb
-        print *, 'ky_local turb', ky_local(turb)
+!         print *, 'turb', turb
+!         print *, 'ky_local turb', ky_local(turb)
         
         ! skip this loop if turb = turbI (turbines impact on itself)
         if (turb .eq. turbI) cycle
@@ -334,29 +336,32 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  & sigmaz_spread, wec_factor, deltav)
                                  
             end if
-            print *, 'ti turb', TIturbs(turb)
-            print *, 'deltav', deltav
+!             print *, 'ti turb', TIturbs(turb)
+!             print *, 'deltav', deltav
             print *, sigmay_spread, sigmaz_spread
             ! if (deltav>0.5) then
 !                 print *, 
 !                 
 !             end if
+
+            call wind_shear_func(pointZ, wtVelocity(turb), z_ref, z_0, shear_exp, inflow_with_shear)
             old_deficit_sum = deficit_sum
             ! combine deficits according to selected wake combination method
-            call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
+            call wake_combination_func(wind_speed_with_shear, inflow_with_shear, deltav,         &
                                        wake_combination_method, old_deficit_sum, deficit_sum)
         
         end if
     
     end do
-    print *, 'deficit_sum', deficit_sum
+!     print *, 'deficit_sum', deficit_sum
     ! find velocity at point p due to the wake of turbine turb
-    point_velocity = wind_speed - deficit_sum
-    print *, 'wind_speed', wind_speed
-    print *, 'point_velocity', point_velocity
+!     call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
+    point_velocity_with_shear = wind_speed_with_shear - deficit_sum
+!     print *, 'wind_speed_with_shear', wind_speed_with_shear
+!     print *, 'point_velocity', point_velocity_with_shear
     ! adjust sample point velocity for shear
-    call wind_shear_func(pointZ, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
-    print *, 'point_velocity_with_shear', point_velocity_with_shear
+    
+!     print *, 'point_velocity_with_shear', point_velocity_with_shear
 end subroutine point_velocity_with_shear_func
 
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for visualization
