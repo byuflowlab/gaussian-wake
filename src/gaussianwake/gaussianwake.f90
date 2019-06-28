@@ -234,7 +234,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
      Real(dp) :: wake_offset
     
     ! local
-    Real(dp) :: old_deficit_sum, deficit_sum, wind_speed_with_shear, inflow_with_shear
+    Real(dp) :: old_deficit_sum, deficit_sum
     Real(dp) :: x, deltav, x0, theta_c_0, sigmay, sigmaz
     Real(dp) :: discontinuity_point, sigmay_d, sigmaz_d
     Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
