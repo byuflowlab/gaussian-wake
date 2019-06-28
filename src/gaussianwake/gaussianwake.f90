@@ -143,46 +143,48 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 ! calculate downstream distance between wind turbines
                 x = turbineXw(turbI) - turbineXw(turb)
                 
-                ! determine the far-wake onset location 
-                call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
-                            & TIturbs(turb), beta, x0)
+                if (x > tol) then
+                    ! determine the far-wake onset location 
+                    call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
+                                & TIturbs(turb), beta, x0)
                 
-                ! calculate the distance from the onset of far-wake
-                deltax0 = x - x0
+                    ! calculate the distance from the onset of far-wake
+                    deltax0 = x - x0
                 
-                if (deltax0 > 0.0_dp) then
                     ! horizontal spread 
                     call sigmay_func(x, x0, ky_local(turb), rotorDiameter(turb), yaw(turb), sigmay)
-    
+
                     ! vertical spread 
                     call sigmaz_func(x, x0, kz_local(turb), rotorDiameter(turb), sigmaz)
+                
+                    ! determine the initial wake angle at the onset of far wake
+                    call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
+            
+                    ! horizontal cross-wind wake displacement from hub
+                    call wake_offset_func(x, rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
+                                         & ky_local(turb), kz_local(turb), &
+                                         Ct_local(turb), sigmay, sigmaz, wake_offset)
+            
+                    ! cross wind distance from point location to upstream turbine wake center
+                    deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)   
+                
+                    ! save ti_area_ratio and ti_dst to new memory locations to avoid 
+                    ! aliasing during differentiation
+                    TI_area_ratio_tmp = TI_area_ratio
+                    TI_dst_tmp = TIturbs(turbI)
+                    TI_ust_tmp = TIturbs(turb)
+            
+                    ! update local turbulence intensity
+                    call added_ti_func(TI, Ct_local(turb), x, ky_local(turb), rotorDiameter(turb), & 
+                                       & rotorDiameter(turbI), deltay, turbineZ(turb), &
+                                       & turbineZ(turbI), sm_smoothing, TI_ust_tmp, &
+                                       & TI_calculation_method, TI_area_ratio_tmp, &
+                                       & TI_dst_tmp, TI_area_ratio, TIturbs(turbI))
                 end if
-                
-                ! determine the initial wake angle at the onset of far wake
-                call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
-            
-                ! horizontal cross-wind wake displacement from hub
-                call wake_offset_func(x, rotorDiameter(turb), theta_c_0, x0, yaw(turb), &
-                                     & ky_local(turb), kz_local(turb), &
-                                     Ct_local(turb), sigmay, sigmaz, wake_offset)
-            
-                ! cross wind distance from point location to upstream turbine wake center
-                deltay = turbineYw(turbI) - (turbineYw(turb) + wake_offset)   
-                
-                ! save ti_area_ratio and ti_dst to new memory locations to avoid 
-                ! aliasing during differentiation
-                TI_area_ratio_tmp = TI_area_ratio
-                TI_dst_tmp = TIturbs(turbI)
-                TI_ust_tmp = TIturbs(turb)
-            
-                ! update local turbulence intensity
-                call added_ti_func(TI, Ct_local(turb), x, ky_local(turb), rotorDiameter(turb), & 
-                                   & rotorDiameter(turbI), deltay, turbineZ(turb), &
-                                   & turbineZ(turbI), sm_smoothing, TI_ust_tmp, &
-                                   & TI_calculation_method, TI_area_ratio_tmp, &
-                                   & TI_dst_tmp, TI_area_ratio, TIturbs(turbI))
             
             end do
+            
+            print *, 'ti turbI', TIturbs(turbI)
             
             ! calculate wake spreading parameter at turbI based on local turbulence intensity
             if (calc_k_star .eqv. .true.) then
@@ -241,11 +243,17 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 
     ! initialize deficit summation term to zero
     deficit_sum = 0.0_dp
+    print *,
+    print *, 'turbI', turbI
+    
 !     print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
     do, u=1, nTurbines ! at turbineX-locations
-    
+        
         ! get index of upstream turbine
         turb = sorted_x_idx(u) + 1
+        
+        print *, 'turb', turb
+        print *, 'ky_local turb', ky_local(turb)
         
         ! skip this loop if turb = turbI (turbines impact on itself)
         if (turb .eq. turbI) cycle
@@ -326,6 +334,13 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  & sigmaz_spread, wec_factor, deltav)
                                  
             end if
+            print *, 'ti turb', TIturbs(turb)
+            print *, 'deltav', deltav
+            print *, sigmay_spread, sigmaz_spread
+            ! if (deltav>0.5) then
+!                 print *, 
+!                 
+!             end if
             old_deficit_sum = deficit_sum
             ! combine deficits according to selected wake combination method
             call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
@@ -334,13 +349,14 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
         end if
     
     end do
-
+    print *, 'deficit_sum', deficit_sum
     ! find velocity at point p due to the wake of turbine turb
     point_velocity = wind_speed - deficit_sum
-    
+    print *, 'wind_speed', wind_speed
+    print *, 'point_velocity', point_velocity
     ! adjust sample point velocity for shear
     call wind_shear_func(pointZ, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
-    
+    print *, 'point_velocity_with_shear', point_velocity_with_shear
 end subroutine point_velocity_with_shear_func
 
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for visualization

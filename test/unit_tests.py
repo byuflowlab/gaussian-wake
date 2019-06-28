@@ -542,8 +542,8 @@ class test_added_ti_func(unittest.TestCase):
     def test_added_ti_func_Niayifar_2016_smoothmax_3rd_turb(self):
 
         TI_calculation_method = 5
-        TI_area_ratio_in = 0.0
-        TI_dst_in = 0.0
+        TI_area_ratio_in = .05
+        TI_dst_in = 0.077
         TI_ust = 0.1476
 
         ti_area_ratio, ti_dst = added_ti_func(self.TI, self.ct, self.x, self.ky, self.rotor_diameter,
@@ -863,6 +863,7 @@ class test_wec(unittest.TestCase):
 class test_porteagel_analyze(unittest.TestCase):
 
     def setUp(self):
+        from plantenergy.utilities import sunflower_points
         self.tolerance = 1E-2
         self.wake_combination_method = 1
         self.wake_model_version = 2016
@@ -875,20 +876,59 @@ class test_porteagel_analyze(unittest.TestCase):
         self.wec_factor = 1.0
         self.wind_speed = 8.0
         self.z_ref = self.hub_height
-        self.z_0 = 0.000022
+        self.z_0 = 0.0002
         self.shear_exp = 0.1
         self.yaw = 0.0
         self.wtVelocity = np.array([self.wind_speed])
         self.TI = 0.077
         self.ky = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
         self.kz = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+        rotorpoints = sunflower_points(100)
+        self.RotorPointsY = rotorpoints[0] #np.array([0, .5, 1.0, 0., 0.0, -.5, -1.0, 0., 0.])
+        self.RotorPointsZ = rotorpoints[1] #np.array([0, 0., 0., .5, 1.0, 0., 0.0, -0.5, -1.])
         self.RotorPointsY = np.array([0])
         self.RotorPointsZ = np.array([0])
-        self.TI_calculation_method = 0
+        self.RotorPointsY = np.array([0, .5, 1.0, 0., 0.0, -.5, -1.0, 0., 0.])
+        self.RotorPointsZ = np.array([0, 0., 0., .5, 1.0, 0., 0.0, -0.5, -1.])
+        self.TI_calculation_method = 4
         self.calc_k_star = True
         self.print_ti = False
         self.interp_type = 1
         self.sm_smoothing = 700.
+
+        loc_data = np.loadtxt('input_files/horns_rev_locations.txt', delimiter=',')
+        turbineXw = loc_data[:, 0] * self.rotor_diameter
+        turbineYw = loc_data[:, 1] * self.rotor_diameter
+        turbineZ = np.ones_like(turbineXw) * self.hub_height
+        sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
+        rotorDiameter = np.ones_like(turbineXw) * self.rotor_diameter
+        Ct = np.ones_like(turbineXw) * self.ct
+        yaw = np.ones_like(turbineXw) * self.yaw
+        TI_turbs = np.ones_like(turbineXw) * self.TI
+
+        use_ct_curve = True
+        # ct_data = np.loadtxt('input_files/predicted_ct_vestas_v80_niayifar2016.txt', delimiter=',')
+        ct_data = np.loadtxt('input_files/mfg_ct_vestas_v80_niayifar2016.txt', delimiter=',')
+        ct_curve_wind_speed = ct_data[:, 0]
+        ct_curve_ct = ct_data[:, 1]
+
+        wtVelocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+                                       rotorDiameter, Ct, self.wind_speed,
+                                       yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY,
+                                       self.RotorPointsZ,
+                                       self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
+                                       self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
+                                       self.wake_model_version, self.interp_type, use_ct_curve,
+                                       ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
+                                       self.expratemultiplier)
+
+        free_stream_power = power_func_v80(self.wind_speed)
+        wtPower = power_func_v80(wtVelocity)
+
+        self.norm_pow_ave_by_row = np.zeros(10)
+        for i in np.arange(0, self.norm_pow_ave_by_row.size):
+            pow_ave_row = np.average([wtPower[40 + i], wtPower[50 + i], wtPower[60 + i]])
+            self.norm_pow_ave_by_row[i] = pow_ave_row / free_stream_power
 
     def test_wt_velocity_1_turb(self):
         turbineXw = np.array([0.0])
@@ -914,36 +954,48 @@ class test_porteagel_analyze(unittest.TestCase):
                                         self.expratemultiplier)
 
         self.assertAlmostEqual(wt_velocity, 8.0, delta=self.tolerance)
+        #
+        # 2.009085240790877, 0.4619246861924686
+        # 2.0091082123225856, 0.46359832635983256
+        # 3.003385019279678, 0.5037656903765689
+        # 3.997271310197718, 0.515481171548117
+        # 4.996498482238084, 0.516317991631799
+        # 5.990212486668307, 0.515481171548117
+        # 7.0003626220362625, 0.5121338912133888
+        # 7.994042169168923, 0.5087866108786608
+        # 8.99869062269259, 0.5046025104602508
+        # 10.003339076216259, 0.5004184100418408
 
-    def test_wt_velocity_row_of_horns_rev(self):
-        loc_data = np.loadtxt('input_files/horns_rev_locations.txt', delimiter=',')
-        turbineXw = loc_data[:, 0]
-        turbineYw = loc_data[:, 1]
-        turbineZ = np.ones_like(turbineXw)*self.hub_height
-        sorted_x_idx = np.argsort(turbineXw, kind='heapsort')
-        rotorDiameter = np.ones_like(turbineXw)*self.rotor_diameter
-        Ct = np.ones_like(turbineXw)*self.ct
-        yaw = np.ones_like(turbineXw)*self.yaw
-        TI_turbs = np.ones_like(turbineXw)*self.TI
+    def test_wt_velocity_row_1_of_horns_rev(self):
 
-        use_ct_curve = True
-        ct_data = np.loadtxt('input_files/predicted_ct_vestas_v80_niayifar2016.txt', delimiter=',')
-        ct_curve_wind_speed = ct_data[:,0]
-        ct_curve_ct = ct_data[:,1]
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[0], 1.0, delta=self.tolerance)
 
-        wtVelocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
-                                        rotorDiameter, Ct, self.wind_speed,
-                                        yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY, self.RotorPointsZ,
-                                        self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
-                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
-                                        self.wake_model_version, self.interp_type, use_ct_curve,
-                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
-                                        self.expratemultiplier)
+    def test_wt_velocity_row_2_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[1], 0.4619246861924686, delta=self.tolerance)
 
-        free_stream_power = power_func_v80(self.wind_speed)
-        wtPower = power_func_v80(wtVelocity)
+    def test_wt_velocity_row_3_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[2], 0.5037656903765689, delta=self.tolerance)
 
-        self.assertAlmostEqual(wtVelocity[1], 1.0, delta=self.tolerance)
+    def test_wt_velocity_row_4_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[3], 0.515481171548117, delta=self.tolerance)
+
+    def test_wt_velocity_row_5_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[4], 0.516317991631799, delta=self.tolerance)
+
+    def test_wt_velocity_row_6_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[5], 0.515481171548117, delta=self.tolerance)
+
+    def test_wt_velocity_row_7_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[6], 0.5121338912133888, delta=self.tolerance)
+
+    def test_wt_velocity_row_8_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[7], 0.5087866108786608, delta=self.tolerance)
+
+    def test_wt_velocity_row_9_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[8], 0.5046025104602508, delta=self.tolerance)
+
+    def test_wt_velocity_row_10_of_horns_rev(self):
+        self.assertAlmostEqual(self.norm_pow_ave_by_row[9], 0.5004184100418408, delta=self.tolerance)
 
 if __name__ == "__main__":
 
