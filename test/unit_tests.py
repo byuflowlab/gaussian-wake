@@ -3,15 +3,22 @@ Created by Jared J. Thomas, Sep. 2018.
 FLOW Lab
 Brigham Young University
 """
-
+from __future__ import print_function, division, absolute_import
+import cPickle as pickle
 import unittest
-import numpy as np
 
+import numpy as np
+import pytest
+
+import openmdao.api as om
+
+from gaussianwake.gaussianwake import GaussianWake
 from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, theta_c_0_func, sigmay_func
 from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, deltav_near_wake_lin_func
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
 from _porteagel_fortran import interpolation, hermite_spline
+
 
 class test_hermite_spline(unittest.TestCase):
 
@@ -93,11 +100,11 @@ class test_interpolation(unittest.TestCase):
 
         self.assertEqual(yval, 0.5)
 
+
 class test_ctcp_curve(unittest.TestCase):
 
     def setUp(self):
         filename = "./input_files/NREL5MWCPCT_dict.p"
-        import cPickle as pickle
         data = pickle.load(open(filename, "rb"))
         cp_data = np.zeros([data['wind_speed'].size])
         ct_data = np.zeros([data['wind_speed'].size])
@@ -116,10 +123,13 @@ class test_ctcp_curve(unittest.TestCase):
 
     def test_5mw_ct_greater_than_1_warning(self):
 
-        from gaussianwake.gaussianwake import GaussianWake
-        import pytest
+        prob = om.Problem()
+        prob.model.add_subsystem('gw', GaussianWake(nTurbines=6, options=self.options))
 
-        pytest.warns(Warning, GaussianWake, nTurbines=6, options=self.options)
+        def call_setup():
+            prob.setup()
+
+        pytest.warns(Warning, call_setup)
 
 
 if __name__ == "__main__":

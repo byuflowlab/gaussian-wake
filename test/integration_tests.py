@@ -3,13 +3,15 @@ Created by Jared J. Thomas, Sep. 2018.
 FLOW Lab
 Brigham Young University
 """
-
+from __future__ import print_function, division, absolute_import
 import unittest
+
 import numpy as np
+
+import openmdao.api as om
 
 from plantenergy.OptimizationGroups import AEPGroup
 
-from openmdao.api import Problem
 
 
 class test_guass(unittest.TestCase):
@@ -58,10 +60,10 @@ class test_guass(unittest.TestCase):
         # set up problem
 
         wake_model_options = {'nSamples': 0}
-        prob = Problem(root=AEPGroup(nTurbines=nTurbines, nDirections=nDirections, wake_model=gauss_wrapper,
-                                     wake_model_options=wake_model_options, datasize=0, use_rotor_components=False,
-                                     params_IdepVar_func=add_gauss_params_IndepVarComps, differentiable=True,
-                                     params_IndepVar_args={}))
+        prob = om.Problem(model=AEPGroup(nTurbines=nTurbines, nDirections=nDirections, wake_model=gauss_wrapper,
+                                         wake_model_options=wake_model_options, datasize=0, use_rotor_components=False,
+                                         params_IdepVar_func=add_gauss_params_IndepVarComps, differentiable=True,
+                                         params_IdepVar_args={}))
 
         # initialize problem
         prob.setup(check=True)
@@ -85,7 +87,7 @@ class test_guass(unittest.TestCase):
         prob['Cp_in'] = Cp
 
         # run the problem
-        prob.run()
+        prob.run_model()
 
         self.prob = prob
 
