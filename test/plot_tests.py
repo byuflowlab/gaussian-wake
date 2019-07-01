@@ -130,6 +130,35 @@ class plotting_tests_wec():
 
         return 0
 
+    def get_aep(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
+
+        if x0 == x1:
+            x_range = np.array([x0*self.rotor_diameter])
+        else:
+            x_range = np.linspace(x0*self.rotor_diameter, x1*self.rotor_diameter, res)
+        y_range = np.linspace(y0*self.rotor_diameter, y1*self.rotor_diameter, res)
+
+        xx, yy = np.meshgrid(x_range, y_range)
+
+        aep = np.zeros_like(xx)
+        prob = self.prob
+        prob['model_params:wec_factor'] = wec_diameter_multiplier
+        prob['model_params:exp_rate_multiplier'] = wec_exp_rate_multiplier
+
+        for i in np.arange(0, xx.shape[0]):
+            for j in np.arange(0, xx.shape[1]):
+                prob['turbineX'][2] = xx[int(i), int(j)]
+                prob['turbineY'][2] = yy[int(i), int(j)]
+                # print prob['turbineX'], prob['turbineY']
+                prob.run_once()
+                aep[int(i), int(j)] = self.prob['AEP']
+
+        self.aep = aep
+        self.xx = xx
+        self.yy = yy
+
+        return 0
+
     def plot_cross_sections(self, exp_type='angle', save_image=True):
 
         if exp_type == 'angle':
@@ -167,10 +196,12 @@ class plotting_tests_wec():
             raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
 
 
-        self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
+        # self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
+        self.get_aep(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
 
 
-        plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel, cmap='coolwarm')
+        # plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel, cmap='coolwarm')
+        plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.aep, cmap='coolwarm')
 
         plt.ylabel('Y/D')
         plt.xlabel('X/D')
@@ -384,12 +415,12 @@ class bpa_wind_tunnel_plots():
 
 if __name__ == "__main__":
 
-    # mytest = plotting_tests_wec()
+    mytest = plotting_tests_wec()
     # mytest.plot_data_with_model()
-    # mytest.plot_cross_sections(exp_type='angle')
-    # for xival in np.linspace(1, 10, 11):
-    #     mytest.plot_contour(exp_type='diam', xival=xival, save_fig=True)
+    # mytest.plot_cross_sections(exp_type='diam')
+    for xival in np.linspace(1, 100, 2):
+        mytest.plot_contour(exp_type='angle', xival=xival, save_fig=False)
 
 
-    mytest = bpa_wind_tunnel_plots()
-    mytest.plot_cross_wind_profile()
+    # mytest = bpa_wind_tunnel_plots()
+    # mytest.plot_cross_wind_profile()

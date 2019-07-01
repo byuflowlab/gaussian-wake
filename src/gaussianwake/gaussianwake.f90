@@ -137,8 +137,8 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 ! get index of upstream turbine
                 turb = sorted_x_idx(u) + 1
                 
-                ! skip any downstream turbines
-                if (turb .ge. turbI) cycle
+                ! skip turbine's influence on itself
+                if (turb .eq. turbI) cycle
                 
                 ! calculate downstream distance between wind turbines
                 x = turbineXw(turbI) - turbineXw(turb)
@@ -183,8 +183,6 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
                 end if
             
             end do
-            
-            ! print *, 'ti turbI', TIturbs(turbI)
             
             ! calculate wake spreading parameter at turbI based on local turbulence intensity
             if (calc_k_star .eqv. .true.) then
@@ -243,19 +241,12 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
 
     ! initialize deficit summation term to zero
     deficit_sum = 0.0_dp
-!     print *,
-!     print *, 'turbI', turbI
     
-!     call wind_shear_func(pointZ, wind_speed, z_ref, z_0, shear_exp, wind_speed_with_shear)
-    
-!     print *, 'pointX,Y,Z (fortran) = ', pointX, pointY, pointZ
+    ! loop through all turbines
     do, u=1, nTurbines ! at turbineX-locations
         
         ! get index of upstream turbine
         turb = sorted_x_idx(u) + 1
-        
-!         print *, 'turb', turb
-!         print *, 'ky_local turb', ky_local(turb)
         
         ! skip this loop if turb = turbI (turbines impact on itself)
         if (turb .eq. turbI) cycle
@@ -272,8 +263,6 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             ! determine the onset location of far wake
             call x0_func(rotorDiameter(turb), yaw(turb), Ct_local(turb), alpha, & 
                         & TIturbs(turb), beta, x0)
-                        
-            ! print *, 'x0/d=', x0/rotorDiameter(1)
             
             ! find the final point where the original model is undefined
             call discontinuity_point_func(x0, rotorDiameter(turb), & 
@@ -336,16 +325,10 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  & sigmaz_spread, wec_factor, deltav)
                                  
             end if
-!             print *, 'ti turb', TIturbs(turb)
-!             print *, 'deltav', deltav
-!             print *, sigmay_spread, sigmaz_spread
-            ! if (deltav>0.5) then
-!                 print *, 
-!                 
-!             end if
 
-!             call wind_shear_func(pointZ, wtVelocity(turb), z_ref, z_0, shear_exp, inflow_with_shear)
+            ! save deficit sum in holder for AD purposes
             old_deficit_sum = deficit_sum
+            
             ! combine deficits according to selected wake combination method
             call wake_combination_func(wind_speed, wtVelocity(turb), deltav,         &
                                        wake_combination_method, old_deficit_sum, deficit_sum)
@@ -353,16 +336,13 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
         end if
     
     end do
-!     print *, 'deficit_sum', deficit_sum
-    ! find velocity at point p due to the wake of turbine turb
     
+    ! find velocity at point without shear
     point_velocity = wind_speed - deficit_sum
-    call wind_shear_func(pointZ, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
-!     print *, 'wind_speed_with_shear', wind_speed_with_shear
-!     print *, 'point_velocity', point_velocity_with_shear
-    ! adjust sample point velocity for shear
     
-!     print *, 'point_velocity_with_shear', point_velocity_with_shear
+    ! adjust sample point velocity for shear
+    call wind_shear_func(pointZ, point_velocity, z_ref, z_0, shear_exp, point_velocity_with_shear)
+    
 end subroutine point_velocity_with_shear_func
 
 ! implementation of the Bastankhah and Porte Agel (BPA) wake model for visualization
