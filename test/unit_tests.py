@@ -7,7 +7,7 @@ Brigham Young University
 import unittest
 import numpy as np
 
-from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, theta_c_0_func, sigmay_func, sigma_spread_func
+from _porteagel_fortran import porteagel_analyze, x0_func, theta_c_0_func, sigmay_func, sigma_spread_func
 from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, deltav_near_wake_lin_func
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
@@ -914,15 +914,17 @@ class test_porteagel_analyze(unittest.TestCase):
         ct_curve_wind_speed = ct_data[:, 0]
         ct_curve_ct = ct_data[:, 1]
 
-        wtVelocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+        CalculateFlowField=False
+
+        wtVelocity, _ = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
                                        rotorDiameter, Ct, self.wind_speed,
                                        yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY,
-                                       self.RotorPointsZ,
+                                       self.RotorPointsZ, np.array([0]), np.array([0]), np.array([0]),
                                        self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
                                        self.wake_model_version, self.interp_type, use_ct_curve,
                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
-                                       self.expratemultiplier)
+                                       self.expratemultiplier, CalculateFlowField)
 
         free_stream_power = power_func_v80(self.wind_speed)
         wtPower = power_func_v80(wtVelocity)
@@ -946,16 +948,20 @@ class test_porteagel_analyze(unittest.TestCase):
         ct_curve_wind_speed = np.array([self.wind_speed])
         ct_curve_ct = np.array([self.ct])
 
-        wt_velocity = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
-                                        rotorDiameter, Ct, self.wind_speed,
-                                        yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY, self.RotorPointsZ,
-                                        self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
-                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
-                                        self.wake_model_version, self.interp_type, use_ct_curve,
-                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
-                                        self.expratemultiplier)
 
-        self.assertAlmostEqual(wt_velocity, 8.0, delta=self.tolerance)
+        CalculateFlowField=False
+
+        wtVelocity, _ = porteagel_analyze(turbineXw, sorted_x_idx, turbineYw, turbineZ,
+                                          rotorDiameter, Ct, self.wind_speed,
+                                          yaw, self.ky, self.kz, self.alpha, self.beta, TI_turbs, self.RotorPointsY,
+                                          self.RotorPointsZ, np.array([0]), np.array([0]), np.array([0]),
+                                          self.z_ref, self.z_0, self.shear_exp, self.wake_combination_method,
+                                          self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
+                                          self.wake_model_version, self.interp_type, use_ct_curve,
+                                          ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
+                                          self.expratemultiplier, CalculateFlowField)
+
+        self.assertAlmostEqual(wtVelocity, 8.0, delta=self.tolerance)
         #
         # 2.009085240790877, 0.4619246861924686
         # 2.0091082123225856, 0.46359832635983256
