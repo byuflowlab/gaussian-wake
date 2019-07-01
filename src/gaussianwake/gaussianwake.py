@@ -219,9 +219,9 @@ class GaussianWake(om.ExplicitComponent):
 
         # unused but required for compatibility
 
-        # self.add_param('wakeCentersYT', np.zeros(nTurbines*nTurbines), units='m')
-        # self.add_param('wakeDiametersT', np.zeros(nTurbines*nTurbines), units='m')
-        # self.add_param('wakeOverlapTRel', np.zeros(nTurbines*nTurbines))
+        # self.add_input('wakeCentersYT', np.zeros(nTurbines*nTurbines), units='m')
+        # self.add_input('wakeDiametersT', np.zeros(nTurbines*nTurbines), units='m')
+        # self.add_input('wakeOverlapTRel', np.zeros(nTurbines*nTurbines))
 
         # used
         self.add_input('turbineXw', val=np.zeros(nTurbines), units='m')
@@ -234,7 +234,7 @@ class GaussianWake(om.ExplicitComponent):
         self.add_input('axialInduction', val=np.zeros(nTurbines)+1./3.)
 
         # options
-        # self.add_param('language', val='fortran')
+        # self.add_input('language', val='fortran')
 
         # params for Bastankhah with yaw
         self.add_discrete_input('model_params:ky', val=0.022)
