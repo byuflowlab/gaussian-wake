@@ -67,7 +67,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, turbineXw, &
     wtVelocity = 0.0_dp
     
     ! initialize local TI of all turbines to free-stream value
-    TIturbs = TI
+    TIturbs(:) = TI
     
     ! initialize the local wake factors
     if (calc_k_star .eqv. .true.) then
