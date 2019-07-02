@@ -170,9 +170,6 @@ class GaussianWake(om.ExplicitComponent):
                              desc="Wake Model instantiation parameters.")
 
     def setup(self):
-        """
-        Set up the Floris component.
-        """
         opt = self.options
         nTurbines = opt['nTurbines']
         direction_id = opt['direction_id']
