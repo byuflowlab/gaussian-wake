@@ -612,7 +612,8 @@ class test_sigma_spread(unittest.TestCase):
 
         x = np.array([500.0, 500.0, 500.0, 200.0, -10.0])
         xi_d = np.array([1.0, 2.0, 1.0, 1.0, 1.0])
-        xi_a = np.array([1.0, 1.0, 50.0, 1.0, 1.0])
+        xi_a = np.array([0.0, 0.0, 45.0, 0.0, 0.0])
+
 
         sigma_0 = 38.7
         sigma_d = 34.2
@@ -623,7 +624,7 @@ class test_sigma_spread(unittest.TestCase):
         for i in np.arange(0, x.size):
             self.sigma_spread[i] = sigma_spread_func(x[i], x0, self.ky, sigma_0, sigma_d, xi_a[i], xi_d[i])
 
-        self.correct_results = np.array([75.45, 150.9, 352.8968838, 36.7495751, 0.0])
+        self.correct_results = np.array([75.45, 150.9, 534.2, 36.7495751, 0.0])
 
     def test_sigma_spread_func_case1(self):
 
@@ -644,6 +645,33 @@ class test_sigma_spread(unittest.TestCase):
     def test_sigma_spread_func_case5(self):
 
         self.assertAlmostEqual(self.sigma_spread[4], self.correct_results[4], delta=self.tolerance)
+
+# class test_sigma_spread_too_high_error(unittest.TestCase):
+#
+#     def setUp(self):
+#         self.tolerance = 1E-6
+#         self.d = 126.4
+#         self.yaw = np.pi / 6.
+#         self.ct = 0.8
+#         self.alpha = 2.32
+#         self.beta = 0.154
+#         self.ti = 0.1
+#         self.ky = 0.25
+#         self.kz = 0.2
+#
+#         self.x = 500.0
+#         self.xi_d = 1.0
+#         self.xi_a = 90.000
+#
+#
+#         self.sigma_0 = 38.7
+#         self.sigma_d = 34.2
+#
+#         self.x0 = 353.0
+#
+#     def test_sigma_spread_too_high(self):
+#         self.assertRaises(sigma_spread_func(self.x, self.x0, self.ky, self.sigma_0, self.sigma_d, self.xi_a, self.xi_d))
+#
 
 class test_hermite_spline(unittest.TestCase):
 

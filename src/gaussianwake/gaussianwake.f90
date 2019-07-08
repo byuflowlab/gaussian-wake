@@ -475,10 +475,23 @@ subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_
     real(dp), intent(out) :: sigma_spread
     
     ! local
-    real(dp) :: k_near_wake, sigma_0_new
+    real(dp) :: k_near_wake, sigma_0_new, k_spread
+    real(dp), parameter :: pi = 3.141592653589793_dp
+    
+    intrinsic tan, atan
+    
+    ! check if spreading angle is too high
+    if (expratemultiplier*pi/180.0_dp .ge. pi/2.0_dp) then
+        print *, "WEC angle factor is too high, must be less than 90 deg "
+        stop 1 
+    end if
     
     ! get slope of wake expansion in the near wake
-    k_near_wake = expratemultiplier * (sigma_0 - sigma_d) / x0
+    k_near_wake = (sigma_0 - sigma_d) / x0
+    k_spread = tan(expratemultiplier*pi/180.0_dp)
+    if (k_spread .gt. k_near_wake) then
+        k_near_wake = k_spread
+    end if
     
     ! get new value for wake spread at the point of far wake onset
     sigma_0_new = k_near_wake * x0 + sigma_d
