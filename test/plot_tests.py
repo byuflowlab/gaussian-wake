@@ -418,9 +418,9 @@ if __name__ == "__main__":
     mytest = plotting_tests_wec()
     # mytest.plot_data_with_model()
     # mytest.plot_cross_sections(exp_type='diam')
-    for xival in np.linspace(1, 100, 2):
-        mytest.plot_contour(exp_type='angle', xival=xival, save_fig=False)
+    # for xival in np.linspace(0, 20, 5):
+    #     mytest.plot_contour(exp_type='angle', xival=xival, save_fig=False)
 
 
-    # mytest = bpa_wind_tunnel_plots()
+    mytest = bpa_wind_tunnel_plots()
     # mytest.plot_cross_wind_profile()
