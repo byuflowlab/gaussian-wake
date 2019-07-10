@@ -163,7 +163,7 @@ class test_guass(unittest.TestCase):
         if nRotorPoints > 1:
             prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
 
-        prob['model_params:exp_rate_multiplier'] = 0.0
+        prob['model_params:wec_spreading_angle'] = 0.0
 
         prob['Ct_in'] = Ct
         prob['Cp_in'] = Cp

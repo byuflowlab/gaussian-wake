@@ -14,7 +14,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
                              TI_calculation_method, calc_k_star, wec_factor, print_ti, &
                              wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
-                             expratemultiplier, CalculateFlowField, &
+                             wec_spreading_angle, CalculateFlowField, &
                              wtVelocity, FieldVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter Ct yawDeg
@@ -39,7 +39,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
     real(dp), intent(in) :: ky, kz, alpha, beta, TI, wind_speed, z_ref, z_0, shear_exp, wec_factor
     real(dp), dimension(nRotorPoints), intent(in) :: RotorPointsY, RotorPointsZ
     real(dp), dimension(nCtPoints), intent(in) :: ct_curve_wind_speed, ct_curve_ct
-    real(dp), intent(in) :: sm_smoothing, expratemultiplier
+    real(dp), intent(in) :: sm_smoothing, wec_spreading_angle
     real(dp), dimension(nFieldPoints), intent(in) :: FieldPointsX, FieldPointsY, FieldPointsZ
 
     ! local (General)
@@ -103,7 +103,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
             call point_velocity_with_shear_func(nTurbines, turbI, wake_combination_method, &
                                           wake_model_version, &
                                           sorted_x_idx, pointX, pointY, pointZ, &
-                                          tol, alpha, beta, expratemultiplier, wec_factor, &
+                                          tol, alpha, beta, wec_spreading_angle, wec_factor, &
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
@@ -210,7 +210,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
                                           wake_model_version, &
                                           sorted_x_idx, FieldPointsX(p), FieldPointsY(p), &
                                           FieldPointsZ(p), &
-                                          tol, alpha, beta, expratemultiplier, wec_factor, &
+                                          tol, alpha, beta, wec_spreading_angle, wec_factor, &
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
@@ -225,7 +225,7 @@ end subroutine porteagel_analyze
 subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_method, &
                                           wake_model_version, &
                                           sorted_x_idx, pointX, pointY, pointZ, &
-                                          tol, alpha, beta, expratemultiplier, wec_factor, &
+                                          tol, alpha, beta, wec_spreading_angle, wec_factor, &
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
@@ -243,7 +243,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     Integer, intent(in) :: nTurbines, turbI, wake_combination_method, wake_model_version
     Integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     Real(dp), intent(in) :: pointX, pointY, pointZ
-    Real(dp), intent(in) :: tol, alpha, beta, expratemultiplier, wec_factor
+    Real(dp), intent(in) :: tol, alpha, beta, wec_spreading_angle, wec_factor
     Real(dp), intent(in) :: wind_speed
     Real(dp), intent(in) :: z_ref, z_0, shear_exp
     Real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
@@ -312,10 +312,10 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, 0.0_dp, 1.0_dp, sigmaz)
             
             ! calculate new spread for WEC in y (horizontal)
-            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, expratemultiplier, wec_factor, sigmay_spread)
+            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, wec_spreading_angle, wec_factor, sigmay_spread)
             
             ! calculate new spread for WEC in z (horizontal)
-            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, expratemultiplier, wec_factor, sigmaz_spread)
+            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, wec_spreading_angle, wec_factor, sigmaz_spread)
             
             ! determine the initial wake angle at the onset of far wake
             call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
@@ -461,7 +461,7 @@ subroutine sigmaz_func(x, x0, kz, rotor_diameter, sigmaz)
     
 end subroutine sigmaz_func
 
-subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_factor, sigma_spread)
+subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, wec_spreading_angle, wec_factor, sigma_spread)
 
     implicit none
     
@@ -469,7 +469,7 @@ subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_factor 
+    real(dp), intent(in) :: x, x0, k, sigma_0, sigma_d, wec_spreading_angle, wec_factor 
 
     ! out
     real(dp), intent(out) :: sigma_spread
@@ -481,14 +481,14 @@ subroutine sigma_spread_func(x, x0, k, sigma_0, sigma_d, expratemultiplier, wec_
     intrinsic tan, atan
     
     ! check if spreading angle is too high
-    if (expratemultiplier*pi/180.0_dp .ge. pi/2.0_dp) then
+    if (wec_spreading_angle*pi/180.0_dp .ge. pi/2.0_dp) then
         print *, "WEC angle factor is too high, must be less than 90 deg "
         stop 1 
     end if
     
     ! get slope of wake expansion in the near wake
     k_near_wake = (sigma_0 - sigma_d) / x0
-    k_spread = tan(expratemultiplier*pi/180.0_dp)
+    k_spread = tan(wec_spreading_angle*pi/180.0_dp)
     if (k_spread .gt. k_near_wake) then
         k_near_wake = k_spread
     end if

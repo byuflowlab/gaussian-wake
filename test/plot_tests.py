@@ -85,7 +85,7 @@ class plotting_tests_wec():
         prob['Ct_in'] = Ct
         prob['Cp_in'] = Cp
         prob['model_params:wec_factor'] = 1.0
-        prob['model_params:exp_rate_multiplier'] = 0.0
+        prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wake_model_version'] = '2016'
         prob['model_params:ti_calculation_method'] = 4
         prob['model_params:I'] = 0.1
@@ -101,7 +101,7 @@ class plotting_tests_wec():
         plt.plot(self.pos_range/self.rotor_diameter, self.vel_range, label=self.label)
         plt.show()
 
-    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
+    def get_velocity(self, wec_diameter_multiplier=1.0, wec_wec_spreading_angle=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
@@ -114,7 +114,7 @@ class plotting_tests_wec():
         vel = np.zeros_like(xx)
         prob = self.prob
         prob['model_params:wec_factor'] = wec_diameter_multiplier
-        prob['model_params:exp_rate_multiplier'] = wec_exp_rate_multiplier
+        prob['model_params:wec_spreading_angle'] = wec_wec_spreading_angle
 
         for i in np.arange(0, xx.shape[0]):
             for j in np.arange(0, xx.shape[1]):
@@ -130,7 +130,7 @@ class plotting_tests_wec():
 
         return 0
 
-    def get_aep(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
+    def get_aep(self, wec_diameter_multiplier=1.0, wec_wec_spreading_angle=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
@@ -143,7 +143,7 @@ class plotting_tests_wec():
         aep = np.zeros_like(xx)
         prob = self.prob
         prob['model_params:wec_factor'] = wec_diameter_multiplier
-        prob['model_params:exp_rate_multiplier'] = wec_exp_rate_multiplier
+        prob['model_params:wec_spreading_angle'] = wec_wec_spreading_angle
 
         for i in np.arange(0, xx.shape[0]):
             for j in np.arange(0, xx.shape[1]):
@@ -174,7 +174,7 @@ class plotting_tests_wec():
             raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
 
         for i in np.arange(0, xivals.size):
-            self.get_velocity(wec_diameter_multiplier=xivals[i] ** diam_on, wec_exp_rate_multiplier=xivals[i] ** angle_on)
+            self.get_velocity(wec_diameter_multiplier=xivals[i] ** diam_on, wec_wec_spreading_angle=xivals[i] ** angle_on)
             plt.plot(self.yy / self.rotor_diameter, self.vel, label=xivals[i])
 
         plt.ylabel('Inflow Velocity (m/s)')
@@ -196,8 +196,8 @@ class plotting_tests_wec():
             raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
 
 
-        # self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
-        self.get_aep(wec_diameter_multiplier=xival ** diam_on, wec_exp_rate_multiplier=xival ** angle_on, x0=0., x1=10.)
+        # self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_wec_spreading_angle=xival ** angle_on, x0=0., x1=10.)
+        self.get_aep(wec_diameter_multiplier=xival ** diam_on, wec_wec_spreading_angle=xival ** angle_on, x0=0., x1=10.)
 
 
         # plt.contourf(self.xx/self.rotor_diameter, self.yy / self.rotor_diameter, self.vel, cmap='coolwarm')

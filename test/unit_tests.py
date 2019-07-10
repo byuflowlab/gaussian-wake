@@ -819,12 +819,12 @@ class test_wec(unittest.TestCase):
         prob['turbineYw'] = turbineY
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
-        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
         prob.run_once()
         wspeed0 = prob['wtVelocity0'][1]
-        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob['model_params:wec_spreading_angle'] = 2.0
         prob.run_once()
         wspeed1 = prob['wtVelocity0'][1]
 
@@ -838,12 +838,12 @@ class test_wec(unittest.TestCase):
         prob['turbineXw'] = turbineX
         prob['turbineYw'] = turbineY
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
-        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
         prob.run_once()
         wspeed0 = prob['wtVelocity0'][1]
-        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob['model_params:wec_spreading_angle'] = 2.0
         prob.run_once()
         wspeed1 = prob['wtVelocity0'][1]
 
@@ -857,7 +857,7 @@ class test_wec(unittest.TestCase):
         prob['turbineXw'] = turbineX
         prob['turbineYw'] = turbineY
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
-        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
         prob.run_once()
@@ -876,13 +876,13 @@ class test_wec(unittest.TestCase):
         prob['turbineXw'] = turbineX
         prob['turbineYw'] = turbineY
         prob['rotorDiameter'] = np.array([rotor_diameter, rotor_diameter])
-        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
         prob.run_once()
         prob['model_params:wec_factor'] = 1.0
         wspeed0 = prob['wtVelocity0'][1]
-        prob['model_params:exp_rate_multiplier'] = 2.0
+        prob['model_params:wec_spreading_angle'] = 2.0
         prob.run_once()
         wspeed1 = prob['wtVelocity0'][1]
 

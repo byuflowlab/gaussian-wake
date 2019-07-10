@@ -254,7 +254,7 @@ class GaussianWake(Component):
         self.add_param('model_params:sm_smoothing', val=700.0, pass_by_object=True,
                        desc='adjust degree of smoothing in the smooth-max for local TI calcs')
 
-        self.add_param('model_params:exp_rate_multiplier', val=0.0, pass_by_object=True,
+        self.add_param('model_params:wec_spreading_angle', val=0.0, pass_by_object=True,
                        desc='multiply wake expansion rate as wec alternative')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
@@ -300,7 +300,7 @@ class GaussianWake(Component):
         print_ti = params['model_params:print_ti']
 
         sm_smoothing = params['model_params:sm_smoothing']
-        exp_rate_multiplier = params['model_params:exp_rate_multiplier']
+        wec_spreading_angle = params['model_params:wec_spreading_angle']
 
 
         # rename inputs and outputs
@@ -354,7 +354,7 @@ class GaussianWake(Component):
                                                        wake_combination_method, ti_calculation_method,
                                                        calc_k_star, wec_factor, print_ti, wake_model_version,
                                                        interp_type, use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-                                                       sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+                                                       sm_smoothing, wec_spreading_angle, CalculateFlowField)
 
         unknowns['wtVelocity%i' % direction_id] = TurbineVelocity
 
@@ -404,7 +404,7 @@ class GaussianWake(Component):
 
         sm_smoothing = params['model_params:sm_smoothing']
 
-        exp_rate_multiplier = params['model_params:exp_rate_multiplier']
+        wec_spreading_angle = params['model_params:wec_spreading_angle']
 
         use_ct_curve = self.use_ct_curve
         interp_type = self.interp_type
@@ -465,7 +465,7 @@ class GaussianWake(Component):
                                                                                                ct_curve_wind_speed,
                                                                                                ct_curve_ct,
                                                                                                sm_smoothing,
-                                                                                               exp_rate_multiplier,
+                                                                                               wec_spreading_angle,
                                                                                                CalculateFlowField,
                                                                                                wtVelocityb)
         #
@@ -484,7 +484,7 @@ class GaussianWake(Component):
         #                      rotorDiameter, rotorDiameterd, Ct, Ctd, wind_speed, yawDeg, yawDegd, ky, kz, alpha, beta,
         #                      I, RotorPointsY, RotorPointsZ, FieldPointsX, FieldPointsY, FieldPointsZ, z_ref, z_0, shear_exp, wake_combination_method,
         #                      ti_calculation_method, calc_k_star, wec_factor, print_ti, wake_model_version, interp_type,
-        #                      use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                      use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_dxwd = wtVelocityd
         #
@@ -504,7 +504,7 @@ class GaussianWake(Component):
         #                                          ti_calculation_method, calc_k_star, wec_factor, print_ti,
         #                                          wake_model_version, interp_type,
         #                                          use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-        #                                          sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                                          sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_dywd = wtVelocityd
         #
@@ -524,7 +524,7 @@ class GaussianWake(Component):
         #                                          ti_calculation_method, calc_k_star, wec_factor, print_ti,
         #                                          wake_model_version, interp_type,
         #                                          use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-        #                                          sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                                          sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_dzd = wtVelocityd
         #
@@ -544,7 +544,7 @@ class GaussianWake(Component):
         #                                          ti_calculation_method, calc_k_star, wec_factor, print_ti,
         #                                          wake_model_version, interp_type,
         #                                          use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-        #                                          sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                                          sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_drd = wtVelocityd
         #
@@ -564,7 +564,7 @@ class GaussianWake(Component):
         #                                          ti_calculation_method, calc_k_star, wec_factor, print_ti,
         #                                          wake_model_version, interp_type,
         #                                          use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-        #                                          sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                                          sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_dctd = wtVelocityd
         #
@@ -584,7 +584,7 @@ class GaussianWake(Component):
         #                                          ti_calculation_method, calc_k_star, wec_factor, print_ti,
         #                                          wake_model_version, interp_type,
         #                                          use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-        #                                          sm_smoothing, exp_rate_multiplier, CalculateFlowField)
+        #                                          sm_smoothing, wec_spreading_angle, CalculateFlowField)
         #
         # wtVelocityb_dyawd = wtVelocityd
 
