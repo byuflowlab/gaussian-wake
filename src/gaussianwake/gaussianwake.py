@@ -254,7 +254,7 @@ class GaussianWake(Component):
         self.add_param('model_params:sm_smoothing', val=700.0, pass_by_object=True,
                        desc='adjust degree of smoothing in the smooth-max for local TI calcs')
 
-        self.add_param('model_params:exp_rate_multiplier', val=1.0, pass_by_object=True,
+        self.add_param('model_params:exp_rate_multiplier', val=0.0, pass_by_object=True,
                        desc='multiply wake expansion rate as wec alternative')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')

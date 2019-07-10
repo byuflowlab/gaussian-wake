@@ -85,9 +85,9 @@ class plotting_tests_wec():
         prob['Ct_in'] = Ct
         prob['Cp_in'] = Cp
         prob['model_params:wec_factor'] = 1.0
-        prob['model_params:exp_rate_multiplier'] = 1.0
+        prob['model_params:exp_rate_multiplier'] = 0.0
         prob['model_params:wake_model_version'] = '2016'
-        prob['model_params:ti_calculation_method'] = 0
+        prob['model_params:ti_calculation_method'] = 4
         prob['model_params:I'] = 0.1
 
         # run the problem
@@ -101,7 +101,7 @@ class plotting_tests_wec():
         plt.plot(self.pos_range/self.rotor_diameter, self.vel_range, label=self.label)
         plt.show()
 
-    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
+    def get_velocity(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
@@ -130,7 +130,7 @@ class plotting_tests_wec():
 
         return 0
 
-    def get_aep(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=1.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
+    def get_aep(self, wec_diameter_multiplier=1.0, wec_exp_rate_multiplier=0.0, x0=4.5, x1=4.5, y0=-4, y1=4, res=50):
 
         if x0 == x1:
             x_range = np.array([x0*self.rotor_diameter])
@@ -184,7 +184,7 @@ class plotting_tests_wec():
             plt.savefig(exp_type+''+".pdf",tranparent=True)
         plt.show()
 
-    def plot_contour(self, exp_type='angle', xival=1., save_fig=False):
+    def plot_contour(self, exp_type='angle', xival=0., save_fig=False):
 
         if exp_type == 'angle':
             angle_on = 1
@@ -268,7 +268,7 @@ class plotting_tests_wec():
         tol = 1E-12
         alpha = 2.32
         beta = 0.154
-        expratemultiplier = 1.0
+        expratemultiplier = 0.0
         wec_factor = 1.0
         wind_speed = 4.88
         z_ref = 0.125
@@ -366,7 +366,7 @@ class bpa_wind_tunnel_plots():
         self.tol = 1E-12
         self.alpha = 2.32
         self.beta = 0.154
-        self.expratemultiplier = 1.0
+        self.expratemultiplier = 0.0
         self.wec_factor = 1.0
         self.wind_speed = 4.88
         self.z_ref = 0.125
@@ -378,7 +378,7 @@ class bpa_wind_tunnel_plots():
         self.yaw = np.array([20. * np.pi / 180.0])
         self.wtVelocity = np.array([self.wind_speed])
         self.Ct_local = 0.7361200568897026 * np.ones_like(self.turbineXw)  # np.array([0.7374481936835376])
-        self.TIturbs = 0.074 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
+        self.TIturbs = 0.05442 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
         self.ky_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
         self.kz_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
 
@@ -423,4 +423,4 @@ if __name__ == "__main__":
 
 
     mytest = bpa_wind_tunnel_plots()
-    # mytest.plot_cross_wind_profile()
+    mytest.plot_cross_wind_profile()
