@@ -22,9 +22,8 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
 & z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method&
 & , calc_k_star, wec_factor, print_ti, wake_model_version, interp_type, &
 & use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
-& expratemultiplier, calculateflowfield, wtvelocityb, &
-& nbdirs)
-!  USE DIFFSIZES
+& wec_spreading_angle, calculateflowfield, wtvelocityb, nbdirs)
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -52,7 +51,7 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
 & rotorpointsz
   REAL(dp), DIMENSION(nctpoints), INTENT(IN) :: ct_curve_wind_speed, &
 & ct_curve_ct
-  REAL(dp), INTENT(IN) :: sm_smoothing, expratemultiplier
+  REAL(dp), INTENT(IN) :: sm_smoothing, wec_spreading_angle
   REAL(dp), DIMENSION(nfieldpoints), INTENT(IN) :: fieldpointsx, &
 & fieldpointsy, fieldpointsz
 ! local (General)
@@ -125,12 +124,13 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
 &                                   wake_combination_method, &
 &                                   wake_model_version, sorted_x_idx, &
 &                                   pointx, pointy, pointz, tol, alpha, &
-&                                   beta, expratemultiplier, wec_factor&
-&                                   , wind_speed, z_ref, z_0, shear_exp&
-&                                   , turbinexw, turbineyw, turbinez, &
-&                                   rotordiameter, yaw, wtvelocity, &
-&                                   ct_local, titurbs, ky_local, &
-&                                   kz_local, point_velocity_with_shear)
+&                                   beta, wec_spreading_angle, &
+&                                   wec_factor, wind_speed, z_ref, z_0, &
+&                                   shear_exp, turbinexw, turbineyw, &
+&                                   turbinez, rotordiameter, yaw, &
+&                                   wtvelocity, ct_local, titurbs, &
+&                                   ky_local, kz_local, &
+&                                   point_velocity_with_shear)
 ! add sample point velocity to turbine velocity to be averaged later
       CALL PUSHREAL8(wtvelocity(turbi))
       wtvelocity(turbi) = wtvelocity(turbi) + point_velocity_with_shear
@@ -353,8 +353,8 @@ SUBROUTINE PORTEAGEL_ANALYZE_BV(nturbines, nrotorpoints, nctpoints, &
 &                                      wake_model_version, sorted_x_idx&
 &                                      , pointx, pointxb, pointy, &
 &                                      pointyb, pointz, pointzb, tol, &
-&                                      alpha, beta, expratemultiplier, &
-&                                      wec_factor, wind_speed, z_ref, &
+&                                      alpha, beta, wec_spreading_angle&
+&                                      , wec_factor, wind_speed, z_ref, &
 &                                      z_0, shear_exp, turbinexw, &
 &                                      turbinexwb, turbineyw, turbineywb&
 &                                      , turbinez, turbinezb, &
@@ -407,13 +407,13 @@ END SUBROUTINE PORTEAGEL_ANALYZE_BV
 SUBROUTINE POINT_VELOCITY_WITH_SHEAR_FUNC_BV(nturbines, turbi, &
 & wake_combination_method, wake_model_version, sorted_x_idx, pointx, &
 & pointxb, pointy, pointyb, pointz, pointzb, tol, alpha, beta, &
-& expratemultiplier, wec_factor, wind_speed, z_ref, z_0, shear_exp, &
+& wec_spreading_angle, wec_factor, wind_speed, z_ref, z_0, shear_exp, &
 & turbinexw, turbinexwb, turbineyw, turbineywb, turbinez, turbinezb, &
 & rotordiameter, rotordiameterb, yaw, yawb, wtvelocity, wtvelocityb, &
 & ct_local, ct_localb, titurbs, titurbsb, ky_local, ky_localb, kz_local&
 & , kz_localb, point_velocity_with_shear, point_velocity_with_shearb, &
 & nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -425,7 +425,7 @@ SUBROUTINE POINT_VELOCITY_WITH_SHEAR_FUNC_BV(nturbines, turbi, &
   INTEGER, DIMENSION(nturbines), INTENT(IN) :: sorted_x_idx
   REAL(dp), INTENT(IN) :: pointx, pointy, pointz
   REAL(dp), DIMENSION(nbdirs) :: pointxb, pointyb, pointzb
-  REAL(dp), INTENT(IN) :: tol, alpha, beta, expratemultiplier, &
+  REAL(dp), INTENT(IN) :: tol, alpha, beta, wec_spreading_angle, &
 & wec_factor
   REAL(dp), INTENT(IN) :: wind_speed
   REAL(dp), INTENT(IN) :: z_ref, z_0, shear_exp
@@ -509,19 +509,21 @@ SUBROUTINE POINT_VELOCITY_WITH_SHEAR_FUNC_BV(nturbines, turbi, &
 ! calculate wake spread in horizontal at point of interest
         CALL PUSHREAL8(sigmay)
         CALL SIGMA_SPREAD_FUNC(x, x0, ky_local(turb), sigmay_0, sigmay_d&
-&                        , 1.0_dp, 1.0_dp, sigmay)
+&                        , 0.0_dp, 1.0_dp, sigmay)
 ! calculate wake spread in vertical at point of interest
         CALL PUSHREAL8(sigmaz)
         CALL SIGMA_SPREAD_FUNC(x, x0, kz_local(turb), sigmaz_0, sigmaz_d&
-&                        , 1.0_dp, 1.0_dp, sigmaz)
+&                        , 0.0_dp, 1.0_dp, sigmaz)
 ! calculate new spread for WEC in y (horizontal)
         CALL PUSHREAL8(sigmay_spread)
         CALL SIGMA_SPREAD_FUNC(x, x0, ky_local(turb), sigmay_0, sigmay_d&
-&                        , expratemultiplier, wec_factor, sigmay_spread)
+&                        , wec_spreading_angle, wec_factor, &
+&                        sigmay_spread)
 ! calculate new spread for WEC in z (horizontal)
         CALL PUSHREAL8(sigmaz_spread)
         CALL SIGMA_SPREAD_FUNC(x, x0, kz_local(turb), sigmaz_0, sigmaz_d&
-&                        , expratemultiplier, wec_factor, sigmaz_spread)
+&                        , wec_spreading_angle, wec_factor, &
+&                        sigmaz_spread)
 ! determine the initial wake angle at the onset of far wake
         CALL PUSHREAL8(theta_c_0)
         CALL THETA_C_0_FUNC(yaw(turb), ct_local(turb), theta_c_0)
@@ -660,24 +662,24 @@ SUBROUTINE POINT_VELOCITY_WITH_SHEAR_FUNC_BV(nturbines, turbi, &
         CALL POPREAL8(sigmaz_spread)
         CALL SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, kz_local(turb), &
 &                           kz_localb(1, turb), sigmaz_0, sigmaz_0b, &
-&                           sigmaz_d, sigmaz_db, expratemultiplier, &
+&                           sigmaz_d, sigmaz_db, wec_spreading_angle, &
 &                           wec_factor, sigmaz_spread, sigmaz_spreadb, &
 &                           nbdirs)
         CALL POPREAL8(sigmay_spread)
         CALL SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, ky_local(turb), &
 &                           ky_localb(1, turb), sigmay_0, sigmay_0b, &
-&                           sigmay_d, sigmay_db, expratemultiplier, &
+&                           sigmay_d, sigmay_db, wec_spreading_angle, &
 &                           wec_factor, sigmay_spread, sigmay_spreadb, &
 &                           nbdirs)
         CALL POPREAL8(sigmaz)
         CALL SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, kz_local(turb), &
 &                           kz_localb(1, turb), sigmaz_0, sigmaz_0b, &
-&                           sigmaz_d, sigmaz_db, 1.0_dp, 1.0_dp, sigmaz&
+&                           sigmaz_d, sigmaz_db, 0.0_dp, 1.0_dp, sigmaz&
 &                           , sigmazb, nbdirs)
         CALL POPREAL8(sigmay)
         CALL SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, ky_local(turb), &
 &                           ky_localb(1, turb), sigmay_0, sigmay_0b, &
-&                           sigmay_d, sigmay_db, 1.0_dp, 1.0_dp, sigmay&
+&                           sigmay_d, sigmay_db, 0.0_dp, 1.0_dp, sigmay&
 &                           , sigmayb, nbdirs)
         CALL POPREAL8(sigmaz_0)
         CALL SIGMAZ_FUNC_BV(x0, x0b, x0, x0b, kz_local(turb), kz_localb(&
@@ -728,7 +730,7 @@ END SUBROUTINE POINT_VELOCITY_WITH_SHEAR_FUNC_BV
 ! calculates the onset of far-wake conditions
 SUBROUTINE X0_FUNC_BV(rotor_diameter, rotor_diameterb, yaw, yawb, ct, &
 & ctb, alpha, ti, tib, beta, x0, x0b, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -776,7 +778,7 @@ END SUBROUTINE X0_FUNC_BV
 ! calculates the wake angle at the onset of far wake conditions
 SUBROUTINE THETA_C_0_FUNC_BV(yaw, yawb, ct, ctb, theta_c_0, theta_c_0b, &
 & nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -821,7 +823,7 @@ END SUBROUTINE THETA_C_0_FUNC_BV
 ! wake condition
 SUBROUTINE SIGMAY_FUNC_BV(x, xb, x0, x0b, ky, kyb, rotor_diameter, &
 & rotor_diameterb, yaw, yawb, sigmay, sigmayb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -857,7 +859,7 @@ END SUBROUTINE SIGMAY_FUNC_BV
 ! wake condition
 SUBROUTINE SIGMAZ_FUNC_BV(x, xb, x0, x0b, kz, kzb, rotor_diameter, &
 & rotor_diameterb, sigmaz, sigmazb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -887,17 +889,17 @@ END SUBROUTINE SIGMAZ_FUNC_BV
 !                x0
 !   with respect to varying inputs: k sigma_d x sigma_0 x0
 SUBROUTINE SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, k, kb, sigma_0, sigma_0b&
-& , sigma_d, sigma_db, expratemultiplier, wec_factor, sigma_spread, &
+& , sigma_d, sigma_db, wec_spreading_angle, wec_factor, sigma_spread, &
 & sigma_spreadb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
 !! define precision to be the standard for a double precision ! on local system
   INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
-  REAL(dp), INTENT(IN) :: x, x0, k, sigma_0, sigma_d, expratemultiplier&
-& , wec_factor
+  REAL(dp), INTENT(IN) :: x, x0, k, sigma_0, sigma_d, &
+& wec_spreading_angle, wec_factor
   REAL(dp), DIMENSION(nbdirs) :: xb, x0b, kb, sigma_0b, sigma_db
 ! out
   REAL(dp) :: sigma_spread
@@ -914,12 +916,12 @@ SUBROUTINE SIGMA_SPREAD_FUNC_BV(x, xb, x0, x0b, k, kb, sigma_0, sigma_0b&
   INTEGER :: branch
   INTEGER :: nbdirs
 ! check if spreading angle is too high
-  IF (expratemultiplier*pi/180.0_dp .GE. pi/2.0_dp) THEN
+  IF (wec_spreading_angle*pi/180.0_dp .GE. pi/2.0_dp) THEN
     STOP
   ELSE
 ! get slope of wake expansion in the near wake
     k_near_wake = (sigma_0-sigma_d)/x0
-    k_spread = TAN(expratemultiplier*pi/180.0_dp)
+    k_spread = TAN(wec_spreading_angle*pi/180.0_dp)
     IF (k_spread .GT. k_near_wake) THEN
       k_near_wake = k_spread
       CALL PUSHCONTROL1B(0)
@@ -976,7 +978,7 @@ END SUBROUTINE SIGMA_SPREAD_FUNC_BV
 SUBROUTINE WAKE_OFFSET_FUNC_BV(x, xb, rotor_diameter, rotor_diameterb, &
 & theta_c_0, theta_c_0b, x0, x0b, yaw, yawb, ky, kyb, kz, kzb, ct, ctb, &
 & sigmay, sigmayb, sigmaz, sigmazb, wake_offset, wake_offsetb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -1097,7 +1099,7 @@ SUBROUTINE DELTAV_FUNC_BV(deltay, deltayb, deltaz, deltazb, ct, ctb, yaw&
 & rotor_diameter_ustb, version, k, kb, deltax, deltaxb, wec_factor, &
 & sigmay_spread, sigmay_spreadb, sigmaz_spread, sigmaz_spreadb, deltav, &
 & deltavb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
 !print *, "rotor_diameter in deltav exit", rotor_diameter_ust
@@ -1282,7 +1284,7 @@ SUBROUTINE DELTAV_NEAR_WAKE_LIN_FUNC_BV(deltay, deltayb, deltaz, deltazb&
 & sigmaz_d, sigmaz_db, version, k_2014, k_2014b, deltaxd_2014, &
 & sigmay_spread, sigmay_spreadb, sigmaz_spread, sigmaz_spreadb, &
 & wec_factor_2014, deltav, deltavb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -1537,7 +1539,7 @@ SUBROUTINE WAKE_COMBINATION_FUNC_BV(wind_speed, turb_inflow, &
 & turb_inflowb, deltav, deltavb, wake_combination_method, &
 & old_deficit_sum, old_deficit_sumb, new_deficit_sum, new_deficit_sumb, &
 & nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -1615,7 +1617,7 @@ SUBROUTINE ADDED_TI_FUNC_BV(ti, ct_ust, ct_ustb, x, xb, k_star_ust, &
 & , ti_ustb, ti_calculation_method, ti_area_ratio_in, ti_area_ratio_inb&
 & , ti_dst_in, ti_dst_inb, ti_area_ratio, ti_area_ratiob, ti_dst, &
 & ti_dstb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
 !print *, "ratio: ", wake_overlap/rotor_area_dst
@@ -2153,7 +2155,7 @@ SUBROUTINE OVERLAP_AREA_FUNC_BV(turbine_y, turbine_yb, turbine_z, &
 & turbine_zb, rotor_diameter, rotor_diameterb, wake_center_y, &
 & wake_center_z, wake_center_zb, wake_diameter, wake_diameterb, &
 & wake_overlap, wake_overlapb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2416,7 +2418,7 @@ END SUBROUTINE OVERLAP_AREA_FUNC_BV
 ! compute wake spread parameter based on local turbulence intensity
 SUBROUTINE K_STAR_FUNC_BV(ti_ust, ti_ustb, k_star_ust, k_star_ustb, &
 & nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2442,7 +2444,7 @@ END SUBROUTINE K_STAR_FUNC_BV
 ! calculate axial induction from Ct
 SUBROUTINE CT_TO_AXIAL_IND_FUNC_BV(ct, ctb, axial_induction, &
 & axial_inductionb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2479,7 +2481,7 @@ END SUBROUTINE CT_TO_AXIAL_IND_FUNC_BV
 ! adjust wind speed for wind shear
 SUBROUTINE WIND_SHEAR_FUNC_BV(point_z, point_zb, u_ref, u_refb, z_ref, &
 & z_0, shear_exp, adjusted_wind_speed, adjusted_wind_speedb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2523,7 +2525,7 @@ END SUBROUTINE WIND_SHEAR_FUNC_BV
 SUBROUTINE DISCONTINUITY_POINT_FUNC_BV(x0, x0b, rotor_diameter, &
 & rotor_diameterb, ky, kyb, kz, kzb, yaw, yawb, ct, ctb, &
 & discontinuity_point, discontinuity_pointb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2587,7 +2589,7 @@ END SUBROUTINE DISCONTINUITY_POINT_FUNC_BV
 !   gradient     of useful results: g
 !   with respect to varying inputs: x y
 SUBROUTINE SMOOTH_MAX_BV(s, x, xb, y, yb, g, gb, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTRINSIC KIND
@@ -2656,7 +2658,7 @@ END SUBROUTINE SMOOTH_MAX_BV
 !   with respect to varying inputs: yval xval
 SUBROUTINE INTERPOLATION_BV(npoints, interp_type, x, y, xval, xvalb, &
 & yval, yvalb, dy0in, dy1in, usedyin, nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
 !     print *, "yval = ", yval
@@ -2747,7 +2749,7 @@ END SUBROUTINE INTERPOLATION_BV
 !   with respect to varying inputs: x
 SUBROUTINE HERMITE_SPLINE_BV(x, xb, x0, x1, y0, dy0, y1, dy1, y, yb, &
 & nbdirs)
-!  USE DIFFSIZES
+!!  USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
 !dy_dx = c3*3*x**2 + c2*2*x + c1
