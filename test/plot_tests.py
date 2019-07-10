@@ -378,7 +378,7 @@ class bpa_wind_tunnel_plots():
         self.yaw = np.array([20. * np.pi / 180.0])
         self.wtVelocity = np.array([self.wind_speed])
         self.Ct_local = 0.7361200568897026 * np.ones_like(self.turbineXw)  # np.array([0.7374481936835376])
-        self.TIturbs = 0.05442 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
+        self.TIturbs = 0.074 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001])
         self.ky_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
         self.kz_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
 
@@ -418,9 +418,9 @@ if __name__ == "__main__":
     mytest = plotting_tests_wec()
     # mytest.plot_data_with_model()
     # mytest.plot_cross_sections(exp_type='diam')
-    # for xival in np.linspace(0, 20, 5):
-    #     mytest.plot_contour(exp_type='angle', xival=xival, save_fig=False)
+    for xival in np.linspace(0, 20, 5):
+        mytest.plot_contour(exp_type='angle', xival=xival, save_fig=False)
 
 
-    mytest = bpa_wind_tunnel_plots()
-    mytest.plot_cross_wind_profile()
+    # mytest = bpa_wind_tunnel_plots()
+    # mytest.plot_cross_wind_profile()

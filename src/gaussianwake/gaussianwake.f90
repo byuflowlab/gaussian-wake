@@ -306,10 +306,10 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             call sigmaz_func(x0, x0, kz_local(turb), rotorDiameter(turb), sigmaz_0)
             
             ! calculate wake spread in horizontal at point of interest
-            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, 1.0_dp, 1.0_dp,  sigmay)
+            call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, 0.0_dp, 1.0_dp,  sigmay)
             
             ! calculate wake spread in vertical at point of interest
-            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, 1.0_dp, 1.0_dp, sigmaz)
+            call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, 0.0_dp, 1.0_dp, sigmaz)
             
             ! calculate new spread for WEC in y (horizontal)
             call sigma_spread_func(x, x0, ky_local(turb), sigmay_0, sigmay_d, expratemultiplier, wec_factor, sigmay_spread)
