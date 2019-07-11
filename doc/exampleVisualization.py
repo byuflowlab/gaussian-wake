@@ -160,23 +160,23 @@ if __name__ == "__main__":
             # gauss_prob['model_params:Dw0'] = 1.708328
             # gauss_prob['model_params:m'] = 0.0
 
-            # for decoupled ky with n_std_dev = 4, error = 1140.59, not integrating, power law for expansion,
-            # linear for yaw
-            gauss_prob['model_params:ke'] = 0.050741
-            gauss_prob['model_params:rotation_offset_angle'] = 3.628737
-            gauss_prob['model_params:Dw0'] = 0.846582
-            gauss_prob['model_params:ky'] = 0.207734
-
-            # for decoupled ky with n_std_dev = 4, error = 1058.73, integrating, power law for expansion,
-            # linear for yaw
-            # gauss_prob['model_params:ke'] = 0.016129
-            # gauss_prob['model_params:rotation_offset_angle'] = 3.644356
-            # gauss_prob['model_params:Dw0'] = 0.602132
-            # gauss_prob['model_params:ky'] = 0.191178
-
-            gauss_prob['model_params:integrate'] = False
-            gauss_prob['model_params:spread_mode'] = 'power'
-            gauss_prob['model_params:n_std_dev'] = 4
+            # # for decoupled ky with n_std_dev = 4, error = 1140.59, not integrating, power law for expansion,
+            # # linear for yaw
+            # gauss_prob['model_params:ke'] = 0.050741
+            # gauss_prob['model_params:rotation_offset_angle'] = 3.628737
+            # gauss_prob['model_params:Dw0'] = 0.846582
+            # gauss_prob['model_params:ky'] = 0.207734
+            #
+            # # for decoupled ky with n_std_dev = 4, error = 1058.73, integrating, power law for expansion,
+            # # linear for yaw
+            # # gauss_prob['model_params:ke'] = 0.016129
+            # # gauss_prob['model_params:rotation_offset_angle'] = 3.644356
+            # # gauss_prob['model_params:Dw0'] = 0.602132
+            # # gauss_prob['model_params:ky'] = 0.191178
+            #
+            # gauss_prob['model_params:integrate'] = False
+            # gauss_prob['model_params:spread_mode'] = 'power'
+            # gauss_prob['model_params:n_std_dev'] = 4
 
             prob['yaw0'] = yaw_gauss
 

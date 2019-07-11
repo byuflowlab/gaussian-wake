@@ -15,7 +15,7 @@ setup(
     name='GaussianWake',
     version='0.0.1',
     description='Gaussian wake model published by Bastankhah and Porte Agel 2016',
-    install_requires=['openmdao>=1.7'],
+    install_requires=['openmdao>=1.7.3'],
     package_dir={'': 'src'},
     ext_modules=[module1],
     dependency_links=['http://github.com/OpenMDAO/OpenMDAO.git@master'],
