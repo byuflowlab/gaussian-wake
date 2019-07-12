@@ -13,12 +13,12 @@ import pytest
 import openmdao.api as om
 
 from gaussianwake.gaussianwake import GaussianWake
-from _porteagel_fortran import porteagel_analyze, porteagel_visualize, x0_func, theta_c_0_func, sigmay_func
+from _porteagel_fortran import porteagel_analyze, x0_func, theta_c_0_func, sigmay_func, sigma_spread_func
 from _porteagel_fortran import sigmaz_func, wake_offset_func, deltav_func, deltav_near_wake_lin_func
 from _porteagel_fortran import overlap_area_func, wake_combination_func, added_ti_func, k_star_func
 from _porteagel_fortran import ct_to_axial_ind_func, wind_shear_func, discontinuity_point_func, smooth_max
 from _porteagel_fortran import interpolation, hermite_spline, point_velocity_with_shear_func
-from openmdao.api import Problem, Group
+import openmdao.api as om
 
 def power_func_v80(v):
     # power curve fit for vestas v80 from Niayifar 2016
@@ -777,14 +777,14 @@ class test_ctcp_curve(unittest.TestCase):
         self.cp_data = cp_data
         self.wind_speed_data = wind_speed_data
 
-        self.options = {'use_ct_curve': True,
+        self.options = {'use_ct_curve': True, 'nTurbines': 6,
                    'ct_curve_ct': self.ct_data,
                    'ct_curve_wind_speed': self.wind_speed_data}
 
     def test_5mw_ct_greater_than_1_warning(self):
 
         prob = om.Problem()
-        prob.model.add_subsystem('gw', GaussianWake(nTurbines=6, options=self.options))
+        prob.model.add_subsystem('gw', GaussianWake(options=self.options))
 
         def call_setup():
             prob.setup()
@@ -808,14 +808,16 @@ class test_wec(unittest.TestCase):
         self.cp_data = cp_data
         self.wind_speed_data = wind_speed_data
 
-        self.options = {'use_ct_curve': True,
+        nTurbines = 2
+
+        self.options = {'use_ct_curve': True, 'nTurbines': 2,
                    'ct_curve_ct': self.ct_data,
                    'ct_curve_wind_speed': self.wind_speed_data}
 
-        nTurbines = 2
         from gaussianwake.gaussianwake import GaussianWake
-        prob = Problem(root=Group())
-        prob.root.add('wakemodel', GaussianWake(nTurbines, options=self.options), promotes=['*'])
+        model = om.Group()
+        prob = om.Problem(model)
+        prob.model.add_subsystem('wakemodel', GaussianWake(options=self.options), promotes=['*'])
         prob.setup()
         prob['wind_speed'] = 8.
         self.prob = prob
@@ -832,10 +834,10 @@ class test_wec(unittest.TestCase):
         prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
-        prob.run_once()
+        prob.run_model()
         wspeed0 = prob['wtVelocity0'][1]
         prob['model_params:wec_spreading_angle'] = 2.0
-        prob.run_once()
+        prob.run_model()
         wspeed1 = prob['wtVelocity0'][1]
 
         self.assertEqual(wspeed1, wspeed0)
@@ -851,10 +853,10 @@ class test_wec(unittest.TestCase):
         prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
-        prob.run_once()
+        prob.run_model()
         wspeed0 = prob['wtVelocity0'][1]
         prob['model_params:wec_spreading_angle'] = 2.0
-        prob.run_once()
+        prob.run_model()
         wspeed1 = prob['wtVelocity0'][1]
 
         self.assertEqual(wspeed1, wspeed0)
@@ -870,10 +872,10 @@ class test_wec(unittest.TestCase):
         prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
-        prob.run_once()
+        prob.run_model()
         wspeed0 = prob['wtVelocity0'][1]
         prob['model_params:wec_factor'] = 2.0
-        prob.run_once()
+        prob.run_model()
         wspeed1 = prob['wtVelocity0'][1]
 
         self.assertGreater(wspeed0, wspeed1)
@@ -889,11 +891,11 @@ class test_wec(unittest.TestCase):
         prob['model_params:wec_spreading_angle'] = 0.0
         prob['model_params:wec_factor'] = 1.0
 
-        prob.run_once()
+        prob.run_model()
         prob['model_params:wec_factor'] = 1.0
         wspeed0 = prob['wtVelocity0'][1]
         prob['model_params:wec_spreading_angle'] = 2.0
-        prob.run_once()
+        prob.run_model()
         wspeed1 = prob['wtVelocity0'][1]
 
         self.assertGreater(wspeed0, wspeed1)

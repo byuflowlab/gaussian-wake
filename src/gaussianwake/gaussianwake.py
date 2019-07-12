@@ -265,7 +265,7 @@ class GaussianWake(om.ExplicitComponent):
         self.add_discrete_input('model_params:sm_smoothing', val=700.0,
                        desc='adjust degree of smoothing in the smooth-max for local TI calcs')
 
-        self.add_discrete('model_params:wec_spreading_angle', val=0.0, pass_by_object=True,
+        self.add_discrete_input('model_params:wec_spreading_angle', val=0.0,
                        desc='multiply wake expansion rate as wec alternative')
 
         self.add_output('wtVelocity%i' % direction_id, val=np.zeros(nTurbines), units='m/s')
@@ -312,8 +312,6 @@ class GaussianWake(om.ExplicitComponent):
         z_0 = discrete_inputs['model_params:z_0']
         shear_exp = discrete_inputs['model_params:shear_exp']
         wake_model_version = discrete_inputs['model_params:wake_model_version']
-
-        opt_exp_fac = discrete_inputs['model_params:opt_exp_fac']
 
         print_ti = discrete_inputs['model_params:print_ti']
 
@@ -376,10 +374,10 @@ class GaussianWake(om.ExplicitComponent):
                                                        interp_type, use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
                                                        sm_smoothing, wec_spreading_angle, CalculateFlowField)
 
-        unknowns['wtVelocity%i' % direction_id] = TurbineVelocity
+        outputs['wtVelocity%i' % direction_id] = TurbineVelocity
 
         if nSamples > 0:
-            unknowns['wsArray%i' % direction_id] = FieldVelocity
+            outputs['wsArray%i' % direction_id] = FieldVelocity
 
     def compute_partials(self, inputs, partials, discrete_inputs):
         opt = self.options
