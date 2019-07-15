@@ -62,7 +62,7 @@ class plotting_tests_wec():
         prob = Problem(root=AEPGroup(nTurbines=nTurbines, nDirections=nDirections, wake_model=gauss_wrapper,
                                      wake_model_options=wake_model_options, datasize=0, use_rotor_components=False,
                                      params_IdepVar_func=add_gauss_params_IndepVarComps, differentiable=True,
-                                     params_IndepVar_args={}))
+                                     params_IdepVar_args={}))
 
         # initialize problem
         prob.setup(check=True)
@@ -91,7 +91,7 @@ class plotting_tests_wec():
         prob['model_params:I'] = 0.1
 
         # run the problem
-        prob.run()
+        prob.run_driver()
 
         self.prob = prob
         self.label = ''
@@ -121,7 +121,7 @@ class plotting_tests_wec():
                 prob['turbineX'][2] = xx[int(i), int(j)]
                 prob['turbineY'][2] = yy[int(i), int(j)]
                 # print prob['turbineX'], prob['turbineY']
-                prob.run_once()
+                prob.run_model()
                 vel[int(i), int(j)] = self.prob['wtVelocity0'][2]
 
         self.vel = vel
@@ -150,7 +150,7 @@ class plotting_tests_wec():
                 prob['turbineX'][2] = xx[int(i), int(j)]
                 prob['turbineY'][2] = yy[int(i), int(j)]
                 # print prob['turbineX'], prob['turbineY']
-                prob.run_once()
+                prob.run_model()
                 aep[int(i), int(j)] = self.prob['AEP']
 
         self.aep = aep
