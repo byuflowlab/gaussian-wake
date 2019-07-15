@@ -784,7 +784,7 @@ class test_ctcp_curve(unittest.TestCase):
     def test_5mw_ct_greater_than_1_warning(self):
 
         prob = om.Problem()
-        prob.model.add_subsystem('gw', GaussianWake(options=self.options))
+        prob.model.add_subsystem('gw', GaussianWake(nTurbines=self.options['nTurbines'], options=self.options))
 
         def call_setup():
             prob.setup()
@@ -817,7 +817,7 @@ class test_wec(unittest.TestCase):
         from gaussianwake.gaussianwake import GaussianWake
         model = om.Group()
         prob = om.Problem(model)
-        prob.model.add_subsystem('wakemodel', GaussianWake(options=self.options), promotes=['*'])
+        prob.model.add_subsystem('wakemodel', GaussianWake(nTurbines=self.options['nTurbines'], options=self.options), promotes=['*'])
         prob.setup()
         prob['wind_speed'] = 8.
         self.prob = prob
