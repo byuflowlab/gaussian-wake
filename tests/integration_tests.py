@@ -83,9 +83,9 @@ class test_guass(unittest.TestCase):
         input_directory = "./input_files/"
         filename = input_directory + "NREL5MWCPCT_dict.p"
         # filename = "../input_files/NREL5MWCPCT_smooth_dict.p"
-        import cPickle as pickle
+        import pickle
 
-        data = pickle.load(open(filename, "rb"))
+        data = pickle.load(open(filename, "rb"), encoding="latin1")
         ct_curve = np.zeros([data['wind_speed'].size, 2])
         ct_curve_wind_speed = data['wind_speed']
         ct_curve_ct = data['CT']

@@ -4,7 +4,7 @@ FLOW Lab
 Brigham Young University
 """
 from __future__ import print_function, division, absolute_import
-import cPickle as pickle
+import pickle
 import unittest
 
 import numpy as np
@@ -765,7 +765,7 @@ class test_ctcp_curve(unittest.TestCase):
 
     def setUp(self):
         filename = "./input_files/NREL5MWCPCT_dict.p"
-        data = pickle.load(open(filename, "rb"))
+        data = pickle.load(open(filename, "rb"), encoding="latin1")
         cp_data = np.zeros([data['wind_speed'].size])
         ct_data = np.zeros([data['wind_speed'].size])
         wind_speed_data = np.zeros([data['wind_speed'].size])
@@ -795,8 +795,8 @@ class test_wec(unittest.TestCase):
 
     def setUp(self):
         filename = "./input_files/NREL5MWCPCT_dict.p"
-        import cPickle as pickle
-        data = pickle.load(open(filename, "rb"))
+        import pickle
+        data = pickle.load(open(filename, "rb"), encoding="latin1")
         cp_data = np.zeros([data['wind_speed'].size])
         ct_data = np.zeros([data['wind_speed'].size])
         wind_speed_data = np.zeros([data['wind_speed'].size])
