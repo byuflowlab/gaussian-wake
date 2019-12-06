@@ -206,6 +206,7 @@ class test_basic_subroutines(unittest.TestCase):
         sigmay_d = 40.0
         sigmaz_d = 40.0
         wec_factor = 1.0
+        wech = 0
 
         deltay = 100.0
         deltaz = 5.0
@@ -213,7 +214,8 @@ class test_basic_subroutines(unittest.TestCase):
 
         x = 0.0
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
-                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                  sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                           sigmay_0, sigmaz_0, wec_factor, wech)
 
         self.assertAlmostEqual(deltav, 0.00048145926305030354, delta=self.tolerance)
 
@@ -231,13 +233,15 @@ class test_basic_subroutines(unittest.TestCase):
         sigmay_d = 40.0
         sigmaz_d = 40.0
         wec_factor = 1.0
+        wech = 0
 
         deltay = 100.0
         deltaz = 5.0
 
         x = 200.0
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd, sigmay_d,
-                                            sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                            sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                            sigmay_0, sigmaz_0, wec_factor, wech)
         self.assertAlmostEqual(deltav, 0.027941992346249663, delta=self.tolerance)
 
     def test_near_deltav_func_2014_x0_location(self):
@@ -254,6 +258,8 @@ class test_basic_subroutines(unittest.TestCase):
         sigmaz_d = 40.0
         wec_factor = 1.0
 
+        wech = 0
+
         deltay = 100.0
         deltaz = 5.0
 
@@ -261,7 +267,8 @@ class test_basic_subroutines(unittest.TestCase):
         x = 353.
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
                                            sigmay_d,
-                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                           sigmay_0, sigmaz_0, wec_factor, wech)
         self.assertAlmostEqual(deltav, 0.0401329549842686, delta=self.tolerance)
 
     def test_near_deltav_func_2016_rotor_location(self):
@@ -276,6 +283,7 @@ class test_basic_subroutines(unittest.TestCase):
         sigmay_d = 40.0
         sigmaz_d = 40.0
         wec_factor = 1.0
+        wech = 0
 
         deltay = 100.0
         deltaz = 5.0
@@ -283,7 +291,8 @@ class test_basic_subroutines(unittest.TestCase):
         x = 0.0
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
                                            sigmay_d,
-                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                           sigmay_0, sigmaz_0, wec_factor, wech)
 
         self.assertAlmostEqual(deltav, 0.05319773340098457, delta=self.tolerance)
 
@@ -300,6 +309,7 @@ class test_basic_subroutines(unittest.TestCase):
         sigmay_d = 40.0
         sigmaz_d = 40.0
         wec_factor = 1.0
+        wech = 0
 
         deltay = 100.0
         deltaz = 5.0
@@ -307,7 +317,8 @@ class test_basic_subroutines(unittest.TestCase):
         x = 200.0
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
                                            sigmay_d,
-                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                           sigmay_0, sigmaz_0, wec_factor, wech)
         self.assertAlmostEqual(deltav, 0.0388723745762739, delta=self.tolerance)
 
     def test_near_deltav_func_2016_x0_location(self):
@@ -323,6 +334,7 @@ class test_basic_subroutines(unittest.TestCase):
         sigmay_d = 40.0
         sigmaz_d = 40.0
         wec_factor = 1.0
+        wech = 0
 
         deltay = 100.0
         deltaz = 5.0
@@ -330,7 +342,8 @@ class test_basic_subroutines(unittest.TestCase):
         x = 353.
         deltav = deltav_near_wake_lin_func(deltay, deltaz, self.ct, yaw, sigmay_0, sigmaz_0, x0, self.d, x, xd,
                                            sigmay_d,
-                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread, wec_factor)
+                                           sigmaz_d, version, self.ky, x, sigmay_spread, sigmaz_spread,
+                                           sigmay_0, sigmaz_0, wec_factor, wech)
         self.assertAlmostEqual(deltav, 0.027913475075370238, delta=self.tolerance)
 
     def test_wake_combination_func_Lissaman1979(self):
@@ -589,6 +602,8 @@ class test_point_velocity_with_shear(unittest.TestCase):
         self.TIturbs = 0.025 * np.ones_like(self.turbineXw)  # *np.array([0.01]) #np.array([0.001]) #TODO check point velocity tests and ti input
         self.ky_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
         self.kz_local = 0.022  # np.array([0.3837*TIturbs[0] + 0.003678])
+        self.WECH = 0    # choose not to use WECH
+
 
 
     def test_point_velocity_with_shear(self):
@@ -599,7 +614,7 @@ class test_point_velocity_with_shear(unittest.TestCase):
                                                       self.wind_speed, self.z_ref, self.z_0, self.shear_exp, self.turbineXw,
                                                       self.turbineYw, self.turbineZ, self.rotorDiameter, self.yaw,
                                                       self.wtVelocity, self.Ct_local, self.TIturbs, self.ky_local,
-                                                      self.kz_local)
+                                                      self.kz_local, self.WECH)
 
             self.assertAlmostEqual(point_velocity_with_shear/self.wind_speed, 0.406, delta=self.tolerance)
 
@@ -937,6 +952,7 @@ class test_porteagel_analyze(unittest.TestCase):
         self.print_ti = False
         self.interp_type = 1
         self.sm_smoothing = 700.
+        self.WECH = 0
 
         loc_data = np.loadtxt('input_files/horns_rev_locations.txt', delimiter=',')
         turbineXw = loc_data[:, 0] * self.rotor_diameter
@@ -964,7 +980,7 @@ class test_porteagel_analyze(unittest.TestCase):
                                        self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
                                        self.wake_model_version, self.interp_type, use_ct_curve,
                                        ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
-                                       self.expratemultiplier, CalculateFlowField)
+                                       self.expratemultiplier, CalculateFlowField, self.WECH)
 
         free_stream_power = power_func_v80(self.wind_speed)
         wtPower = power_func_v80(wtVelocity)
@@ -999,7 +1015,7 @@ class test_porteagel_analyze(unittest.TestCase):
                                           self.TI_calculation_method, self.calc_k_star, self.wec_factor, self.print_ti,
                                           self.wake_model_version, self.interp_type, use_ct_curve,
                                           ct_curve_wind_speed, ct_curve_ct, self.sm_smoothing,
-                                          self.expratemultiplier, CalculateFlowField)
+                                          self.expratemultiplier, CalculateFlowField, self.WECH)
 
         self.assertAlmostEqual(wtVelocity, 8.0, delta=self.tolerance)
         #
