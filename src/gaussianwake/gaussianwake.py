@@ -258,6 +258,8 @@ class GaussianWake(om.ExplicitComponent):
                                 desc='print TI values to a file for use in plotting etc')
         self.add_discrete_input('model_params:wake_model_version', val=2016,
                                 desc='choose whether to use Bastankhah 2014 or 2016')
+        self.add_discrete_input('model_params:WECH', val=0,
+                                desc='choose whether to use WECH or WECD when wec_factor != 1')
 
         self.add_discrete_input('model_params:wec_factor', val=1.0,
                        desc='increase spread for optimization')
@@ -312,6 +314,7 @@ class GaussianWake(om.ExplicitComponent):
         z_0 = discrete_inputs['model_params:z_0']
         shear_exp = discrete_inputs['model_params:shear_exp']
         wake_model_version = discrete_inputs['model_params:wake_model_version']
+        WECH = discrete_inputs['model_params:WECH']
 
         print_ti = discrete_inputs['model_params:print_ti']
 
@@ -372,7 +375,7 @@ class GaussianWake(om.ExplicitComponent):
                                                        wake_combination_method, ti_calculation_method,
                                                        calc_k_star, wec_factor, print_ti, wake_model_version,
                                                        interp_type, use_ct_curve, ct_curve_wind_speed, ct_curve_ct,
-                                                       sm_smoothing, wec_spreading_angle, CalculateFlowField)
+                                                       sm_smoothing, wec_spreading_angle, CalculateFlowField, WECH)
 
         outputs['wtVelocity%i' % direction_id] = TurbineVelocity
 

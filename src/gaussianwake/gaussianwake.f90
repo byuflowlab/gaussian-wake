@@ -14,7 +14,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
                              TI_calculation_method, calc_k_star, wec_factor, print_ti, &
                              wake_model_version, interp_type, &
                              use_ct_curve, ct_curve_wind_speed, ct_curve_ct, sm_smoothing, &
-                             wec_spreading_angle, CalculateFlowField, &
+                             wec_spreading_angle, CalculateFlowField, WECH, &
                              wtVelocity, FieldVelocity)
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter Ct yawDeg
@@ -30,7 +30,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
     ! in
     integer, intent(in) :: nTurbines, nRotorPoints, nCtPoints, nFieldPoints
     integer, intent(in) :: wake_combination_method, TI_calculation_method, & 
-                        &  wake_model_version, interp_type
+                        &  wake_model_version, interp_type, WECH
     logical, intent(in) :: calc_k_star, print_ti, use_ct_curve, CalculateFlowField
     real(dp), dimension(nTurbines), intent(in) :: turbineXw, turbineYw, turbineZ
     integer, dimension(nTurbines), intent(in) :: sorted_x_idx
@@ -107,7 +107,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
-                                          Ct_local, TIturbs, ky_local, kz_local, &
+                                          Ct_local, TIturbs, ky_local, kz_local, WECH, &
                                           point_velocity_with_shear)
             
             ! add sample point velocity to turbine velocity to be averaged later
@@ -214,7 +214,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
-                                          Ct_local, TIturbs, ky_local, kz_local, &
+                                          Ct_local, TIturbs, ky_local, kz_local, WECH,&
                                           FieldVelocity(p))
         
         end do
@@ -229,7 +229,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                           wind_speed, z_ref, z_0, shear_exp, &
                                           turbineXw, turbineYw, turbineZ, &
                                           rotorDiameter, yaw, wtVelocity, &
-                                          Ct_local, TIturbs, ky_local, kz_local, &
+                                          Ct_local, TIturbs, ky_local, kz_local, WECH, &
                                           point_velocity_with_shear)
                                           
     ! if not calculating velocity for a specific turbine, please set turbI to 0
@@ -240,7 +240,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     integer, parameter :: dp = kind(0.d0)
     
     ! in
-    Integer, intent(in) :: nTurbines, turbI, wake_combination_method, wake_model_version
+    Integer, intent(in) :: nTurbines, turbI, wake_combination_method, wake_model_version, WECH
     Integer, dimension(nTurbines), intent(in) :: sorted_x_idx
     Real(dp), intent(in) :: pointX, pointY, pointZ
     Real(dp), intent(in) :: tol, alpha, beta, wec_spreading_angle, wec_factor
@@ -259,7 +259,7 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
     Real(dp) :: x, deltav, x0, theta_c_0, sigmay, sigmaz
     Real(dp) :: discontinuity_point, sigmay_d, sigmaz_d
     Real(dp) :: sigmay_0, sigmaz_0, deltay, deltaz, point_velocity
-    Real(dp) :: sigmay_spread, sigmaz_spread
+    Real(dp) :: sigmay_spread, sigmaz_spread, sigmay_0_spread, sigmaz_0_spread
     Integer :: u, turb
 
     ! initialize deficit summation term to zero
@@ -316,6 +316,12 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
             
             ! calculate new spread for WEC in z (horizontal)
             call sigma_spread_func(x, x0, kz_local(turb), sigmaz_0, sigmaz_d, wec_spreading_angle, wec_factor, sigmaz_spread)
+
+            ! calculate new spread for WEC in y (horizontal) at onset of far wake
+            call sigma_spread_func(x0, x0, ky_local(turb), sigmay_0, sigmay_d, wec_spreading_angle, wec_factor, sigmay_0_spread)
+
+            ! calculate new spread for WEC in z (horizontal) at onset of far wake
+            call sigma_spread_func(x0, x0, kz_local(turb), sigmaz_0, sigmaz_d, wec_spreading_angle, wec_factor, sigmaz_0_spread)
             
             ! determine the initial wake angle at the onset of far wake
             call theta_c_0_func(yaw(turb), Ct_local(turb), theta_c_0)
@@ -345,7 +351,8 @@ subroutine point_velocity_with_shear_func(nTurbines, turbI, wake_combination_met
                                  & rotorDiameter(turb), x, discontinuity_point, & 
                                  & sigmay_d, sigmaz_d, wake_model_version, &
                                  & kz_local(turb), x0, sigmay_spread, &
-                                 & sigmaz_spread, wec_factor, deltav)
+                                 & sigmaz_spread, sigmay_0_spread, &
+                                 & sigmaz_0_spread, wec_factor, WECH, deltav)
                                  
             end if
 
@@ -619,7 +626,8 @@ end subroutine deltav_func
 subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
                                  & sigmay_0, sigmaz_0, x0, rotor_diameter_ust, x, &
                                  & discontinuity_point, sigmay_d, sigmaz_d, version, k_2014, &
-                                 & deltaxd_2014, sigmay_spread, sigmaz_spread, wec_factor_2014, deltav)
+                                 & deltaxd_2014, sigmay_spread, sigmaz_spread, sigmay_0_spread, sigmaz_0_spread, &
+                                 & wec_factor_2014, WECH, deltav)
 
     implicit none
 
@@ -627,14 +635,14 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay_0, sigmaz_0, x0
+    real(dp), intent(in) :: deltay, deltaz, Ct, yaw, sigmay_0, sigmaz_0, x0, sigmay_0_spread, sigmaz_0_spread
     real(dp), intent(in) :: rotor_diameter_ust, sigmay_spread, sigmaz_spread
     real(dp), intent(in) :: x, discontinuity_point, sigmay_d, sigmaz_d
     real(dp), intent(in) :: k_2014, deltaxd_2014, wec_factor_2014    ! only for 2014 version
-    integer, intent(in) :: version
+    integer, intent(in) :: version, WECH
     
     ! local
-    real(dp) :: deltav0m, deltavdm
+    real(dp) :: deltav0m, deltavdm, sigmay, sigmaz
     real(dp) :: beta_2014, epsilon_2014 ! only for 2014 version
 
     ! out
@@ -675,10 +683,19 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
         deltavdm = ((1.0_dp - sqrt(1.0_dp - Ct *                          &
                     cos(yaw) / (8.0_dp * sigmay_d * sigmaz_d/(rotor_diameter_ust ** 2)))))
 
-        ! linearized gaussian magnitude term for near wake
-        deltav = (((deltav0m - deltavdm)/x0) * x + deltavdm) *       &
-            exp(-0.5_dp * (deltay / (sigmay_spread)) ** 2) * &
-            exp(-0.5_dp * (deltaz / (sigmaz_spread)) ** 2)
+        if (WECH == 0) then
+            ! linearized gaussian magnitude term for near wake
+            deltav = (((deltav0m - deltavdm)/x0) * x + deltavdm) *       &
+                exp(-0.5_dp * (deltay / (sigmay_spread)) ** 2) * &
+                exp(-0.5_dp * (deltaz / (sigmaz_spread)) ** 2)
+        else
+            ! linearized gaussian magnitude term for near wake for WECH
+            sigmay = ((sigmay_0_spread - sigmay_0)/(x0)) * x + sigmay_0
+            sigmaz = ((sigmaz_0_spread - sigmay_0)/(x0)) * x + sigmaz_0
+            deltav = (((deltav0m - deltavdm)/x0) * x + deltavdm) *       &
+                exp(-0.5_dp * (deltay / (sigmay_0_spread)) ** 2) * &
+                exp(-0.5_dp * (deltaz / (sigmaz_0_spread)) ** 2)
+        end if
             
     else
     

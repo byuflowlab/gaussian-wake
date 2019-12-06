@@ -89,6 +89,7 @@ class plotting_tests_wec():
         prob['model_params:wake_model_version'] = '2016'
         prob['model_params:ti_calculation_method'] = 4
         prob['model_params:I'] = 0.1
+        prob['model_params:WECH'] = 0
 
         # run the problem
         prob.run_driver()
@@ -421,6 +422,7 @@ if __name__ == "__main__":
     mytest.plot_contour(exp_type='angle', xival=0.0, save_fig=False)
     xis = np.array([0., 10., 20., 30., 40., 50., 60.])
     xis = np.array([1., 2., 4., 6., 8., 10., 12.])
+    xis = np.array([1., 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
     for xival in xis:
         print( xival)
         mytest.plot_contour(exp_type='diam', xival=xival, save_fig=False)
