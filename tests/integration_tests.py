@@ -175,6 +175,7 @@ class test_guass(unittest.TestCase):
         prob.run_model()
 
         self.prob = prob
+        self.prob.check_totals()
 
     def testImport(self):
         self.assertEqual(self.working_import, True, "gauss_wrapper Import Failed")

@@ -427,6 +427,8 @@ class GaussianWake(om.ExplicitComponent):
 
         wec_spreading_angle = discrete_inputs['model_params:wec_spreading_angle']
 
+        WECH = discrete_inputs['model_params:WECH']
+
         use_ct_curve = self.use_ct_curve
         interp_type = self.interp_type
 
@@ -476,6 +478,7 @@ class GaussianWake(om.ExplicitComponent):
                                                                                                sm_smoothing,
                                                                                                wec_spreading_angle,
                                                                                                CalculateFlowField,
+                                                                                               WECH,
                                                                                                wtVelocityb)
         #
         # turbineXwd = np.eye(nDirs, nTurbines)
