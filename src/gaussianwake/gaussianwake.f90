@@ -693,8 +693,8 @@ subroutine deltav_near_wake_lin_func(deltay, deltaz, Ct, yaw, &
             sigmay = ((sigmay_0_spread - sigmay_0)/(x0)) * x + sigmay_0
             sigmaz = ((sigmaz_0_spread - sigmay_0)/(x0)) * x + sigmaz_0
             deltav = (((deltav0m - deltavdm)/x0) * x + deltavdm) *       &
-                exp(-0.5_dp * (deltay / (sigmay_0_spread)) ** 2) * &
-                exp(-0.5_dp * (deltaz / (sigmaz_0_spread)) ** 2)
+                exp(-0.5_dp * (deltay / (sigmay)) ** 2) * &
+                exp(-0.5_dp * (deltaz / (sigmaz)) ** 2)
         end if
             
     else

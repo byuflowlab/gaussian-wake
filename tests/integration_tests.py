@@ -117,6 +117,23 @@ class test_guass(unittest.TestCase):
                                          params_IdepVar_func=add_gauss_params_IndepVarComps, differentiable=True,
                                          params_IdepVar_args={}))
 
+        prob.driver = om.pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SNOPT'
+        # prob.driver.options['gradient method'] = 'snopt_fd'
+        # prob.driver.options['gradient method'] = 'pyopt_fd'
+
+        # set optimizer options
+        prob.driver.opt_settings['Verify level'] = 1
+        # set optimizer options
+        prob.driver.opt_settings['Major optimality tolerance'] = 1e-6
+
+        prob.model.add_objective('AEP', scaler=1E-7)
+
+        # select design variables
+        prob.model.add_design_var('turbineY')
+        prob.model.add_design_var('turbineX')
+        prob.model.add_design_var('yaw0')
+
         # initialize problem
         prob.setup(check=True)
 
@@ -175,7 +192,8 @@ class test_guass(unittest.TestCase):
         prob.run_model()
 
         self.prob = prob
-        self.prob.check_totals()
+        self.prob.check_totals(out_stream=None)
+        self.prob.check_partials(out_stream=None)
 
     def testImport(self):
         self.assertEqual(self.working_import, True, "gauss_wrapper Import Failed")

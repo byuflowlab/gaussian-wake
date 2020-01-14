@@ -89,7 +89,7 @@ class plotting_tests_wec():
         prob['model_params:wake_model_version'] = '2016'
         prob['model_params:ti_calculation_method'] = 4
         prob['model_params:I'] = 0.1
-        prob['model_params:WECH'] = 0
+        prob['model_params:WECH'] = 1
 
         # run the problem
         prob.run_driver()
