@@ -18,6 +18,13 @@ from plantenergy.OptimizationGroups import AEPGroup
 class test_guass(unittest.TestCase):
 
     def setUp(self):
+        self.atol = 1E-6
+        self.rtol = 1E-6
+        self.atol_p = 1E-6
+        self.rtol_p = 1E-6
+        self.atol_t = 1E-6
+        self.rtol_t = 1E-6
+
         try:
             from plantenergy.gauss import gauss_wrapper, add_gauss_params_IndepVarComps
             self.working_import = True
@@ -169,7 +176,7 @@ class test_guass(unittest.TestCase):
         prob['model_params:wake_combination_method'] = 1
         prob['model_params:ti_calculation_method'] = 4
         prob['model_params:wake_model_version'] = 2016
-        prob['model_params:wec_factor'] = 1.0
+        prob['model_params:wec_factor'] = 10.0
         prob['model_params:calc_k_star'] = True
         prob['model_params:sort'] = True
         prob['model_params:z_ref'] = z_ref
@@ -179,11 +186,13 @@ class test_guass(unittest.TestCase):
         prob['model_params:print_ti'] = False
         prob['model_params:shear_exp'] = 0.15
         prob['model_params:I'] = 0.06
+        prob['model_params:WECH'] = 1
         prob['model_params:sm_smoothing'] = 700
         if nRotorPoints > 1:
             prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
 
         prob['model_params:wec_spreading_angle'] = 0.0
+        prob['use_power_curve_definition'] = True
 
         prob['Ct_in'] = Ct
         prob['Cp_in'] = Cp
@@ -192,8 +201,9 @@ class test_guass(unittest.TestCase):
         prob.run_model()
 
         self.prob = prob
-        self.prob.check_totals(out_stream=None)
-        self.prob.check_partials(out_stream=None)
+        self.Jt = self.prob.check_totals(out_stream=None)
+        self.Jp = self.prob.check_partials(out_stream=None)
+        print('placeholder')
 
     def testImport(self):
         self.assertEqual(self.working_import, True, "gauss_wrapper Import Failed")
@@ -206,8 +216,52 @@ class test_guass(unittest.TestCase):
         # 3.9981577198314526, 1.1575456053067994
         # 4.99994999064341, 1.2205638474295195
         # 5.992119493324558, 1.240464344941957
-        np.testing.assert_allclose(self.prob['wtPower0']*1E-3, np.array([1.87, 2.03, 1.23, 1.15, 1.22, 1.24]), rtol=1E-0, atol=1E-0)
+        np.testing.assert_allclose(self.prob['wtPower0']*1E-3, np.array([1.87, 2.03, 1.23, 1.15, 1.22, 1.24]), rtol=self.rtol, atol=self.atol)
 
+    def testGaussGrads_wtVelocity0_turbineXw(self):
+        np.testing.assert_allclose(
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'turbineXw')]['J_fwd'],
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'turbineXw')]['J_fd'],
+            self.rtol_p, self.atol_p)
 
+    def testGaussGrads_wtVelocity0_turbineYw(self):
+        np.testing.assert_allclose(
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'turbineYw')]['J_fwd'],
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'turbineYw')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_rotorDiameter(self):
+        np.testing.assert_allclose(
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'rotorDiameter')]['J_fwd'],
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'rotorDiameter')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_yaw0(self):
+        np.testing.assert_allclose(
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'yaw0')]['J_fwd'],
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'yaw0')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_hubHeight(self):
+        np.testing.assert_allclose(
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'hubHeight')]['J_fwd'],
+            self.Jp['all_directions.direction_group0.myModel.f_1'][('wtVelocity0', 'hubHeight')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testAEP_x(self):
+        np.testing.assert_allclose(self.Jt[('AEPcomp.AEP', 'desvars.turbineX')]['J_fwd'],
+                                   self.Jt[('AEPcomp.AEP', 'desvars.turbineX')]['J_fd'], self.rtol_t,
+                                   self.atol_t)
+
+    def testAEP_y(self):
+        np.testing.assert_allclose(self.Jt[('AEPcomp.AEP', 'desvars.turbineY')]['J_fwd'],
+                                   self.Jt[('AEPcomp.AEP', 'desvars.turbineY')]['J_fd'],
+                                   self.rtol_t, self.atol_t)
+
+    def testAEP_yaw(self):
+        for dir in np.arange(0, self.nDirections):
+            np.testing.assert_allclose(self.Jt[('AEPcomp.AEP', 'y_ivc.yaw%i' % dir)]['J_fwd'],
+                                       self.Jt[('AEPcomp.AEP', 'y_ivc.yaw%i' % dir)]['J_fd'], self.rtol_t,
+                                       self.atol_t)
 if __name__ == "__main__":
     unittest.main(verbosity=2)

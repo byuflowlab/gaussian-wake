@@ -89,7 +89,7 @@ class plotting_tests_wec():
         prob['model_params:wake_model_version'] = '2016'
         prob['model_params:ti_calculation_method'] = 4
         prob['model_params:I'] = 0.1
-        prob['model_params:WECH'] = 1
+        prob['model_params:WECH'] = 0
 
         # run the problem
         prob.run_driver()
@@ -171,6 +171,11 @@ class plotting_tests_wec():
             xivals = np.arange(1.0, 10.0, .5)
             diam_on = 1
             angle_on = 0
+        elif exp_type == "hybrid":
+            xivals = np.arange(1.0, 10.0, .5)
+            diam_on = 1
+            angle_on = 0
+            self.prob['model_params:WECH'] = 1
         else:
             raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
 
@@ -193,8 +198,12 @@ class plotting_tests_wec():
         elif exp_type =="diam":
             diam_on = 1
             angle_on = 0
+        elif exp_type == "hybrid":
+            diam_on = 1
+            angle_on = 0
+            self.prob['model_params:WECH'] = 1
         else:
-            raise ValueError("incorrect value specified for exp_type in plot_cross_sections")
+            raise ValueError("incorrect value specified for exp_type in plot_contour")
 
 
         # self.get_velocity(wec_diameter_multiplier=xival ** diam_on, wec_wec_spreading_angle=xival ** angle_on, x0=0., x1=10.)
@@ -418,14 +427,14 @@ if __name__ == "__main__":
 
     mytest = plotting_tests_wec()
     # mytest.plot_data_with_model()
-    # mytest.plot_cross_sections(exp_type='diam')
-    mytest.plot_contour(exp_type='angle', xival=0.0, save_fig=False)
+    # mytest.plot_cross_sections(exp_type='hybrid')
+    # mytest.plot_contour(exp_type='angle', xival=0.0, save_fig=False)
     xis = np.array([0., 10., 20., 30., 40., 50., 60.])
     xis = np.array([1., 2., 4., 6., 8., 10., 12.])
     xis = np.array([1., 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
     for xival in xis:
         print( xival)
-        mytest.plot_contour(exp_type='diam', xival=xival, save_fig=False)
+        mytest.plot_contour(exp_type='hybrid', xival=xival, save_fig=False)
 
 
     # mytest = bpa_wind_tunnel_plots()

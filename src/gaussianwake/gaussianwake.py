@@ -455,7 +455,7 @@ class GaussianWake(om.ExplicitComponent):
         CalculateFlowField = False
 
 
-        turbineXwb, turbineYwb, turbineZb, rotorDiameter, Ctb, yawDegb = porteagel_analyze_bv(turbineXw, sorted_x_idx,
+        turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = porteagel_analyze_bv(turbineXw, sorted_x_idx,
                                                                                                turbineYw, turbineZ,
                                                                                                rotorDiameter, Ct,
                                                                                                wind_speed, yawDeg, ky,
@@ -624,7 +624,7 @@ class GaussianWake(om.ExplicitComponent):
         partials['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
         partials['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZb
         partials['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegb
-        partials['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameter
+        partials['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterb
         partials['wtVelocity%i' % direction_id, 'Ct'] = Ctb
         # print J
 
