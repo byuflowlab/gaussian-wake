@@ -169,6 +169,34 @@ class test_basic_subroutines(unittest.TestCase):
 
         self.assertAlmostEqual(deltav, 0.1293410999394427, delta=self.tolerance)
 
+    def test_deltav_func_2016_small(self):
+
+        d = 0.125
+        yaw = 0.0
+        ky = 0.022
+        kz = 0.022
+        dx = 6.0*d
+        ct = 0.82
+        astar = 2.32
+        bstar = 0.154
+        TI = 0.087056
+        x0 = d * (np.cos(yaw) * (1.0 + np.sqrt(1.0 - ct))) / (np.sqrt(2.0) * (astar * TI+bstar * (1.0-np.sqrt(1.0-ct))))
+        sigmay = d*(ky*(dx-x0)/d+np.cos(yaw)/np.sqrt(8.0))
+        sigmaz = d*(ky*(dx-x0)/d+np.cos(yaw)/np.sqrt(8.0))
+        z = 0.15
+        zh = 0.15
+        wec_factor = 1.0
+        y = 0.0
+        delta = 0.0
+        x = d*4.0
+
+        deltay = y-delta
+        deltaz = z-zh
+
+        deltav = np.round(deltav_func(deltay, deltaz, ct, yaw, sigmay, sigmaz, d, 2016, self.ky, x, wec_factor, sigmay, sigmaz), 2)
+
+        self.assertAlmostEqual(deltav, 0.38, delta=self.tolerance)
+
     def test_deltav_func_2014(self):
 
         d = 126.4
@@ -1060,6 +1088,240 @@ class test_porteagel_analyze(unittest.TestCase):
 
     def test_wt_velocity_row_10_of_horns_rev(self):
         self.assertAlmostEqual(self.norm_pow_ave_by_row[9], 0.5004184100418408, delta=self.tolerance)
+
+
+class test_wtvelocity_gradients(unittest.TestCase):
+
+    def setUp(self):
+        self.atol = 1E-4
+        self.rtol = 1E-4
+        self.atol_p = 1E-4
+        self.rtol_p = 1E-4
+        self.atol_t = 1E-4
+        self.rtol_t = 1E-4
+
+        # define turbine locations in global reference frame
+        # this is the 5 deg rotated from free stream wind farm from Gebraad 2014 CFD study
+        # wind to 30 deg from east, farm rotated to 35 deg from east
+        turbineX = np.array([1164.7, 947.2, 1682.4, 1464.9, 1982.6, 2200.1])
+        turbineY = np.array([1024.7, 1335.3, 1387.2, 1697.8, 2060.3, 1749.7])
+
+
+
+
+        # initialize input variable arrays
+        nTurbines = 6
+        hubHeight = np.zeros(nTurbines) + 90.
+
+        # hubHeight[0] = 60.
+        # hubHeight[2] = 100.
+        # hubHeight[5] = 110.
+
+        rotorDiameter = np.zeros(nTurbines)
+        axialInduction = np.zeros(nTurbines)
+        Ct = np.zeros(nTurbines)
+        Cp = np.zeros(nTurbines)
+        generatorEfficiency = np.zeros(nTurbines)
+        yaw = np.zeros(nTurbines)
+
+        rotor_diameter = 126.4
+
+        # define initial values
+        for turbI in range(0, nTurbines):
+            rotorDiameter[turbI] = rotor_diameter  # m
+            axialInduction[turbI] = 1.0 / 3.0
+            Ct[turbI] = 4.0 * axialInduction[turbI] * (1.0 - axialInduction[turbI])
+            Cp[turbI] = 0.7737 / 0.944 * 4.0 * 1.0 / 3.0 * np.power((1 - 1.0 / 3.0), 2)
+            generatorEfficiency[turbI] = 1.  # 0.944
+            yaw[turbI] = 0.  # deg.
+
+        turbineX = np.array([5.0, 0.0, -10.0, 5.0, 10.0, 15.0])*rotor_diameter
+        turbineY = np.array([0.0, 0.0, 3.0, 4.0, 5.0, 0.0])*rotor_diameter*2.0
+
+        # Define flow properties
+        nDirections = 1
+        wind_speed = 8.0  # m/s
+        air_density = 1.1716  # kg/m^3
+        wind_direction = 270. - 0.523599 * 180. / np.pi  # deg (N = 0 deg., using direction FROM, as in met-mast data)
+        wind_frequency = 1.  # probability of wind in this direction at this speed
+
+        # set up problem
+        nRotorPoints = 100
+
+        # define turbine size
+        rotor_diameter = 126.4  # (m)
+        hub_height = 90.0
+
+        z_ref = 80.0  # m
+        z_0 = 0.0
+
+        # load performance characteristics
+        cut_in_speed = 3.  # m/s
+        rated_power = 5000.  # kW
+        generator_efficiency = 0.944
+        input_directory = "./input_files/"
+        filename = input_directory + "NREL5MWCPCT_dict.p"
+        # filename = "../input_files/NREL5MWCPCT_smooth_dict.p"
+        import pickle
+
+        data = pickle.load(open(filename, "rb"), encoding="latin1")
+        ct_curve = np.zeros([data['wind_speed'].size, 2])
+        ct_curve_wind_speed = data['wind_speed']
+        ct_curve_ct = data['CT']
+
+        # cp_curve_cp = data['CP']
+        # cp_curve_wind_speed = data['wind_speed']
+
+        loc0 = np.where(data['wind_speed'] < 11.55)
+        loc1 = np.where(data['wind_speed'] > 11.7)
+
+        dirid = 0
+        options = None
+
+        prob = om.Problem()
+        indeps = prob.model.add_subsystem('indeps', om.IndepVarComp())
+        indeps.add_output('turbineXw', turbineX, units='m')
+        indeps.add_output('turbineYw', turbineY, units='m')
+        indeps.add_output('hubHeight', hubHeight, units='m')
+        indeps.add_output('rotorDiameter', rotorDiameter, units='m')
+        indeps.add_output('Ct', Ct)
+        indeps.add_output('yaw', yaw, units='deg')
+
+        prob.model.add_subsystem('gw', GaussianWake(nTurbines=nTurbines, direction_id=dirid, options=options))
+
+        excomp = om.ExecComp('obj=sum(wtVelocity)', wtVelocity=np.zeros(nTurbines))
+        prob.model.add_subsystem('excomp', excomp)
+
+        prob.model.connect('indeps.turbineXw', 'gw.turbineXw')
+        prob.model.connect('indeps.turbineYw', 'gw.turbineYw')
+        prob.model.connect('indeps.hubHeight', 'gw.hubHeight')
+        prob.model.connect('indeps.rotorDiameter', 'gw.rotorDiameter')
+        prob.model.connect('indeps.Ct', 'gw.Ct')
+        prob.model.connect('indeps.yaw', 'gw.yaw0')
+
+        prob.model.connect('gw.wtVelocity0', 'excomp.wtVelocity')
+
+        prob.driver = om.pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SNOPT'
+        # prob.driver.options['gradient method'] = 'snopt_fd'
+        # prob.driver.options['gradient method'] = 'pyopt_fd'
+
+        # set optimizer options
+        prob.driver.opt_settings['Verify level'] = 1
+        # set optimizer options
+        prob.driver.opt_settings['Major optimality tolerance'] = 1e-6
+
+        prob.model.add_objective('excomp.obj')
+
+        # select design variables
+        prob.model.add_design_var('indeps.turbineXw')
+        prob.model.add_design_var('indeps.turbineYw')
+        prob.model.add_design_var('indeps.hubHeight')
+        prob.model.add_design_var('indeps.rotorDiameter')
+        prob.model.add_design_var('indeps.Ct')
+        prob.model.add_design_var('indeps.yaw')
+        # prob.model.add_design_var('yaw0')
+
+        # initialize problem
+        prob.setup(check=True)
+
+        # if nRotorPoints > 1:
+        #     from plantenergy.utilities import sunflower_points
+        #     prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
+        #
+        # # assign values to turbine states
+        # prob['turbineX'] = turbineX
+        # prob['turbineY'] = turbineY
+        # prob['hubHeight'] = hubHeight
+        # prob['yaw0'] = yaw
+        #
+        # # assign values to constant inputs (not design variables)
+        # prob['rotorDiameter'] = rotorDiameter
+        # prob['axialInduction'] = axialInduction
+        # prob['generatorEfficiency'] = generatorEfficiency
+        prob['gw.wind_speed'] = 8.0
+        # prob['model_params:I'] = 0.06
+        # prob['model_params:z_ref'] = 90.
+        # prob['model_params:z_0'] = 0.001
+        # prob['model_params:wake_model_version'] = 2016.
+        # prob['air_density'] = air_density
+        # prob['windDirections'] = np.array([wind_direction])
+        # prob['windFrequencies'] = np.array([wind_frequency])
+        #
+        # cutInSpeeds = np.ones(nTurbines) * cut_in_speed
+        # prob['cut_in_speed'] = cutInSpeeds
+        # ratedPowers = np.ones(nTurbines) * rated_power
+        # prob['rated_power'] = ratedPowers
+        #
+        # prob['model_params:wake_combination_method'] = 1
+        # prob['model_params:ti_calculation_method'] = 4
+        # prob['model_params:wake_model_version'] = 2016
+        # prob['model_params:wec_factor'] = 10.0
+        # prob['model_params:calc_k_star'] = True
+        # prob['model_params:sort'] = True
+        # prob['model_params:z_ref'] = z_ref
+        # prob['model_params:z_0'] = z_0
+        # prob['model_params:ky'] = 0.022
+        # prob['model_params:kz'] = 0.022
+        # prob['model_params:print_ti'] = False
+        # prob['model_params:shear_exp'] = 0.15
+        # prob['model_params:I'] = 0.06
+        # prob['model_params:WECH'] = 1
+        # prob['model_params:sm_smoothing'] = 700
+        # if nRotorPoints > 1:
+        #     prob['model_params:RotorPointsY'], prob['model_params:RotorPointsZ'] = sunflower_points(nRotorPoints)
+        #
+        # prob['model_params:wec_spreading_angle'] = 0.0
+        # prob['use_power_curve_definition'] = True
+        #
+        # prob['Ct_in'] = Ct
+        # prob['Cp_in'] = Cp
+
+        # run the problem
+        prob.run_model()
+        # prob.run_driver()
+
+        self.prob = prob
+        self.Jt = self.prob.check_totals(out_stream=None)
+        # self.Jp = self.prob.check_partials(out_stream=None)
+        # print('placeholder')
+
+    def testGaussGrads_wtVelocity0_turbineXw(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.turbineXw')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.turbineXw')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_turbineYw(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.turbineYw')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.turbineYw')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_hubHeight(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.hubHeight')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.hubHeight')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_rotorDiameter(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.rotorDiameter')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.rotorDiameter')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_Ct(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.Ct')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.Ct')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
+    def testGaussGrads_wtVelocity0_yaw(self):
+        np.testing.assert_allclose(
+            self.Jt[('excomp.obj', 'indeps.yaw')]['J_fwd'],
+            self.Jt[('excomp.obj', 'indeps.yaw')]['J_fd'],
+            self.rtol_p, self.atol_p)
+
 
 if __name__ == "__main__":
 

@@ -454,7 +454,6 @@ class GaussianWake(om.ExplicitComponent):
         FieldPointsZ = np.array([0])
         CalculateFlowField = False
 
-
         turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = porteagel_analyze_bv(turbineXw, sorted_x_idx,
                                                                                                turbineYw, turbineZ,
                                                                                                rotorDiameter, Ct,
@@ -480,6 +479,18 @@ class GaussianWake(om.ExplicitComponent):
                                                                                                CalculateFlowField,
                                                                                                WECH,
                                                                                                wtVelocityb)
+
+        # turbineXwb, turbineYwb, turbineZb, rotorDiameterb, Ctb, yawDegb = porteagel_analyze_bv(turbineXw, sorted_x_idx,
+        #     turbineYw, turbineZ, rotorDiameter, Ct, wind_speed, yawDeg, ky, kz, alpha, beta, I, RotorPointsY, RotorPointsZ,
+        #     z_ref, z_0, shear_exp, wake_combination_method, ti_calculation_method, calc_k_star, wec_factor, print_ti, wtVelocityb)
+
+        # print("this is a check")
+        partials['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwb
+        partials['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
+        partials['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZb
+        partials['wtVelocity%i' % direction_id, 'yaw%i' % direction_id] = yawDegb
+        partials['wtVelocity%i' % direction_id, 'rotorDiameter'] = rotorDiameterb
+        partials['wtVelocity%i' % direction_id, 'Ct'] = Ctb
         #
         # turbineXwd = np.eye(nDirs, nTurbines)
         # turbineYwd = np.zeros([nDirs, nTurbines])
@@ -620,6 +631,7 @@ class GaussianWake(om.ExplicitComponent):
         # J['wtVelocity%i' % direction_id, 'rotorDiameter'] = wtVelocityb[4, :]
         # J['wtVelocity%i' % direction_id, 'Ct'] = wtVelocityb[5, :]
         # turbineXwb, turbineYwb, turbineZb, rotorDiameter, Ctb, yawDegb
+
         partials['wtVelocity%i' % direction_id, 'turbineXw'] = turbineXwb
         partials['wtVelocity%i' % direction_id, 'turbineYw'] = turbineYwb
         partials['wtVelocity%i' % direction_id, 'hubHeight'] = turbineZb
