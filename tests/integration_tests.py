@@ -135,7 +135,7 @@ class test_guass(unittest.TestCase):
         # set optimizer options
         prob.driver.opt_settings['Major optimality tolerance'] = 1e-6
 
-        prob.model.add_objective('AEP', scaler=1E-7)
+        prob.model.add_objective('AEP', scaler=1E-0)
 
         # select design variables
         prob.model.add_design_var('turbineY')

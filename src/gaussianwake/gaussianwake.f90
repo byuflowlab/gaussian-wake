@@ -19,7 +19,7 @@ subroutine porteagel_analyze(nTurbines, nRotorPoints, nCtPoints, nFieldPoints, t
 
     ! independent variables: turbineXw turbineYw turbineZ rotorDiameter Ct yawDeg
 
-    ! dependent variables: wtVelocity
+    ! dependent variables:
 
 
     implicit none
